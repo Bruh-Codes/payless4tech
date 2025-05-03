@@ -40,7 +40,7 @@ export default function RootLayout({
 				<SupabaseSessionInitializer />
 				<WhatsAppButton />
 				<Footer />
-				<Toaster />
+				<Toaster  />
 			</body>
 		</html>
 	);
