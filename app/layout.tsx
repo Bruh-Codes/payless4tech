@@ -6,7 +6,7 @@ import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Toaster } from "@/components/ui/sonner";
 import { SupabaseSessionInitializer } from "@/contexts/SupabaseSessionInitializer";
-
+import NextTopLoader from "nextjs-toploader";
 const roboto = Roboto({
 	variable: "--font-roboto",
 	subsets: ["latin", "greek"],
@@ -25,6 +25,17 @@ export default function RootLayout({
 	return (
 		<html lang="en">
 			<body className={`${roboto.variable} antialiased`}>
+				<NextTopLoader
+					color="#FF8904"
+					initialPosition={0.04}
+					crawlSpeed={300}
+					height={2}
+					crawl={true}
+					easing="ease"
+					speed={350}
+					shadow="0 0 10px #FF8904,0 0 5px #FF8904"
+					zIndex={9999}
+				/>
 				<CartProvider>{children}</CartProvider>
 				<SupabaseSessionInitializer />
 				<WhatsAppButton />
