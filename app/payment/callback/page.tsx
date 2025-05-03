@@ -29,7 +29,7 @@ const PaymentCallback = () => {
 				description:
 					"There was an issue processing your payment. Please try again or contact support.",
 			});
-			router.push("/cart");
+			// router.push("/cart");
 		}
 	}, [searchParams, router.push, toast]);
 
@@ -43,10 +43,10 @@ const PaymentCallback = () => {
 	);
 };
 
-const PaymentCallbackPage = () => (
+const Page = () => (
 	<Suspense fallback={<div>Loading...</div>}>
 		<PaymentCallback />
 	</Suspense>
 );
 
-export default PaymentCallbackPage;
+export default Page;
