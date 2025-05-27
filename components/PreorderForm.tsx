@@ -54,27 +54,27 @@ export const PreorderForm = ({ isOpen, onOpenChange }: PreorderFormProps) => {
 			if (dbError) throw dbError;
 
 			// Send email notification
-			const { error: emailError } = await supabase.functions.invoke(
-				"send-preorder-email",
-				{
-					body: {
-						preorderDetails: {
-							fullName: formData.fullName,
-							email: formData.email,
-							phoneNumber: formData.phoneNumber,
-							itemType: formData.itemType,
-							specifications: formData.specifications,
-						},
-					},
-				}
-			);
+			// const { error: emailError } = await supabase.functions.invoke(
+			// 	"send-preorder-email",
+			// 	{
+			// 		body: {
+			// 			preorderDetails: {
+			// 				fullName: formData.fullName,
+			// 				email: formData.email,
+			// 				phoneNumber: formData.phoneNumber,
+			// 				itemType: formData.itemType,
+			// 				specifications: formData.specifications,
+			// 			},
+			// 		},
+			// 	}
+			// );
 
-			if (emailError) throw emailError;
+			// if (emailError) throw emailError;
 
 			// Show success toast
-			toast("Preorder Submitted Successfully", {
+			toast.success("Preorder Submitted Successfully", {
 				description:
-					"Thank you for the information, a member of our team will contact you shortly.",
+					"Thank you for the information, our team will contact you.",
 				duration: 5000, // Show for 5 seconds
 			});
 

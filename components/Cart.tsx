@@ -288,26 +288,26 @@ export const Cart = () => {
 													Add Extended Warranty (12 months) for ₵500
 												</Label>
 											</div>
-											<div className="flex space-x-2 pt-4">
-												<Button
-													disabled={isCheckOutLoading}
-													type="button"
-													variant="outline"
-													className="w-1/2"
-													onClick={() => setIsCheckingOut(false)}
-												>
-													Back
-												</Button>
+											<div className="grid grid-cols-1 md:grid-cols-2 gap-5 space-x-2">
 												<Button
 													disabled={isCheckOutLoading}
 													type="submit"
-													className="w-1/2"
+													className="w-full"
 												>
 													{isCheckOutLoading ? (
 														<Loader />
 													) : (
 														"Proceed to Payment"
 													)}
+												</Button>
+												<Button
+													disabled={isCheckOutLoading}
+													type="button"
+													variant="outline"
+													className="w-full"
+													onClick={() => setIsCheckingOut(false)}
+												>
+													Back
 												</Button>
 											</div>
 										</form>

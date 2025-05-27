@@ -100,7 +100,7 @@ const Page = () => {
 								variant="secondary"
 								size="lg"
 								onClick={() => setIsPreorderFormOpen(true)}
-								className="bg-[#F97316] text-white font-bold px-8 py-3 rounded-lg button-animation"
+								className="bg-[#F97316] text-white hover:bg-[#F97316]/80 font-bold px-8 py-3 rounded-lg button-animation"
 							>
 								Preorder Now
 							</Button>
