@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@supabase/auth-helpers-react";
 import { ProductCard } from "./ProductCard";
 import { LoadingState } from "./LoadingState";
 import { useCart } from "@/contexts/CartContext";
@@ -51,22 +50,18 @@ export const ProductGrid = ({
 
 			if (category) {
 				query = query.eq("category", category);
-				console.log("Applied category filter:", category);
 			}
 
 			if (excludeCategory) {
 				query = query.neq("category", excludeCategory);
-				console.log("Applied exclude category filter:", excludeCategory);
 			}
 
 			if (brandFilter) {
 				if (brandFilter === "MacBook") {
 					query = query.ilike("name", `%${brandFilter}%`);
-					console.log("Applied MacBook filter - searching for:", brandFilter);
 				} else {
 					const sanitizedBrandFilter = brandFilter.trim();
 					query = query.ilike("name", `${sanitizedBrandFilter}%`);
-					console.log("Applied brand filter:", sanitizedBrandFilter);
 				}
 			}
 
@@ -74,10 +69,8 @@ export const ProductGrid = ({
 
 			if (limit) {
 				query = query.limit(limit);
-				console.log("Applied limit:", limit);
 			}
 
-			console.log("Executing Supabase query...");
 			const { data, error } = await query;
 
 			if (error) {
@@ -94,12 +87,6 @@ export const ProductGrid = ({
 					excludeCategory,
 					brandFilter,
 					limit,
-				});
-			} else {
-				console.log("Products fetched successfully:", {
-					count: data.length,
-					filters: { category, excludeCategory, brandFilter, limit },
-					firstProduct: data[0],
 				});
 			}
 

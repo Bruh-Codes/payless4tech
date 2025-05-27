@@ -22,6 +22,11 @@ export const Cart = () => {
 	const { state, removeItem, updateQuantity, checkout, toggleWarranty } =
 		useCart();
 	const [isCheckingOut, setIsCheckingOut] = useState(false);
+	const [isCheckOutLoading, setIsCheckOutLoading] = useState(false);
+
+	const Loader = () => (
+		<span className="inline-block w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2" />
+	);
 	const [checkoutDetails, setCheckoutDetails] = useState({
 		phoneNumber: "",
 		alternativePhone: "",
@@ -30,9 +35,11 @@ export const Cart = () => {
 		email: "",
 		extendedWarranty: false,
 	});
+	const [triggerSheet, setTriggerSheet] = useState(false);
 
 	const handleCheckout = async (e: React.FormEvent) => {
 		e.preventDefault();
+		setIsCheckOutLoading(true);
 		if (
 			!checkoutDetails.phoneNumber ||
 			!checkoutDetails.deliveryAddress ||
@@ -44,9 +51,23 @@ export const Cart = () => {
 			return;
 		}
 		try {
-			await checkout(checkoutDetails);
+			checkout(checkoutDetails);
+			toast.success("Checkout successful", {
+				description: "Your order has been placed successfully.",
+			});
+			setIsCheckOutLoading(false);
+			setTriggerSheet(false);
+			setCheckoutDetails({
+				phoneNumber: "",
+				alternativePhone: "",
+				deliveryAddress: "",
+				gpsLocation: "",
+				email: "",
+				extendedWarranty: false,
+			});
 		} catch (error) {
 			console.error("Checkout error:", error);
+			setIsCheckOutLoading(false);
 		}
 	};
 
@@ -56,7 +77,7 @@ export const Cart = () => {
 	};
 
 	return (
-		<Sheet>
+		<Sheet onOpenChange={setTriggerSheet} open={triggerSheet}>
 			<SheetTrigger asChild>
 				<Button
 					variant="outline"
@@ -74,7 +95,7 @@ export const Cart = () => {
 					)}
 				</Button>
 			</SheetTrigger>
-			<SheetContent className="w-full sm:max-w-lg">
+			<SheetContent className="w-full sm:max-w-lg p-5">
 				<SheetHeader>
 					<SheetTitle>Shopping Cart</SheetTitle>
 				</SheetHeader>
@@ -93,7 +114,7 @@ export const Cart = () => {
 									>
 										<div className="flex items-center space-x-4">
 											<img
-												src={item.image_url || "/placeholder.svg"}
+												src={item.image_url || " "}
 												alt={item.name}
 												className="h-16 w-16 rounded-md object-cover"
 											/>
@@ -212,8 +233,9 @@ export const Cart = () => {
 													Alternative Phone
 												</Label>
 												<Input
+													type="phone"
 													id="alternativePhone"
-													value={checkoutDetails.alternativePhone}
+													value={checkoutDetails?.alternativePhone}
 													onChange={(e) =>
 														setCheckoutDetails({
 															...checkoutDetails,
@@ -266,6 +288,7 @@ export const Cart = () => {
 											</div>
 											<div className="flex space-x-2 pt-4">
 												<Button
+													disabled={isCheckOutLoading}
 													type="button"
 													variant="outline"
 													className="w-1/2"
@@ -273,8 +296,16 @@ export const Cart = () => {
 												>
 													Back
 												</Button>
-												<Button type="submit" className="w-1/2">
-													Proceed to Payment
+												<Button
+													disabled={isCheckOutLoading}
+													type="submit"
+													className="w-1/2"
+												>
+													{isCheckOutLoading ? (
+														<Loader />
+													) : (
+														"Proceed to Payment"
+													)}
 												</Button>
 											</div>
 										</form>

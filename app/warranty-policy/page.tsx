@@ -1,4 +1,6 @@
+import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const WarrantyPolicy = () => {
 	return (
@@ -207,6 +209,7 @@ const WarrantyPolicy = () => {
 					</section>
 				</div>
 			</main>
+			<Footer /> <WhatsAppButton />
 		</>
 	);
 };

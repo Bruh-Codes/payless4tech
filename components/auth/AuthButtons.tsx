@@ -1,21 +1,29 @@
 "use client";
 
-import { useSession, useSupabaseClient } from "@supabase/auth-helpers-react";
+import { useSession } from "@supabase/auth-helpers-react";
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { useRouter } from "next/navigation";
 
 export const AuthButtons = () => {
-	const session = useSession();
-	const supabase = useSupabaseClient();
 	const [isAdmin, setIsAdmin] = useState(false);
 	const [isLoading, setIsLoading] = useState(false);
+	const session = useSession();
+	const router = useRouter();
 
 	useEffect(() => {
 		const checkAdminStatus = async () => {
 			if (session?.user) {
-				console.log("Checking admin status for user:", session.user.email);
 				try {
 					const { data: userRole, error } = await supabase
 						.from("user_roles")
@@ -28,9 +36,7 @@ export const AuthButtons = () => {
 						return;
 					}
 
-					const hasAdminRole = userRole?.role === "admin";
-					console.log("Admin status:", hasAdminRole);
-					setIsAdmin(hasAdminRole);
+					setIsAdmin(userRole?.role === "admin");
 				} catch (error) {
 					console.error("Error in checkAdminStatus:", error);
 				}
@@ -51,6 +57,7 @@ export const AuthButtons = () => {
 			toast("Logged out successfully", {
 				description: "You have been logged out of your account",
 			});
+			router.push("/");
 		} catch (error) {
 			console.error("Error logging out:", error);
 
@@ -73,19 +80,33 @@ export const AuthButtons = () => {
 								size="sm"
 								className="bg-blue-100 hover:bg-orange-400 hover:text-white cursor-pointer"
 							>
-								Admin
+								Dashboard
 							</Button>
 						</Link>
 					)}
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={handleLogout}
-						className="hover:bg-orange-400 hover:text-white cursor-pointer"
-						disabled={isLoading}
-					>
-						{isLoading ? "Logging out..." : `Logout (${session.user.email})`}
-					</Button>
+
+					<DropdownMenu modal={false}>
+						<DropdownMenuTrigger asChild disabled={isLoading}>
+							<Button
+								disabled={isLoading}
+								variant="ghost"
+								className="relative cursor-pointer h-10 w-10 rounded-full"
+							>
+								<Avatar className="h-10 w-10">
+									<AvatarImage src="" alt="Admin" />
+									<AvatarFallback>AD</AvatarFallback>
+								</Avatar>
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							onClick={handleLogout}
+							className="w-56 cursor-pointer"
+							align="end"
+							forceMount
+						>
+							<DropdownMenuItem>Log out</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</>
 			) : (
 				<Link href="/login">

@@ -48,10 +48,10 @@ export const FeaturedCategories = () => {
 			link: "/shop?brand=MacBook",
 		},
 		{
-			title: "HP Laptops",
+			title: "Laptops",
 			icon: <HardDrive size={24} />,
 			bgImage: "https://images.unsplash.com/photo-1611078489935-0cb964de46d6",
-			link: "/shop?brand=HP",
+			link: "/shop?brand=laptop",
 		},
 		{
 			title: "Audio devices",

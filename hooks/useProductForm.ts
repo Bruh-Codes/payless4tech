@@ -56,7 +56,7 @@ export const useProductForm = ({
 		} = supabase.auth.onAuthStateChange((_event, session) => {
 			setSession(session);
 			if (!session) {
-				router.push("/");
+				// router.push("/");
 			}
 		});
 
@@ -72,7 +72,7 @@ export const useProductForm = ({
 			toast.error("Unauthorized", {
 				description: "Please login to access this page",
 			});
-			router.push("/");
+			// router.push("/");
 		}
 	};
 

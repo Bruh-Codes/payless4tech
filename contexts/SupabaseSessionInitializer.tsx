@@ -1,20 +1,16 @@
 "use client";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect } from "react";
+import { SessionContextProvider } from "@supabase/auth-helpers-react";
 
-export function SupabaseSessionInitializer() {
-	useEffect(() => {
-		const token = localStorage.getItem("supabase.auth.token");
-		if (token) {
-			supabase.auth
-				.setSession({
-					access_token: token,
-					refresh_token: "",
-				})
-				.catch(console.error);
-		}
-	}, []);
-
-	return null;
+export function SupabaseSessionInitializer({
+	children,
+}: {
+	children: React.ReactNode;
+}) {
+	return (
+		<SessionContextProvider supabaseClient={supabase}>
+			{children}
+		</SessionContextProvider>
+	);
 }

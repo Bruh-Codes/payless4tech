@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductForm } from "@/components/admin/ProductForm";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Trash2 } from "lucide-react";
 import {
@@ -25,6 +24,8 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 interface ProductImage {
 	created_at: string;
@@ -100,8 +101,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 				"content",
 				product.description || "View product details on Payless4Tech"
 			);
-		if (image)
-			image.setAttribute("content", product.image_url || "/placeholder.svg");
+		if (image) image.setAttribute("content", product.image_url || " ");
 		if (pageTitle) pageTitle.textContent = `${product.name} | Payless4Tech`;
 	};
 
@@ -334,14 +334,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 							</AlertDialogContent>
 						</AlertDialog>
 					</div>
-					<ProductForm
-						productId={product.id}
-						isEditing={true}
-						onProductAdded={() => {
-							setIsEditing(false);
-							fetchProduct();
-						}}
-					/>
 				</main>
 			</div>
 		);
@@ -352,156 +344,159 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		conditionDefinitions[conditionDisplay as keyof typeof conditionDefinitions];
 
 	return (
-		<div className="min-h-screen">
-			<Header />
-			<main className="container mx-auto px-4 py-8">
-				<div className="flex justify-between items-center mb-4">
-					<Button variant="outline" onClick={() => router.back()}>
-						Back
-					</Button>
-					{session && (
-						<Button variant="secondary" onClick={() => setIsEditing(true)}>
-							Edit Product
+		<>
+			<div className="min-h-screen">
+				<Header />
+				<main className="container mx-auto px-4 py-8">
+					<div className="flex justify-between items-center mb-4">
+						<Button variant="outline" onClick={() => router.back()}>
+							Back
 						</Button>
-					)}
-				</div>
+						{session && (
+							<Button variant="secondary" onClick={() => setIsEditing(true)}>
+								Edit Product
+							</Button>
+						)}
+					</div>
 
-				<Card className="p-6">
-					<div className="grid md:grid-cols-2 gap-8">
-						<div className="space-y-4">
-							<div className="aspect-square overflow-hidden rounded-lg">
-								<img
-									src={selectedImage || "/placeholder.svg"}
-									alt={product?.name}
-									className="w-full h-full object-contain"
-								/>
-							</div>
-
-							{product?.images && product.images.length > 0 && (
-								<div className="grid grid-cols-5 gap-2">
-									{[
-										product.image_url,
-										...product.images.map((img) => img.image_url),
-									]
-										.filter(Boolean)
-										.map((imageUrl, index) => (
-											<button
-												key={index}
-												onClick={() => setSelectedImage(imageUrl)}
-												className={`aspect-square rounded-lg overflow-hidden border-2 ${
-													selectedImage === imageUrl
-														? "border-primary"
-														: "border-transparent"
-												}`}
-											>
-												<Image
-													priority
-													loader={({ src }) => src}
-													src={imageUrl || ""}
-													alt={`${product.name} view ${index + 1}`}
-													className="w-full h-full object-contain"
-													width={700}
-													height={700}
-												/>
-											</button>
-										))}
-								</div>
-							)}
-
-							{session && (
-								<div className="space-y-2">
-									<Input
-										type="file"
-										accept="image/*"
-										multiple
-										onChange={handleImageUpload}
-										disabled={isLoading}
+					<Card className="p-6">
+						<div className="grid md:grid-cols-2 gap-8">
+							<div className="space-y-4">
+								<div className="aspect-square overflow-hidden rounded-lg">
+									<img
+										src={selectedImage || " "}
+										alt={product?.name}
+										className="w-full h-full object-contain"
 									/>
-									{newImages.length > 0 && (
-										<Button onClick={handleSaveImages} disabled={isLoading}>
-											{isLoading ? "Uploading..." : "Save Images"}
-										</Button>
-									)}
 								</div>
-							)}
-						</div>
 
-						<div className="space-y-4">
-							<h1 className="text-3xl font-bold">{product?.name}</h1>
-							<div className="flex flex-col gap-4">
-								<div className="flex items-center gap-2">
-									<Badge
-										variant="secondary"
-										className="capitalize bg-[#FEC6A1] text-gray-800 hover:bg-[#FEC6A1]/90"
-									>
-										{conditionDisplay}
-									</Badge>
-									<Badge variant="secondary">{product?.category}</Badge>
-								</div>
-								{conditionInfo && (
-									<div className="bg-secondary/10 p-4 rounded-lg space-y-2">
-										<p className="text-sm text-muted-foreground">
-											{conditionInfo.definition}
-										</p>
-										{conditionInfo.hasWarranty && (
-											<p className="text-sm text-muted-foreground">
-												Comes with a standard 30 days warranty which is
-												extendable to 12 months for a fee.{" "}
-												<Link
-													href="/warranty-policy"
-													className="text-primary hover:underline"
+								{product?.images && product.images.length > 0 && (
+									<div className="grid grid-cols-5 gap-2">
+										{[
+											product.image_url,
+											...product.images.map((img) => img.image_url),
+										]
+											.filter(Boolean)
+											.map((imageUrl, index) => (
+												<button
+													key={index}
+													onClick={() => setSelectedImage(imageUrl)}
+													className={`aspect-square rounded-lg overflow-hidden border-2 ${
+														selectedImage === imageUrl
+															? "border-primary"
+															: "border-transparent"
+													}`}
 												>
-													Learn more about our warranty policy
-												</Link>
-												.
-											</p>
+													<Image
+														priority
+														loader={({ src }) => src}
+														src={imageUrl || ""}
+														alt={`${product.name} view ${index + 1}`}
+														className="w-full h-full object-contain"
+														width={700}
+														height={700}
+													/>
+												</button>
+											))}
+									</div>
+								)}
+
+								{session && (
+									<div className="space-y-2">
+										<Input
+											type="file"
+											accept="image/*"
+											multiple
+											onChange={handleImageUpload}
+											disabled={isLoading}
+										/>
+										{newImages.length > 0 && (
+											<Button onClick={handleSaveImages} disabled={isLoading}>
+												{isLoading ? "Uploading..." : "Save Images"}
+											</Button>
 										)}
 									</div>
 								)}
 							</div>
-							<p className="text-gray-600">{product?.description}</p>
 
-							{product?.detailed_specs && (
-								<div className="mt-4">
-									<h2 className="text-xl font-semibold mb-2">
-										Detailed Specifications
-									</h2>
-									<ul className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-gray-600">
-										{product.detailed_specs
-											.slice(0, product.detailed_specs.length - 1)
-											.split("\n\n")
-											.map((spec, index) => (
-												<li
-													key={index}
-													className="whitespace-pre-wrap list-disc"
-												>
-													{spec}
-												</li>
-											))}
-									</ul>
+							<div className="space-y-4">
+								<h1 className="text-3xl font-bold">{product?.name}</h1>
+								<div className="flex flex-col gap-4">
+									<div className="flex items-center gap-2">
+										<Badge
+											variant="secondary"
+											className="capitalize bg-[#FEC6A1] text-gray-800 hover:bg-[#FEC6A1]/90"
+										>
+											{conditionDisplay}
+										</Badge>
+										<Badge variant="secondary">{product?.category}</Badge>
+									</div>
+									{conditionInfo && (
+										<div className="bg-secondary/10 p-4 rounded-lg space-y-2">
+											<p className="text-sm text-muted-foreground">
+												{conditionInfo.definition}
+											</p>
+											{conditionInfo.hasWarranty && (
+												<p className="text-sm text-muted-foreground">
+													Comes with a standard 30 days warranty which is
+													extendable to 12 months for a fee.{" "}
+													<Link
+														href="/warranty-policy"
+														className="text-primary hover:underline"
+													>
+														Learn more about our warranty policy
+													</Link>
+													.
+												</p>
+											)}
+										</div>
+									)}
 								</div>
-							)}
+								<p className="text-gray-600">{product?.description}</p>
 
-							<div className="flex items-center gap-4">
-								<span className="text-2xl font-bold">
-									₵{product?.price.toLocaleString()}
-								</span>
-								{product?.original_price && (
-									<span className="text-gray-500 line-through">
-										₵{product.original_price.toLocaleString()}
-									</span>
+								{product?.detailed_specs && (
+									<div className="mt-4">
+										<h2 className="text-xl font-semibold mb-2">
+											Detailed Specifications
+										</h2>
+										<ul className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-gray-600">
+											{product.detailed_specs
+												.slice(0, product.detailed_specs.length - 1)
+												.split("\n\n")
+												.map((spec, index) => (
+													<li
+														key={index}
+														className="whitespace-pre-wrap list-disc"
+													>
+														{spec}
+													</li>
+												))}
+										</ul>
+									</div>
 								)}
-							</div>
 
-							<Button onClick={handleAddToCart} className="w-full" size="lg">
-								<ShoppingCart className="mr-2" />
-								Add to Cart
-							</Button>
+								<div className="flex items-center gap-4">
+									<span className="text-2xl font-bold">
+										₵{product?.price.toLocaleString()}
+									</span>
+									{product?.original_price && (
+										<span className="text-gray-500 line-through">
+											₵{product.original_price.toLocaleString()}
+										</span>
+									)}
+								</div>
+
+								<Button onClick={handleAddToCart} className="w-full" size="lg">
+									<ShoppingCart className="mr-2" />
+									Add to Cart
+								</Button>
+							</div>
 						</div>
-					</div>
-				</Card>
-			</main>
-		</div>
+					</Card>
+				</main>
+			</div>
+			<Footer /> <WhatsAppButton />
+		</>
 	);
 };
 

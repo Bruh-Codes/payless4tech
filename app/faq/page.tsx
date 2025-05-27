@@ -1,3 +1,4 @@
+import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import {
 	Accordion,
@@ -5,6 +6,7 @@ import {
 	AccordionItem,
 	AccordionTrigger,
 } from "@/components/ui/accordion";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const FAQ = () => {
 	const faqs = [
@@ -36,27 +38,32 @@ const FAQ = () => {
 	];
 
 	return (
-		<div className="min-h-screen flex flex-col">
-			<Header />
-			<main className="flex-grow container mx-auto px-4 py-12">
-				<h1 className="text-3xl font-bold mb-8">Frequently Asked Questions</h1>
+		<>
+			<div className="min-h-screen flex flex-col">
+				<Header />
+				<main className="flex-grow container mx-auto px-4 py-12">
+					<h1 className="text-3xl font-bold mb-8">
+						Frequently Asked Questions
+					</h1>
 
-				<div className="max-w-3xl mx-auto">
-					<Accordion type="single" collapsible className="w-full">
-						{faqs.map((faq, index) => (
-							<AccordionItem key={index} value={`item-${index}`}>
-								<AccordionTrigger className="text-lg font-medium">
-									{faq.question}
-								</AccordionTrigger>
-								<AccordionContent className="text-gray-600">
-									{faq.answer}
-								</AccordionContent>
-							</AccordionItem>
-						))}
-					</Accordion>
-				</div>
-			</main>
-		</div>
+					<div className="max-w-3xl mx-auto">
+						<Accordion type="single" collapsible className="w-full">
+							{faqs.map((faq, index) => (
+								<AccordionItem key={index} value={`item-${index}`}>
+									<AccordionTrigger className="text-lg font-medium">
+										{faq.question}
+									</AccordionTrigger>
+									<AccordionContent className="text-gray-600">
+										{faq.answer}
+									</AccordionContent>
+								</AccordionItem>
+							))}
+						</Accordion>
+					</div>
+				</main>
+			</div>
+			<Footer /> <WhatsAppButton />
+		</>
 	);
 };
 

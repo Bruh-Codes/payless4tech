@@ -2,33 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@supabase/auth-helpers-react";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Header } from "@/components/Header";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Footer } from "@/components/Footer";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 const Login = () => {
-	const session = useSession();
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
-		console.log("Session state changed:", session);
 		const {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event, session) => {
-			console.log("Auth state change event:", event);
-			console.log("Session:", session);
-
 			if (event === "SIGNED_IN" && session) {
 				console.log("User signed in, navigating to home");
-				toast("Success", {
+				toast.success("Success", {
 					description: "Successfully logged in",
 				});
-				router.push("/");
 			}
 
 			if (event === "SIGNED_OUT") {
@@ -44,7 +38,6 @@ const Login = () => {
 			} = await supabase.auth.getSession();
 			if (session) {
 				console.log("Initial session exists, navigating to home");
-				router.push("/");
 			}
 			if (error) {
 				setError(error.message);
@@ -59,6 +52,12 @@ const Login = () => {
 		};
 	}, [router.push, toast]);
 
+	useEffect(() => {
+		if (error) {
+			toast.error(error);
+		}
+	}, [error]);
+
 	if (isLoading) {
 		return (
 			<div className="min-h-screen flex items-center justify-center">
@@ -68,17 +67,16 @@ const Login = () => {
 	}
 
 	return (
-		<div>
-			<Header />
-			<div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-				{error && (
-					<Alert variant="destructive" className="mb-4">
-						<AlertDescription>{error}</AlertDescription>
-					</Alert>
-				)}
-				<LoginForm />
+		<>
+			<div>
+				<Header />
+				<div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+					<LoginForm />
+				</div>
 			</div>
-		</div>
+			<Footer />
+			<WhatsAppButton />
+		</>
 	);
 };
 

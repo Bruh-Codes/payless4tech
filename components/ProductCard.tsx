@@ -1,9 +1,11 @@
+"use client";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { useCart } from "@/contexts/CartContext";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface Product {
 	id: string;
@@ -54,18 +56,22 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 			>
 				{" "}
 				{/* Fixed height for image container */}
-				<img
-					src={product.image_url || "/placeholder.svg"}
-					alt={product.name}
-					className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" // Use object-cover
-					onError={(e) => {
-						console.log("Image failed to load for product:", {
-							id: product.id,
-							url: product.image_url,
-						});
-						e.currentTarget.src = "/placeholder.svg";
-					}}
-				/>
+				{product.image_url && (
+					<Image
+						src={product.image_url}
+						alt={product.name}
+						width={300}
+						height={300}
+						className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" // Use object-cover
+						onError={(e) => {
+							// console.log("Image failed to load for product:", {
+							// 	id: product.id,
+							// 	url: product.image_url,
+							// });
+							e.currentTarget.src = " ";
+						}}
+					/>
+				)}
 				{product.original_price && (
 					<Badge className="absolute top-2 right-2">
 						Save ₵{Math.floor(product.original_price - product.price)}
@@ -86,11 +92,11 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 					className="flex items-center justify-between mb-2"
 				>
 					<span className="text-primary text-xl font-bold">
-						₵{product.price.toLocaleString()}
+						₵{product?.price?.toLocaleString()}
 					</span>
 					{product.original_price && (
 						<span className="text-sm text-muted-foreground line-through">
-							₵{product.original_price.toLocaleString()}
+							₵{product?.original_price?.toLocaleString()}
 						</span>
 					)}
 				</Link>

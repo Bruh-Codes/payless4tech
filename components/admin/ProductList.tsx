@@ -91,7 +91,7 @@ export const ProductList = () => {
 						<Card key={product.id}>
 							<CardContent className="flex items-center gap-4 p-4">
 								<img
-									src={product.image_url || "/placeholder.svg"}
+									src={product.image_url || " "}
 									alt={product.name}
 									className="w-20 h-20 object-cover rounded"
 								/>

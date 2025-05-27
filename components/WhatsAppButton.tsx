@@ -7,21 +7,25 @@ export const WhatsAppButton = () => {
 	const [scrollY, setScrollY] = useState(0);
 
 	useEffect(() => {
-		// Show button after a short delay so it doesn't appear immediately on page load
 		const timer = setTimeout(() => {
 			setIsVisible(true);
 		}, 1000);
 
-		// Add scroll event listener
 		const handleScroll = () => {
-			setScrollY(window.scrollY);
+			if (typeof window !== "undefined") {
+				setScrollY(window.scrollY);
+			}
 		};
 
-		window.addEventListener("scroll", handleScroll);
+		if (typeof window !== "undefined") {
+			window.addEventListener("scroll", handleScroll);
+		}
 
 		return () => {
 			clearTimeout(timer);
-			window.removeEventListener("scroll", handleScroll);
+			if (typeof window !== "undefined") {
+				window.removeEventListener("scroll", handleScroll);
+			}
 		};
 	}, []);
 
