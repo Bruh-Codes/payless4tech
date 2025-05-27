@@ -398,6 +398,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														<ul className="grid grid-cols-2 gap-4 mt-4">
 															<li className="relative border rounded-lg overflow-hidden shadow-sm group">
 																<Image
+																	priority
 																	alt={product.name}
 																	src={product.image_url}
 																	width={200}

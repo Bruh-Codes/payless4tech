@@ -60,6 +60,7 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 					<Image
 						src={product.image_url}
 						alt={product.name}
+						priority
 						width={300}
 						height={300}
 						className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" // Use object-cover

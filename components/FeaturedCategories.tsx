@@ -21,6 +21,7 @@ const CategoryCard = ({ title, icon, bgImage, link }: CategoryCardProps) => {
 			{bgImage && (
 				<div className="absolute inset-0 z-0">
 					<Image
+						priority
 						src={bgImage}
 						alt={title}
 						width={190}

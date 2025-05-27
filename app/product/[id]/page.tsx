@@ -1,26 +1,26 @@
 "use client";
 import { useEffect, useState, use } from "react";
-import { useSession } from "@supabase/auth-helpers-react";
+// import { useSession } from "@supabase/auth-helpers-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+// import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Trash2 } from "lucide-react";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+// import {
+// 	AlertDialog,
+// 	AlertDialogAction,
+// 	AlertDialogCancel,
+// 	AlertDialogContent,
+// 	AlertDialogDescription,
+// 	AlertDialogFooter,
+// 	AlertDialogHeader,
+// 	AlertDialogTitle,
+// 	AlertDialogTrigger,
+// } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -75,13 +75,13 @@ const conditionDefinitions = {
 const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const { id } = use(params);
 	const router = useRouter();
-	const session = useSession();
+	// const session = useSession();
 	const { addItem } = useCart();
 	const [product, setProduct] = useState<Product | null>(null);
 	const [selectedImage, setSelectedImage] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const [newImages, setNewImages] = useState<File[]>([]);
-	const [isEditing, setIsEditing] = useState(false);
+	// const [newImages, setNewImages] = useState<File[]>([]);
+	// const [isEditing, setIsEditing] = useState(false);
 
 	useEffect(() => {
 		fetchProduct();
@@ -125,11 +125,12 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 
 			if (imagesError) throw imagesError;
 
-			console.log("Product data:", productData);
-			console.log("Additional images:", imagesData);
+			// console.log("Product data:", productData);
+			// console.log("Additional images:", imagesData);
 
 			const fullProduct = { ...productData, images: imagesData || [] };
 			setProduct(fullProduct);
+			console.log(fullProduct);
 			setSelectedImage(fullProduct.image_url);
 
 			updateMetaTags(fullProduct);
@@ -143,72 +144,51 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		}
 	};
 
-	const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-		if (!session) {
-			toast.error("Error", {
-				description: "You must be logged in to upload images",
-			});
-			return;
-		}
+	// const handleSaveImages = async () => {
+	// 	if (!session || !product) return;
 
-		const files = Array.from(e.target.files || []);
-		const currentImageCount = (product?.images?.length || 0) + newImages.length;
+	// 	setIsLoading(true);
+	// 	try {
+	// 		for (const file of newImages) {
+	// 			const fileExt = file.name.split(".").pop();
+	// 			const fileName = `${Math.random()}.${fileExt}`;
 
-		if (currentImageCount + files.length > 5) {
-			toast.error("Error", {
-				description: "Maximum 5 images allowed per product",
-			});
-			return;
-		}
+	// 			const { error: uploadError, data } = await supabase.storage
+	// 				.from("product-images")
+	// 				.upload(fileName, file);
 
-		setNewImages([...newImages, ...files]);
-	};
+	// 			if (uploadError) throw uploadError;
 
-	const handleSaveImages = async () => {
-		if (!session || !product) return;
+	// 			const {
+	// 				data: { publicUrl },
+	// 			} = supabase.storage.from("product-images").getPublicUrl(fileName);
 
-		setIsLoading(true);
-		try {
-			for (const file of newImages) {
-				const fileExt = file.name.split(".").pop();
-				const fileName = `${Math.random()}.${fileExt}`;
+	// 			const { error: insertError } = await supabase
+	// 				.from("product_images")
+	// 				.insert({
+	// 					product_id: product.id,
+	// 					image_url: publicUrl,
+	// 					display_order: (product.images?.length || 0) + 1,
+	// 				});
 
-				const { error: uploadError, data } = await supabase.storage
-					.from("product-images")
-					.upload(fileName, file);
+	// 			if (insertError) throw insertError;
+	// 		}
 
-				if (uploadError) throw uploadError;
+	// 		toast("Success", {
+	// 			description: "Images uploaded successfully",
+	// 		});
 
-				const {
-					data: { publicUrl },
-				} = supabase.storage.from("product-images").getPublicUrl(fileName);
-
-				const { error: insertError } = await supabase
-					.from("product_images")
-					.insert({
-						product_id: product.id,
-						image_url: publicUrl,
-						display_order: (product.images?.length || 0) + 1,
-					});
-
-				if (insertError) throw insertError;
-			}
-
-			toast("Success", {
-				description: "Images uploaded successfully",
-			});
-
-			setNewImages([]);
-			fetchProduct();
-		} catch (error: any) {
-			console.error("Error uploading images:", error);
-			toast.error("Error", {
-				description: error.message || "Failed to upload images",
-			});
-		} finally {
-			setIsLoading(false);
-		}
-	};
+	// 		setNewImages([]);
+	// 		fetchProduct();
+	// 	} catch (error: any) {
+	// 		console.error("Error uploading images:", error);
+	// 		toast.error("Error", {
+	// 			description: error.message || "Failed to upload images",
+	// 		});
+	// 	} finally {
+	// 		setIsLoading(false);
+	// 	}
+	// };
 
 	const handleAddToCart = () => {
 		if (product) {
@@ -222,72 +202,72 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		}
 	};
 
-	const handleDelete = async () => {
-		if (!product || !session) return;
+	// const handleDelete = async () => {
+	// 	if (!product || !session) return;
 
-		try {
-			setIsLoading(true);
+	// 	try {
+	// 		setIsLoading(true);
 
-			// First, delete any related sale_items
-			const { error: saleItemsError } = await supabase
-				.from("sale_items")
-				.delete()
-				.eq("product_id", product.id);
+	// 		// First, delete any related sale_items
+	// 		const { error: saleItemsError } = await supabase
+	// 			.from("sale_items")
+	// 			.delete()
+	// 			.eq("product_id", product.id);
 
-			if (saleItemsError) throw saleItemsError;
+	// 		if (saleItemsError) throw saleItemsError;
 
-			// Then delete any related images from storage
-			if (product.image_url) {
-				const mainImagePath = product.image_url.split("/").pop();
-				if (mainImagePath) {
-					await supabase.storage.from("product-images").remove([mainImagePath]);
-				}
-			}
+	// 		// Then delete any related images from storage
+	// 		if (product.image_url) {
+	// 			const mainImagePath = product.image_url.split("/").pop();
+	// 			if (mainImagePath) {
+	// 				await supabase.storage.from("product-images").remove([mainImagePath]);
+	// 			}
+	// 		}
 
-			if (product.images && product.images.length > 0) {
-				const additionalImagePaths = product.images
-					.map((img) => img.image_url.split("/").pop())
-					.filter(Boolean);
+	// 		if (product.images && product.images.length > 0) {
+	// 			const additionalImagePaths = product.images
+	// 				.map((img) => img.image_url.split("/").pop())
+	// 				.filter(Boolean);
 
-				if (additionalImagePaths.length > 0) {
-					await supabase.storage
-						.from("product-images")
-						.remove(additionalImagePaths as string[]);
-				}
-			}
+	// 			if (additionalImagePaths.length > 0) {
+	// 				await supabase.storage
+	// 					.from("product-images")
+	// 					.remove(additionalImagePaths as string[]);
+	// 			}
+	// 		}
 
-			// Delete additional images records
-			if (product.images && product.images.length > 0) {
-				const { error: deleteImagesError } = await supabase
-					.from("product_images")
-					.delete()
-					.eq("product_id", product.id);
+	// 		// Delete additional images records
+	// 		if (product.images && product.images.length > 0) {
+	// 			const { error: deleteImagesError } = await supabase
+	// 				.from("product_images")
+	// 				.delete()
+	// 				.eq("product_id", product.id);
 
-				if (deleteImagesError) throw deleteImagesError;
-			}
+	// 			if (deleteImagesError) throw deleteImagesError;
+	// 		}
 
-			// Finally delete the product
-			const { error: deleteError } = await supabase
-				.from("products")
-				.delete()
-				.eq("id", product.id);
+	// 		// Finally delete the product
+	// 		const { error: deleteError } = await supabase
+	// 			.from("products")
+	// 			.delete()
+	// 			.eq("id", product.id);
 
-			if (deleteError) throw deleteError;
+	// 		if (deleteError) throw deleteError;
 
-			toast("Success", {
-				description: "Product deleted successfully",
-			});
+	// 		toast("Success", {
+	// 			description: "Product deleted successfully",
+	// 		});
 
-			router.push("/admin");
-		} catch (error: any) {
-			console.error("Error deleting product:", error);
-			toast.error("Error", {
-				description: error.message || "Failed to delete product",
-			});
-		} finally {
-			setIsLoading(false);
-		}
-	};
+	// 		router.push("/admin");
+	// 	} catch (error: any) {
+	// 		console.error("Error deleting product:", error);
+	// 		toast.error("Error", {
+	// 			description: error.message || "Failed to delete product",
+	// 		});
+	// 	} finally {
+	// 		setIsLoading(false);
+	// 	}
+	// };
 
 	if (isLoading) {
 		return <div>Loading...</div>;
@@ -297,51 +277,76 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		return <div>Product not found</div>;
 	}
 
-	if (isEditing) {
-		return (
-			<div className="min-h-screen">
-				<Header />
-				<main className="container mx-auto px-4 py-8">
-					<div className="flex justify-between items-center mb-4">
-						<Button variant="outline" onClick={() => setIsEditing(false)}>
-							Cancel Editing
-						</Button>
-						<AlertDialog>
-							<AlertDialogTrigger asChild>
-								<Button variant="destructive">
-									<Trash2 className="mr-2 h-4 w-4" />
-									Delete Product
-								</Button>
-							</AlertDialogTrigger>
-							<AlertDialogContent>
-								<AlertDialogHeader>
-									<AlertDialogTitle>Delete Product</AlertDialogTitle>
-									<AlertDialogDescription>
-										Are you sure you want to delete this product? This action
-										cannot be undone and will remove all associated images and
-										data.
-									</AlertDialogDescription>
-								</AlertDialogHeader>
-								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={handleDelete}
-										className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-									>
-										Delete
-									</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-					</div>
-				</main>
-			</div>
-		);
-	}
+	// if (isEditing) {
+	// 	return (
+	// 		<div className="min-h-screen">
+	// 			<Header />
+	// 			<main className="container mx-auto px-4 py-8">
+	// 				<div className="flex justify-between items-center mb-4">
+	// 					<Button variant="outline" onClick={() => setIsEditing(false)}>
+	// 						Cancel Editing
+	// 					</Button>
+	// 					<AlertDialog>
+	// 						<AlertDialogTrigger asChild>
+	// 							<Button variant="destructive">
+	// 								<Trash2 className="mr-2 h-4 w-4" />
+	// 								Delete Product
+	// 							</Button>
+	// 						</AlertDialogTrigger>
+	// 						<AlertDialogContent>
+	// 							<AlertDialogHeader>
+	// 								<AlertDialogTitle>Delete Product</AlertDialogTitle>
+	// 								<AlertDialogDescription>
+	// 									Are you sure you want to delete this product? This action
+	// 									cannot be undone and will remove all associated images and
+	// 									data.
+	// 								</AlertDialogDescription>
+	// 							</AlertDialogHeader>
+	// 							<AlertDialogFooter>
+	// 								<AlertDialogCancel>Cancel</AlertDialogCancel>
+	// 								<AlertDialogAction
+	// 									onClick={handleDelete}
+	// 									className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+	// 								>
+	// 									Delete
+	// 								</AlertDialogAction>
+	// 							</AlertDialogFooter>
+	// 						</AlertDialogContent>
+	// 					</AlertDialog>
+	// 				</div>
+	// 			</main>
+	// 		</div>
+	// 	);
+	// }
 
 	const conditionDisplay = product.condition?.trim() || "New";
 	const conditionInfo =
 		conditionDefinitions[conditionDisplay as keyof typeof conditionDefinitions];
+
+	function parseDetailedSpecs(
+		specText: string
+	): { title: string; items: string[] }[] {
+		const sections: { title: string; items: string[] }[] = [];
+		const lines = specText
+			.split("\n")
+			.map((line) => line.trim())
+			.filter(Boolean);
+
+		let currentSection: { title: string; items: string[] } | null = null;
+
+		for (const line of lines) {
+			// if it's a section title (e.g., ends with ":" or is capitalized and short)
+			if (/^[A-Z][\w\s&]+:$/.test(line)) {
+				if (currentSection) sections.push(currentSection);
+				currentSection = { title: line.replace(/:$/, ""), items: [] };
+			} else if (currentSection) {
+				currentSection.items.push(line);
+			}
+		}
+
+		if (currentSection) sections.push(currentSection);
+		return sections;
+	}
 
 	return (
 		<>
@@ -352,11 +357,11 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 						<Button variant="outline" onClick={() => router.back()}>
 							Back
 						</Button>
-						{session && (
+						{/* {session && (
 							<Button variant="secondary" onClick={() => setIsEditing(true)}>
 								Edit Product
 							</Button>
-						)}
+						)} */}
 					</div>
 
 					<Card className="p-6">
@@ -401,7 +406,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 									</div>
 								)}
 
-								{session && (
+								{/* {session && (
 									<div className="space-y-2">
 										<Input
 											type="file"
@@ -416,7 +421,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 											</Button>
 										)}
 									</div>
-								)}
+								)} */}
 							</div>
 
 							<div className="space-y-4">
@@ -454,27 +459,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 								</div>
 								<p className="text-gray-600">{product?.description}</p>
 
-								{product?.detailed_specs && (
-									<div className="mt-4">
-										<h2 className="text-xl font-semibold mb-2">
-											Detailed Specifications
-										</h2>
-										<ul className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-gray-600">
-											{product.detailed_specs
-												.slice(0, product.detailed_specs.length - 1)
-												.split("\n\n")
-												.map((spec, index) => (
-													<li
-														key={index}
-														className="whitespace-pre-wrap list-disc"
-													>
-														{spec}
-													</li>
-												))}
-										</ul>
-									</div>
-								)}
-
 								<div className="flex items-center gap-4">
 									<span className="text-2xl font-bold">
 										₵{product?.price.toLocaleString()}
@@ -493,6 +477,30 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 							</div>
 						</div>
 					</Card>
+					<div className="w-full">
+						{product?.detailed_specs && (
+							<div className="mt-4">
+								<h2 className="text-xl font-semibold mb-4">
+									Detailed Specifications
+								</h2>
+								<div className="space-y-6 text-gray-700">
+									{parseDetailedSpecs(product.detailed_specs).map(
+										(section, i) => (
+											<Card key={i}>
+												<CardContent className="p-4">
+													<ul className="list-disc grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 list-inside space-y-1 text-sm text-gray-700">
+														{section.items.map((item, idx) => (
+															<li key={idx}>{item}</li>
+														))}
+													</ul>
+												</CardContent>
+											</Card>
+										)
+									)}
+								</div>
+							</div>
+						)}
+					</div>
 				</main>
 			</div>
 			<Footer /> <WhatsAppButton />

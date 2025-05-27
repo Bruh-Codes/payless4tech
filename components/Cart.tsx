@@ -119,7 +119,9 @@ export const Cart = () => {
 												className="h-16 w-16 rounded-md object-cover"
 											/>
 											<div>
-												<h3 className="font-medium">{item.name}</h3>
+												<h3 className="font-medium truncate max-w-[200px]">
+													{item.name}
+												</h3>
 												<p className="text-sm text-muted-foreground">
 													₵{item.price.toLocaleString()}
 												</p>
