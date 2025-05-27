@@ -120,6 +120,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 		total: 0,
 		extendedWarranty: false,
 	});
+	const [paystack, setPaystack] = React.useState<PaystackPop | null>(null);
 
 	const addItem = (item: CartItem) => {
 		dispatch({ type: "ADD_ITEM", payload: item });
@@ -145,6 +146,16 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 		dispatch({ type: "CLEAR_CART" });
 	};
 
+	React.useEffect(() => {
+		const loadPaystack = async () => {
+			const PaystackPop = (await import("@paystack/inline-js")).default;
+			setPaystack(new PaystackPop());
+		};
+
+		if (typeof window !== "undefined") {
+			loadPaystack();
+		}
+	}, []);
 	const checkout = async (details: CheckoutDetails) => {
 		try {
 			// Calculate total with warranty if selected
@@ -157,22 +168,12 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 				.insert({
 					total_amount: totalWithWarranty,
 					status: "pending",
-					phone_number: "0594571065",
-					alternative_phone: "00000000000",
-					delivery_address: "AW/W1D",
-					gps_location: "8.9822, -1.0840",
-					email: "kamasahdickson19@gmail.com",
-					extended_warranty: false,
-					// total_amount: totalWithWarranty,
-					// status: "pending",
-					// phone_number: details.phoneNumber,
-					// alternative_phone:
-					// 	details.alternativePhone !== "" ? details.alternativePhone : null,
-
-					// delivery_address: details.deliveryAddress,
-					// gps_location: details.gpsLocation,
-					// email: details.email,
-					// extended_warranty: details.extendedWarranty,
+					phone_number: details.phoneNumber,
+					delivery_address: details.deliveryAddress,
+					gps_location: details.gpsLocation,
+					email: details.email,
+					extended_warranty: details.extendedWarranty,
+					alternative_phone: details?.alternativePhone,
 				})
 				.select()
 				.single();
@@ -228,8 +229,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 				const data = await response.json();
 
 				if (response.ok && data?.url.access_code) {
-					const popup = new PaystackPop();
-					popup.newTransaction({
+					paystack?.newTransaction({
 						key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
 						email: details.email,
 						amount: totalAmount,

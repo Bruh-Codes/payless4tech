@@ -13,7 +13,7 @@ export const WhatsAppButton = () => {
 
 		const handleScroll = () => {
 			if (typeof window !== "undefined") {
-				setScrollY(window.scrollY);
+				setScrollY(window?.scrollY);
 			}
 		};
 
