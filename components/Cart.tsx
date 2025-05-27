@@ -110,7 +110,7 @@ export const Cart = () => {
 								{state.items.map((item) => (
 									<div
 										key={item.id}
-										className="flex items-center justify-between space-x-4 bg-white/50 p-4 rounded-lg shadow-sm"
+										className="flex items-center flex-col sm:flex-row justify-between space-x-4 bg-white/50 p-4 rounded-lg shadow-sm"
 									>
 										<div className="flex items-center space-x-4">
 											<img
