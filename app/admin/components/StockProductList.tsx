@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 import {
@@ -16,50 +16,90 @@ import { Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
 import ProductCard, { Product } from "./ProductCard";
 import { AddProductsSheet } from "./AddProductsSheet";
+import { useDebounce } from "use-debounce";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ProductListProps {
 	products: Product[];
-	onRefresh: () => void;
 }
 
-const StockProductList: React.FC<ProductListProps> = ({
-	products,
-	onRefresh,
-}) => {
+const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [categoryFilter, setCategoryFilter] = useState("");
 	const [statusFilter, setStatusFilter] = useState("");
-	const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+	const [showCount, setShowCount] = useState(20);
+	const queryClient = useQueryClient();
+	const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // 300ms debounce
 
-	const filteredProducts = products.filter((product) => {
-		const matchesSearch =
-			product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			product?.description?.toLowerCase().includes(searchTerm.toLowerCase());
-		const matchesCategory =
-			categoryFilter === "" ||
-			categoryFilter === "all" ||
-			product.category === categoryFilter;
+	const filteredProducts = useMemo(() => {
+		return products.filter((product) => {
+			const matchesSearch =
+				product?.name
+					?.toLowerCase()
+					.includes(debouncedSearchTerm.toLowerCase()) ||
+				product?.description
+					?.toLowerCase()
+					.includes(debouncedSearchTerm.toLowerCase());
+			const matchesCategory =
+				categoryFilter === "" ||
+				categoryFilter === "all" ||
+				product.category === categoryFilter;
 
-		const matchesStatus =
-			statusFilter === "" ||
-			statusFilter === "all" ||
-			product.status === statusFilter;
+			const matchesStatus =
+				statusFilter === "" ||
+				statusFilter === "all" ||
+				product.status === statusFilter;
 
-		return matchesSearch && matchesCategory && matchesStatus;
-	});
+			return matchesSearch && matchesCategory && matchesStatus;
+		});
+	}, [products, debouncedSearchTerm, categoryFilter, statusFilter]);
 
 	const handleEdit = (product: Product) => {
 		setSelectedProduct(product);
-		setIsAddDialogOpen(true);
 	};
 
 	const handleDelete = async (id: string) => {
 		try {
+			// First, get the product by id to retrieve its image URL
+			const { data: productData, error: fetchError } = await supabase
+				.from("products")
+				.select("*")
+				.eq("id", id)
+				.single();
+
+			if (fetchError) {
+				toast.error("Failed to fetch product for deletion");
+				return;
+			}
+
+			const imageUrl = productData?.image_url || "";
+			if (imageUrl) {
+				const path = imageUrl.split(
+					"/storage/v1/object/public/product-images/"
+				)[1];
+				if (path) {
+					const { error: imageError } = await supabase.storage
+						.from("product-images")
+						.remove([path.replace("product-images/", "")]);
+					if (imageError) {
+						toast.error("Failed to delete product image");
+						return;
+					}
+				}
+			}
+
+			const { error } = await supabase.from("products").delete().eq("id", id);
+
+			if (error) {
+				toast.error("Failed to delete product");
+				return;
+			}
+			queryClient.invalidateQueries({
+				queryKey: ["products"],
+			});
 			toast.success("Product deleted successfully");
-			// In a real implementation, you would call the Supabase delete API here
-			// await supabaseClient.from('products').delete().eq('id', id);
-			onRefresh();
 		} catch (error) {
 			toast.error("Failed to delete product");
 			console.error("Error deleting product:", error);
@@ -68,29 +108,22 @@ const StockProductList: React.FC<ProductListProps> = ({
 
 	const handleStatusChange = async (id: string, status: string) => {
 		try {
+			const { error } = await supabase
+				.from("products")
+				.update({ status })
+				.eq("id", id);
+			if (error) {
+				toast.error("Error updating product status");
+				return;
+			}
 			toast.success(`Product marked as ${status}`);
-			// In a real implementation, you would call the Supabase update API here
-			// await supabaseClient.from('products').update({ status }).eq('id', id);
-			onRefresh();
+			queryClient.invalidateQueries({
+				queryKey: ["products"],
+			});
 		} catch (error) {
 			toast.error("Failed to update product status");
 			console.error("Error updating product status:", error);
 		}
-	};
-
-	const handleFormClose = () => {
-		setIsAddDialogOpen(false);
-		setSelectedProduct(null);
-	};
-
-	const handleFormSubmit = () => {
-		toast.success(
-			selectedProduct
-				? "Product updated successfully"
-				: "Product added successfully"
-		);
-		onRefresh();
-		handleFormClose();
 	};
 
 	const clearFilters = () => {
@@ -187,17 +220,35 @@ const StockProductList: React.FC<ProductListProps> = ({
 					</p>
 				</div>
 			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-					{filteredProducts.map((product) => (
-						<ProductCard
-							key={product.id}
-							product={product}
-							onEdit={handleEdit}
-							onDelete={handleDelete}
-							onStatusChange={handleStatusChange}
-						/>
-					))}
-				</div>
+				<>
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+						{filteredProducts.slice(0, showCount).map((product) => (
+							<ProductCard
+								key={product.id}
+								product={product}
+								onEdit={handleEdit}
+								onDelete={handleDelete}
+								onStatusChange={handleStatusChange}
+							/>
+						))}
+					</div>
+					{showCount < filteredProducts.length ? (
+						<div className="flex justify-center mt-6">
+							<Button
+								variant="outline"
+								onClick={() => setShowCount((prev) => prev + 20)}
+							>
+								Show More
+							</Button>
+						</div>
+					) : (
+						filteredProducts.length > 20 && (
+							<div className="text-center py-4 text-muted-foreground">
+								No more products to show.
+							</div>
+						)
+					)}
+				</>
 			)}
 		</div>
 	);

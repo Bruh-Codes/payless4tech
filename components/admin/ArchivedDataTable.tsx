@@ -35,7 +35,6 @@ import {
 	DropdownMenuCheckboxItem,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
@@ -59,7 +58,17 @@ import { cn } from "@/lib/utils";
 import PreorderTable from "./PreorderTable";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import {
+	Dialog,
+	DialogContent,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+	DialogClose,
+} from "@/components/ui/dialog";
+import ArchivedPreorders, { preorderSchema } from "./ArchivedPreorders";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const schema = z.object({
 	id: z.number(),
@@ -83,36 +92,11 @@ export const schema = z.object({
 	),
 });
 
-const handleMarkAsDelivered = async (
-	id: number,
-	data: any[],
-	setData: Function
-) => {
-	const { error } = await supabase
-		.from("sales")
-		.update({ fulfillment_status: "delivered" })
-		.eq("id", id.toString());
-
-	if (error) {
-		console.error("Error updating order status:", error);
-		toast.error("Error", { description: "Failed to update order status" });
-	} else {
-		// Update local state
-		const updated = data.map((row) =>
-			row.id === id ? { ...row, fulfillment_status: "delivered" } : row
-		);
-		setData(updated);
-
-		toast.success("Success", {
-			description: "Order status updated successfully",
-		});
-	}
-};
-
 const columns = (
-	data: z.infer<typeof schema>[],
-	setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
-	handleDelete: (id: number) => void
+	// data: z.infer<typeof schema>[],
+	// setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
+	handleDeletePermanent: (id: number) => void,
+	handleRestoreArchived: (id: number) => void
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
 		accessorKey: "status",
@@ -281,15 +265,12 @@ const columns = (
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem
-						disabled={row?.original.fulfillment_status !== "pending"}
-						onClick={() =>
-							handleMarkAsDelivered(row.original.id, data, setData)
-						}
+						onClick={() => handleRestoreArchived(row.original.id)}
 					>
-						Mark Delivered
+						Restore
 					</DropdownMenuItem>
 					<DropdownMenuItem
-						onClick={() => handleDelete(row.original.id)}
+						onClick={() => handleDeletePermanent(row.original.id)}
 						variant="destructive"
 					>
 						Delete
@@ -302,8 +283,15 @@ const columns = (
 
 export default columns;
 
-export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
+export function ArchivedDataTable({
+	data,
+}: {
+	data: z.infer<typeof schema>[];
+}) {
+	const queryClient = useQueryClient();
 	const [rowSelection, setRowSelection] = React.useState({});
+	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+	const [isDeleting, setIsDeleting] = React.useState(false);
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -315,58 +303,86 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 		data || []
 	);
 
+	React.useEffect(() => {
+		setSalesData(data || []);
+	}, [data]);
+
+	const { data: preorders, error } = useQuery({
+		queryKey: ["archived_preorders"],
+		queryFn: async () => {
+			const response = await supabase.from("archived_preorders").select("*");
+			return response;
+		},
+	});
+
+	if (error) {
+		toast.error(error.message);
+	}
+
 	const [pagination, setPagination] = React.useState({
 		pageIndex: 0,
 		pageSize: 10,
 	});
 
-	const handleDelete = async (id: number) => {
-		// Fetch the sale to archive
-		const { data: saleData, error: fetchError } = await supabase
-			.from("sales")
-			.select("*")
-			.eq("id", id.toString())
-			.single();
-
-		if (fetchError || !saleData) {
-			console.error("Error fetching sale:", fetchError);
-			toast.error("Error", {
-				description: "Failed to fetch sale for archiving",
-			});
-			return;
-		}
-
-		// Insert into archived_sales
-		const { error: archiveError } = await supabase
+	const handleDeletePermanent = async (id: number) => {
+		const { error } = await supabase
 			.from("archived_sales")
-			.insert([saleData]);
-
-		if (archiveError) {
-			console.error("Error archiving sale:", archiveError);
-			toast.error("Error", { description: "Failed to archive sale" });
-			return;
-		}
-
-		// Delete from sales
-		const { error: deleteError } = await supabase
-			.from("sales")
 			.delete()
 			.eq("id", id.toString());
+		if (error) {
+			toast.error(error.message);
+			return;
+		}
+		toast.success("Record deleted successfully.");
+		setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
+	};
 
-		if (deleteError) {
-			console.error("Error deleting sale:", deleteError);
-			toast.error("Error", { description: "Failed to delete sale" });
+	const handleRestoreArchived = async (id: number) => {
+		// Fetch the record from archived_sales
+		const { data: archivedRecord, error: fetchError } = await supabase
+			.from("archived_sales")
+			.select("*")
+			.eq("id", id)
+			.single();
+
+		if (fetchError || !archivedRecord) {
+			toast.error(fetchError?.message || "Failed to fetch archived record.");
 			return;
 		}
 
-		// Update local state
-		toast.success("Success", { description: "Order archived successfully" });
-		setSalesData((prev) => prev.filter((row) => row.id !== id));
+		// Insert the record into sales
+		const { error: insertError } = await supabase
+			.from("sales")
+			.insert([{ ...archivedRecord }]);
+
+		if (insertError) {
+			toast.error(insertError.message);
+			return;
+		}
+
+		// Delete the record from archived_sales
+		const { error: deleteError } = await supabase
+			.from("archived_sales")
+			.delete()
+			.eq("id", id);
+
+		if (deleteError) {
+			toast.error(deleteError.message);
+			return;
+		}
+
+		setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
+		toast.success("Record successfully restored.");
 	};
 
 	const table = useReactTable({
 		data: salesData,
-		columns: columns(salesData, setSalesData, handleDelete),
+		columns: columns(
+			// salesData,
+			// setSalesData,
+			handleDeletePermanent,
+			handleRestoreArchived
+		),
 		state: {
 			sorting,
 			columnVisibility,
@@ -389,6 +405,25 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	});
 
+	const handleDeleteAll = async () => {
+		setIsDeleting(true);
+		try {
+			if (activeTab === "outline") {
+				// Delete all archived orders
+				await supabase.from("archived_sales").delete().neq("id", 0);
+				setSalesData([]);
+			} else if (activeTab === "preorders") {
+				await supabase.from("archived_preorders").delete().neq("id", 0);
+				queryClient.invalidateQueries({ queryKey: ["archived_preorders"] });
+			}
+			toast.success("All records deleted.");
+		} catch (err) {
+			toast.error("Failed to delete all records.");
+		}
+		setIsDeleting(false);
+		setShowDeleteDialog(false);
+	};
+
 	return (
 		<Tabs
 			value={activeTab}
@@ -409,13 +444,13 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 						<SelectValue placeholder="Select a view" />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="outline">Active Orders</SelectItem>
-						<SelectItem value="preorders">Preorders</SelectItem>
+						<SelectItem value="outline">Archived Orders</SelectItem>
+						<SelectItem value="preorders">Archived Preorders</SelectItem>
 					</SelectContent>
 				</Select>
 				<TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-					<TabsTrigger value="outline">Active Orders</TabsTrigger>
-					<TabsTrigger value="preorders">Preorders</TabsTrigger>
+					<TabsTrigger value="outline">Archived Orders</TabsTrigger>
+					<TabsTrigger value="preorders">Archived Preorders</TabsTrigger>
 				</TabsList>
 				{activeTab === "outline" && (
 					<div className="flex items-center gap-2">
@@ -452,7 +487,23 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 									})}
 							</DropdownMenuContent>
 						</DropdownMenu>
+						<Button
+							variant="destructive"
+							size="sm"
+							onClick={() => setShowDeleteDialog(true)}
+						>
+							Delete All
+						</Button>
 					</div>
+				)}
+				{activeTab === "preorders" && (
+					<Button
+						variant="destructive"
+						size="sm"
+						onClick={() => setShowDeleteDialog(true)}
+					>
+						Delete All
+					</Button>
 				)}
 			</div>
 			<TabsContent
@@ -520,10 +571,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 											})
 										) : (
 											<TableRow>
-												<TableCell
-													colSpan={columns?.length}
-													className="h-24 text-center"
-												>
+												<TableCell colSpan={20} className="h-24 text-center">
 													No results.
 												</TableCell>
 											</TableRow>
@@ -625,8 +673,44 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 				value="preorders"
 				className="relative flex flex-col gap-4 overflow-auto"
 			>
-				<PreorderTable />
+				<ArchivedPreorders
+					preorders={preorders?.data as z.infer<typeof preorderSchema>[]}
+				/>
 			</TabsContent>
+			<Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>
+							Delete All{" "}
+							{activeTab === "outline"
+								? "Archived Orders"
+								: "Archived Preorders"}
+							?
+						</DialogTitle>
+						<DialogDescription>
+							This action cannot be undone. Are you sure you want to delete all{" "}
+							{activeTab === "outline"
+								? "archived orders"
+								: "archived preorders"}
+							?
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<DialogClose asChild>
+							<Button variant="outline" disabled={isDeleting}>
+								Cancel
+							</Button>
+						</DialogClose>
+						<Button
+							variant="destructive"
+							onClick={handleDeleteAll}
+							disabled={isDeleting}
+						>
+							{isDeleting ? "Deleting..." : "Delete All"}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</Tabs>
 	);
 }

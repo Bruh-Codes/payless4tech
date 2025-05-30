@@ -39,15 +39,17 @@ export const TrustSection = () => {
 								key={index}
 								className="flex flex-col items-center text-center p-6 transition-all duration-300 hover:bg-gray-50 rounded-lg"
 							>
-								<div className="text-primary bg-primary/10 p-3 rounded-full mb-4 transition-all duration-300 hover:scale-110">
+								<div className="text-primary bg-primary/10 dark:text-black dark:bg-black/10 p-3 rounded-full mb-4 transition-all duration-300 hover:scale-110">
 									{badge.icon}
 								</div>
-								<h3 className="font-bold text-lg mb-2">{badge.title}</h3>
+								<h3 className="font-bold text-lg mb-2 dark:text-black">
+									{badge.title}
+								</h3>
 								<p className="text-sm text-gray-600">{badge.description}</p>
 								{badge.link && (
 									<Link
 										href={badge.link}
-										className="mt-3 text-primary text-sm hover:underline font-medium"
+										className="mt-3 text-primary text-sm hover:underline font-medium dark:text-blue-800"
 									>
 										Learn more
 									</Link>
@@ -58,7 +60,7 @@ export const TrustSection = () => {
 
 					{/* Payment Methods */}
 					<div className="flex flex-col items-center mt-8">
-						<h3 className="text-xl font-medium mb-6">
+						<h3 className="text-xl font-medium mb-6 dark:text-black">
 							Accepted Payment Methods
 						</h3>
 						<div className="flex flex-wrap justify-center gap-5">
@@ -88,7 +90,9 @@ export const TrustSection = () => {
 							>
 								<div className="flex items-center gap-1">
 									<div className="bg-yellow-400 rounded-full w-5 h-5"></div>
-									<span className="font-medium">MTN Mobile Money</span>
+									<span className="font-medium dark:text-black">
+										MTN Mobile Money
+									</span>
 								</div>
 							</Badge>
 							<Badge

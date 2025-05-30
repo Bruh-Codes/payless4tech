@@ -1,23 +1,25 @@
-import { ReactNode } from "react";
-import DashboardHeader from "./components/DashboardHeader";
+import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import DashboardSidebar from "./components/DashboardSidebar";
+import { ReactNode } from "react";
+import AdminAuth from "./AdminAuth";
+import QueryProvider from "@/components/admin/QueryProvider";
 
 const layout = ({ children }: { children: ReactNode }) => {
 	return (
-		<SidebarProvider>
-			<DashboardSidebar />
-			<SidebarInset>
-				<div className="flex flex-1 flex-col">
-					<DashboardHeader />
-
-					<main className=" flex flex-1 overflow-y-auto p-4 md:p-6">
-						{children}
-					</main>
-				</div>
-			</SidebarInset>
-		</SidebarProvider>
+		<AdminAuth>
+			<QueryProvider>
+				<SidebarProvider>
+					<AppSidebar variant="inset" />
+					<SidebarInset>
+						<div className="flex flex-1 flex-col">
+							<div className="@container/main flex flex-1 flex-col p-5">
+								{children}
+							</div>
+						</div>
+					</SidebarInset>
+				</SidebarProvider>
+			</QueryProvider>
+		</AdminAuth>
 	);
 };
-
 export default layout;

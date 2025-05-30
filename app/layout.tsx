@@ -5,6 +5,8 @@ import { CartProvider } from "@/contexts/CartContext";
 import { Toaster } from "@/components/ui/sonner";
 import { SupabaseSessionInitializer } from "@/contexts/SupabaseSessionInitializer";
 import NextTopLoader from "nextjs-toploader";
+import { ThemeProvider } from "@/components/admin/theme-provider";
+import ThemeHander from "@/components/ThemeHandler";
 
 const roboto = Roboto({
 	variable: "--font-roboto",
@@ -22,24 +24,32 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang="en">
-			<body className={`${roboto.variable} antialiased`}>
-				<NextTopLoader
-					color="#FF8904"
-					initialPosition={0.04}
-					crawlSpeed={300}
-					height={2}
-					crawl={true}
-					easing="ease"
-					speed={350}
-					shadow="0 0 10px #FF8904,0 0 5px #FF8904"
-					zIndex={9999}
-				/>
-				<CartProvider>
-					<SupabaseSessionInitializer>{children}</SupabaseSessionInitializer>
-				</CartProvider>
-				<Toaster richColors />
-			</body>
+		<html lang="en" suppressHydrationWarning>
+			<ThemeProvider
+				attribute="class"
+				defaultTheme="light"
+				enableSystem
+				disableTransitionOnChange
+			>
+				<body className={`${roboto.variable} antialiased`}>
+					<NextTopLoader
+						color="#FF8904"
+						initialPosition={0.04}
+						crawlSpeed={300}
+						height={2}
+						crawl={true}
+						easing="ease"
+						speed={350}
+						shadow="0 0 10px #FF8904,0 0 5px #FF8904"
+						zIndex={9999}
+					/>
+					<ThemeHander />
+					<CartProvider>
+						<SupabaseSessionInitializer>{children}</SupabaseSessionInitializer>
+					</CartProvider>
+					<Toaster richColors />
+				</body>
+			</ThemeProvider>
 		</html>
 	);
 }

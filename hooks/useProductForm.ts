@@ -3,17 +3,21 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
-interface ProductFormData {
+export interface ProductFormData {
+	id: string;
 	name: string;
 	description: string;
 	price: string;
 	condition: string;
-	originalPrice: string;
+	original_price: string;
 	category: string;
 	image: File | null;
 	additionalImages: File[];
-	detailedSpecs: string;
+	detailed_specs: string;
+	status?: string;
+	stock?: string;
 }
 
 interface UseProductFormProps {
@@ -34,7 +38,10 @@ export const useProductForm = ({
 	const [existingAdditionalImages, setExistingAdditionalImages] = useState<
 		{ id: string; image_url: string }[]
 	>([]);
+	const queryClient = useQueryClient();
+
 	const [newProduct, setNewProduct] = useState<ProductFormData>({
+		id: "",
 		name: "",
 		description: "",
 		price: "",
@@ -42,8 +49,8 @@ export const useProductForm = ({
 		category: "",
 		image: null,
 		additionalImages: [],
-		originalPrice: "",
-		detailedSpecs: "",
+		original_price: "",
+		detailed_specs: "",
 	});
 
 	useEffect(() => {
@@ -105,6 +112,7 @@ export const useProductForm = ({
 				setExistingImageUrl(product.image_url);
 				setExistingAdditionalImages(additionalImages || []);
 				setNewProduct({
+					id: product.id || "",
 					name: product.name || "",
 					description: product.description || "",
 					price: product.price.toString(),
@@ -112,10 +120,11 @@ export const useProductForm = ({
 					category: product.category || "",
 					image: null,
 					additionalImages: [],
-					originalPrice: product.original_price
+					original_price: product.original_price
 						? product.original_price.toString()
 						: "",
-					detailedSpecs: product.detailed_specs || "",
+					detailed_specs: product.detailed_specs || "",
+					stock: product.stock || "",
 				});
 			}
 		} catch (error: any) {
@@ -225,7 +234,10 @@ export const useProductForm = ({
 		return publicUrl;
 	};
 
-	const handleSubmit = async (e: React.FormEvent) => {
+	const handleSubmit = async (
+		e: React.FormEvent,
+		formData?: ProductFormData
+	) => {
 		e.preventDefault();
 
 		if (!session) {
@@ -238,8 +250,14 @@ export const useProductForm = ({
 		setIsLoading(true);
 
 		try {
+			const dataToUse = formData || newProduct;
+
 			let mainImageUrl = existingImageUrl;
 			let additionalImageUrls: string[] = [];
+
+			if (dataToUse.image) {
+				mainImageUrl = await uploadImage(dataToUse.image);
+			}
 
 			if (newProduct.image) {
 				mainImageUrl = await uploadImage(newProduct.image);
@@ -252,15 +270,18 @@ export const useProductForm = ({
 			}
 
 			const productData = {
-				name: newProduct.name,
-				description: newProduct.description,
-				price: parseFloat(newProduct.price),
-				condition: newProduct.condition,
-				category: newProduct.category,
-				original_price: newProduct.originalPrice
-					? parseFloat(newProduct.originalPrice)
+				id: dataToUse.id,
+				name: dataToUse.name,
+				description: dataToUse.description,
+				price: parseFloat(dataToUse.price),
+				condition: dataToUse.condition,
+				category: dataToUse.category,
+				original_price: dataToUse.original_price
+					? parseFloat(dataToUse.original_price)
 					: null,
-				detailed_specs: newProduct.detailedSpecs || null,
+				detailed_specs: dataToUse.detailed_specs || null,
+				status: dataToUse.status,
+				stock: dataToUse.stock || 0,
 				...(mainImageUrl && { image_url: mainImageUrl }),
 			};
 
@@ -312,7 +333,7 @@ export const useProductForm = ({
 
 			if (error) throw error;
 
-			toast("Success", {
+			toast.success("Success", {
 				description: isEditing
 					? "Product updated successfully"
 					: "Product added successfully",
@@ -322,21 +343,21 @@ export const useProductForm = ({
 				onProductAdded();
 			}
 
-			if (isEditing) {
-				router.push(`/product/${productId}`);
-			} else {
-				setNewProduct({
-					name: "",
-					description: "",
-					price: "",
-					condition: "",
-					category: "",
-					image: null,
-					additionalImages: [],
-					originalPrice: "",
-					detailedSpecs: "",
-				});
-			}
+			setNewProduct({
+				id: "",
+				name: "",
+				description: "",
+				price: "",
+				condition: "",
+				category: "",
+				image: null,
+				additionalImages: [],
+				original_price: "",
+				detailed_specs: "",
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["products"],
+			});
 		} catch (error: any) {
 			console.error("Error details:", error);
 			toast.error("Error", {

@@ -47,21 +47,23 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
+
 export interface Product {
 	id: string;
 	name: string;
 	description: string;
 	price: string;
 	image_url: string;
-	category: string;
+	category: "consumer-electronics" | "laptops" | "phones";
 	status: "available" | "unavailable" | "new" | "low-stock";
-	stock: string;
+	stock?: string;
 	condition?: string;
-	originalPrice?: string;
+	original_price?: string;
 	image?: File | null;
 	additionalImages?: File[];
-	detailedSpecs?: string;
+	detailed_specs?: string;
 }
+
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -69,6 +71,7 @@ import { formSchema } from "./AddProductsSheet";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { ProductFormData, useProductForm } from "@/hooks/useProductForm";
 
 interface ProductCardProps {
 	product: Product;
@@ -83,15 +86,50 @@ const ProductCard: React.FC<ProductCardProps> = ({
 	onDelete,
 	onStatusChange,
 }) => {
+	const [toggleSheet, setToggleSheet] = useState(false);
+	const [disableUpdate, setDisableUpdate] = useState(true);
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+	const [extraImages, setExtraImages] = useState<File[]>([]);
+	const [hasImageChanges, setHasImageChanges] = useState(false);
+
+	// Use the hook for product creation
+	const {
+		isLoading,
+		handleFormChange,
+		handleSubmit: hookHandleSubmit,
+	} = useProductForm({
+		isEditing: true,
+		productId: product.id,
+		onProductAdded: () => {
+			setToggleSheet(false);
+			setSelectedFiles([]);
+			setHasImageChanges(false);
+			form.reset();
+		},
+	});
+
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			...product,
+			price: String(product.price ?? ""),
+			stock: String(product.stock ?? ""),
+			original_price: String(product.original_price ?? ""),
 		},
 	});
 
-	const [toggleSheet, setToggleSheet] = useState(false);
-	const [disableUpdate, setDisableUpdate] = useState(true);
+	// Reset form when product changes
+	useEffect(() => {
+		form.reset({
+			...product,
+			price: String(product.price ?? ""),
+			stock: String(product.stock ?? ""),
+			original_price: String(product.original_price ?? ""),
+		});
+		setSelectedFiles([]);
+		setHasImageChanges(false);
+	}, [product]);
 
 	const renderStatusBadge = (status: string) => {
 		switch (status) {
@@ -124,9 +162,41 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		}
 	};
 
-	const onSubmit = (values: z.infer<typeof formSchema>) => {
-		console.log(values);
-		// setToggleSheet(false); // Close the sheet after submit
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
+		const result = formSchema.safeParse(values);
+		if (!result.success) {
+			toast.error("Validation errors. Check the console");
+			console.log("Validation errors:", result.error.flatten());
+			return;
+		}
+
+		const formDataForHook: ProductFormData = {
+			id: values.id as string,
+			name: values.name,
+			description: values.description,
+			price: values.price,
+			original_price: values.original_price || "",
+			category: values.category,
+			condition: values.condition,
+			detailed_specs: values.detailed_specs || "",
+			stock: values.stock || "",
+			status: values.status || "",
+			// Only include image data if there are new images selected
+			image: selectedFiles.length > 0 ? selectedFiles[0] : null,
+			additionalImages: selectedFiles.length > 1 ? selectedFiles.slice(1) : [],
+		};
+
+		// Set each field individually using handleFormChange
+		Object.entries(formDataForHook).forEach(([key, value]) => {
+			handleFormChange(key as keyof typeof formDataForHook, value);
+		});
+
+		// Create a synthetic form event and submit using the hook
+		const syntheticEvent = {
+			preventDefault: () => {},
+		} as React.FormEvent;
+
+		await hookHandleSubmit(syntheticEvent, formDataForHook);
 	};
 
 	useEffect(() => {
@@ -142,11 +212,52 @@ const ProductCard: React.FC<ProductCardProps> = ({
 				return normalize(originalValue) !== normalize(currentValue);
 			});
 
-			setDisableUpdate(!isDifferent);
+			// Check if there are changes in form data OR new images selected
+			setDisableUpdate(!(isDifferent || hasImageChanges));
 		});
 
 		return () => subscription.unsubscribe();
-	}, [form, product]);
+	}, [form, product, hasImageChanges]);
+
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = e.target.files;
+		if (!files) return;
+
+		const fileArray = Array.from(files);
+		const totalFiles = selectedFiles.length + fileArray.length;
+
+		if (totalFiles > 1) {
+			toast.error("You can only upload 1 image for product");
+			return;
+		}
+
+		const newFiles = [...selectedFiles, ...fileArray];
+		setSelectedFiles(newFiles);
+		setHasImageChanges(true);
+
+		// Update form with new image URL for preview
+		if (newFiles.length > 0) {
+			form.setValue("image_url", URL.createObjectURL(newFiles[0]));
+			form.setValue("additionalImages", newFiles.slice(1));
+			setExtraImages(newFiles.slice(1));
+		}
+	};
+
+	const removeFile = (indexToRemove: number) => {
+		const updatedFiles = selectedFiles.filter((_, i) => i !== indexToRemove);
+		setSelectedFiles(updatedFiles);
+
+		if (updatedFiles.length === 0) {
+			// Reset to original image if no files selected
+			form.setValue("image_url", product.image_url);
+			setHasImageChanges(false);
+		} else {
+			// Update with new main image
+			form.setValue("image_url", URL.createObjectURL(updatedFiles[0]));
+			form.setValue("additionalImages", updatedFiles.slice(1));
+			setExtraImages(updatedFiles.slice(1));
+		}
+	};
 
 	return (
 		<Card className="overflow-hidden h-full flex flex-col">
@@ -170,6 +281,20 @@ const ProductCard: React.FC<ProductCardProps> = ({
 			</div>
 
 			<CardContent className="flex flex-col flex-1 p-4">
+				{product?.condition !== "New" && product?.condition !== "none" && (
+					<p
+						className={cn("font-normal text-xs truncate w-fit", {
+							"text-yellow-700 bg-yellow-100 px-2 py-1 rounded":
+								product.condition === "Open Box",
+							"text-blue-700 bg-blue-100 px-2 py-1 rounded":
+								product.condition === "Renewed",
+							"text-gray-700 bg-gray-100 px-2 py-1 rounded":
+								product.condition === "Used",
+						})}
+					>
+						{product.condition}
+					</p>
+				)}
 				<div className="flex items-center justify-between mb-2">
 					<h3 className="font-semibold text-lg truncate">{product.name}</h3>
 					<DropdownMenu>
@@ -214,12 +339,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
 				</p>
 
 				<div className="mt-auto">
+					{product.original_price && (
+						<span className="text-xs line-through text-red-600 font-bold">
+							Ghc{" "}
+							{Number(product.original_price).toLocaleString(undefined, {
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2,
+							})}
+						</span>
+					)}
 					<div className="flex justify-between items-center">
 						<span className="text-lg font-bold">
-							${parseFloat(product.price).toFixed(2)}
+							Ghc
+							{Number(product.price).toLocaleString(undefined, {
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2,
+							})}
 						</span>
-						<span className="text-md text-amber-800 font-semibold">
-							Stock: {product.stock}
+						<span className="text-sm text-amber-400 font-semibold">
+							Stock: {product.stock ?? 0}
 						</span>
 					</div>
 					<div className="text-xs text-muted-foreground mt-1 capitalize">
@@ -255,7 +393,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 											<FormItem>
 												<FormLabel>Product Name</FormLabel>
 												<FormControl>
-													<Input placeholder="Product name" {...field} />
+													<Input
+														placeholder="Product name"
+														{...field}
+														onChange={(e) => field.onChange(e.target.value)}
+													/>
 												</FormControl>
 												<FormMessage />
 											</FormItem>
@@ -273,6 +415,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														min={1}
 														placeholder="Stock"
 														{...field}
+														onChange={(e) => field.onChange(e.target.value)}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -291,6 +434,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														min={1}
 														placeholder="Price"
 														{...field}
+														onChange={(e) =>
+															field.onChange(e.target.value.toString())
+														}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -299,16 +445,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									/>
 									<FormField
 										control={form.control}
-										name="originalPrice"
+										name="original_price"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Original Price (Ghc)</FormLabel>
+												<FormLabel>Market Price (Ghc)</FormLabel>
 												<FormControl>
 													<Input
 														type="number"
-														min={1}
+														min={0}
 														placeholder="Market Price"
 														{...field}
+														onChange={(e) => field.onChange(e.target.value)}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -326,6 +473,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														rows={3}
 														placeholder="Product description"
 														{...field}
+														onChange={(e) => field.onChange(e.target.value)}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -334,7 +482,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									/>
 									<FormField
 										control={form.control}
-										name="detailedSpecs"
+										name="detailed_specs"
 										render={({ field }) => (
 											<FormItem>
 												<FormLabel>Detailed Specifications</FormLabel>
@@ -343,6 +491,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														rows={3}
 														placeholder="Detailed Specifications"
 														{...field}
+														onChange={(e) => field.onChange(e.target.value)}
 													/>
 												</FormControl>
 												<FormMessage />
@@ -353,150 +502,90 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									<FormField
 										control={form.control}
 										name="image_url"
-										render={({ field }) => {
-											const fileInputRef = useRef<HTMLInputElement>(null);
-											const [selectedFiles, setSelectedFiles] = useState<
-												File[]
-											>([]);
-											const [extraImages, setExtraImages] = useState<File[]>(
-												[]
-											);
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Product Images</FormLabel>
+												<FormControl>
+													<div className="flex flex-col items-start gap-2">
+														<Input
+															type="file"
+															accept="image/*"
+															multiple
+															className="hidden"
+															ref={fileInputRef}
+															onChange={handleFileChange}
+														/>
+														<Button
+															variant="outline"
+															type="button"
+															onClick={() => fileInputRef.current?.click()}
+															className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
+														>
+															<UploadCloud className="w-4 h-4" />
+															Upload New Product Images
+														</Button>
+													</div>
+												</FormControl>
 
-											const handleClick = () => {
-												fileInputRef.current?.click();
-											};
-
-											const handleChange = (
-												e: React.ChangeEvent<HTMLInputElement>
-											) => {
-												const files = e.target.files;
-												if (!files) return;
-
-												const fileArray = Array.from(files);
-												const totalFiles =
-													selectedFiles.length + fileArray.length;
-
-												if (totalFiles > 5) {
-													toast.error("You can only upload a maximum of 5");
-													return;
-												}
-
-												const newFiles = [...selectedFiles, ...fileArray];
-												setSelectedFiles(newFiles);
-
-												// First image becomes image_url, rest become additionalImages
-												const [first, ...rest] = newFiles;
-
-												form.setValue("image_url", URL.createObjectURL(first)); // !change this into server image url
-												form.setValue("additionalImages", rest); // Remaining images
-												setExtraImages(rest);
-											};
-
-											return (
-												<FormItem>
-													<>
-														<ul className="grid grid-cols-2 gap-4 mt-4">
-															<li className="relative border rounded-lg overflow-hidden shadow-sm group">
-																<Image
-																	priority
-																	alt={product.name}
-																	src={product.image_url}
-																	width={200}
-																	height={200}
-																	className="object-cover w-full"
-																/>
-																<span
-																	className={cn(
-																		"absolute bg-blue-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded"
-																	)}
-																>
-																	Product image
-																</span>
-															</li>
-
-															{selectedFiles.length > 0 &&
-																selectedFiles.map((file, idx) => (
-																	<li
-																		key={idx}
-																		className="relative border rounded-lg overflow-hidden shadow-sm group"
-																	>
-																		<Image
-																			alt={file.name}
-																			src={URL.createObjectURL(file)}
-																			width={200}
-																			height={200}
-																			className="object-cover w-full h-[150px]"
-																		/>
-																		<span
-																			className={cn(
-																				"absolute top-1 left-1 text-xs bg-white text-gray-800 px-2 py-0.5 rounded",
-																				{
-																					"bg-blue-500 text-white": idx === 0,
-																				}
-																			)}
-																		>
-																			{idx === 0
-																				? "Product image"
-																				: "Additional"}
-																		</span>
-																		<Button
-																			type="button"
-																			onClick={() => {
-																				const updatedFiles =
-																					selectedFiles.filter(
-																						(_, i) => i !== idx
-																					);
-																				setSelectedFiles(updatedFiles);
-
-																				const [newMain, ...newExtras] =
-																					updatedFiles;
-
-																				form.setValue(
-																					"image_url",
-																					URL.createObjectURL(newMain)
-																				);
-																				form.setValue(
-																					"additionalImages",
-																					newExtras
-																				);
-																			}}
-																			className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-500 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
-																		>
-																			<X />
-																		</Button>
-																		<p className="text-sm text-center py-2 px-1 bg-gray-50 text-gray-700 truncate">
-																			{file.name}
-																		</p>
-																	</li>
-																))}
-														</ul>
-													</>
-													<FormLabel>Product Images</FormLabel>
-													<FormControl>
-														<div className="flex flex-col items-start gap-2">
-															<Input
-																type="file"
-																accept="image/*"
-																multiple
-																className="hidden"
-																ref={fileInputRef}
-																onChange={handleChange}
+												{/* Current and new images preview */}
+												<div className="grid grid-cols-2 gap-4 mt-4">
+													{/* Current product image */}
+													{selectedFiles.length === 0 && (
+														<div className="relative border rounded-lg overflow-hidden shadow-sm group">
+															<Image
+																priority
+																alt={product.name}
+																src={product.image_url}
+																width={200}
+																height={200}
+																className="object-cover w-full h-[150px]"
 															/>
-															<Button
-																variant="outline"
-																type="button"
-																onClick={handleClick}
-																className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
-															>
-																<UploadCloud className="w-4 h-4" />
-																Upload New Product Images
-															</Button>
+															<span className="absolute bg-blue-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
+																Current Image
+															</span>
 														</div>
-													</FormControl>
-													<FormMessage />
-												</FormItem>
-											);
-										}}
+													)}
+
+													{/* New selected images */}
+													{selectedFiles.map((file, idx) => (
+														<div
+															key={idx}
+															className="relative border rounded-lg overflow-hidden shadow-sm group"
+														>
+															<Image
+																alt={file.name}
+																src={URL.createObjectURL(file)}
+																width={200}
+																height={200}
+																className="object-cover w-full h-[150px]"
+															/>
+															<span
+																className={cn(
+																	"absolute top-1 left-1 text-xs px-2 py-0.5 rounded",
+																	{
+																		"bg-blue-500 text-white": idx === 0,
+																		"bg-gray-800 text-white": idx !== 0,
+																	}
+																)}
+															>
+																{idx === 0 ? "New Main Image" : "Additional"}
+															</span>
+															<Button
+																type="button"
+																onClick={() => removeFile(idx)}
+																className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
+															>
+																<X className="w-3 h-3" />
+															</Button>
+															<p className="text-sm text-center py-2 px-1 bg-gray-50 text-gray-700 truncate">
+																{file.name}
+															</p>
+														</div>
+													))}
+												</div>
+												<FormMessage />
+											</FormItem>
+										)}
 									/>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -516,7 +605,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														</FormControl>
 														<SelectContent>
 															<SelectGroup>
-																<SelectItem value="electronics">
+																<SelectItem value="consumer-electronics">
 																	Electronics
 																</SelectItem>
 																<SelectItem value="laptops">Laptops</SelectItem>
@@ -580,7 +669,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 															</SelectTrigger>
 														</FormControl>
 														<SelectContent>
-															<SelectItem value="New">New</SelectItem>
+															<SelectItem value={"none"}>None</SelectItem>
 															<SelectItem value="Open Box">Open Box</SelectItem>
 															<SelectItem value="Renewed">Renewed</SelectItem>
 															<SelectItem value="Used">Used</SelectItem>
@@ -593,8 +682,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									</div>
 								</div>
 								<SheetFooter>
-									<Button disabled={disableUpdate} type="submit">
-										Update Product
+									<Button disabled={disableUpdate || isLoading} type="submit">
+										{isLoading ? "Updating product..." : "Update Product"}
 									</Button>
 								</SheetFooter>
 							</form>

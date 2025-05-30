@@ -1,10 +1,18 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { product } from "./RecentProductsList";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "../ui/button";
-import { customerType } from "@/data";
+import { salesType } from "@/app/admin/page";
+
+export type product = {
+	id: number;
+	name: string;
+	category: string;
+	price: number;
+	date: string;
+	status: string;
+};
 
 export const Columns: ColumnDef<product>[] = [
 	{
@@ -77,10 +85,10 @@ export const Columns: ColumnDef<product>[] = [
 		},
 	},
 ];
-export const CustomerColumns: ColumnDef<customerType>[] = [
+export const CustomerColumns: ColumnDef<salesType>[] = [
 	{
-		accessorKey: "name",
-		header: "Name",
+		accessorKey: "id",
+		header: "Id",
 	},
 	{
 		accessorKey: "email",
@@ -97,7 +105,7 @@ export const CustomerColumns: ColumnDef<customerType>[] = [
 		},
 	},
 	{
-		accessorKey: "phone",
+		accessorKey: "phone_number",
 		header: ({ column }) => {
 			return (
 				<Button
@@ -110,22 +118,62 @@ export const CustomerColumns: ColumnDef<customerType>[] = [
 			);
 		},
 	},
-
 	{
-		accessorKey: "spent",
+		accessorKey: "alternative_phone",
 		header: ({ column }) => {
 			return (
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					Spent
+					Alternative Phone
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			);
 		},
+	},
+	{
+		accessorKey: "status",
+		header: ({ column }) => {
+			return (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					Payment Status
+					<ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			);
+		},
+	},
+	{
+		accessorKey: "fulfillment_status",
+		header: ({ column }) => {
+			return (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					Delivery Status
+					<ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			);
+		},
+	},
+	{
+		accessorKey: "total_amount",
+		header: ({ column }) => {
+			return (
+				<Button
+					variant="ghost"
+					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+				>
+					Total Amount <ArrowUpDown className="ml-2 h-4 w-4" />
+				</Button>
+			);
+		},
 		cell: ({ row }) => {
-			const amount = parseFloat(row.getValue("spent"));
+			const amount = parseFloat(row.getValue("total_amount"));
 			const formatted = new Intl.NumberFormat("en-US", {
 				style: "currency",
 				currency: "Ghc",
@@ -135,28 +183,29 @@ export const CustomerColumns: ColumnDef<customerType>[] = [
 		},
 	},
 	{
-		accessorKey: "orders",
+		accessorKey: "delivery_address",
 		header: ({ column }) => {
 			return (
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					Orders
+					Delivery Address
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			);
 		},
 	},
+
 	{
-		accessorKey: "lastOrder",
+		accessorKey: "extended_warranty",
 		header: ({ column }) => {
 			return (
 				<Button
 					variant="ghost"
 					onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
 				>
-					Last Order
+					Extended Warranty
 					<ArrowUpDown className="ml-2 h-4 w-4" />
 				</Button>
 			);

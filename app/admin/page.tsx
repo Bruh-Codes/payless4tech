@@ -1,91 +1,59 @@
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { ProductForm } from "@/components/admin/ProductForm";
-// import { ProductList } from "@/components/admin/ProductList";
-// import { SlideshowImageForm } from "@/components/admin/SlideshowImageForm";
-// import { SlideshowImageList } from "@/components/admin/SlideshowImageList";
-// import { supabase } from "@/integrations/supabase/client";
-// import { Button } from "@/components/ui/button";
-// import { Loader2, Store } from "lucide-react";
-// import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import AdminOverview from "@/components/admin/AdminOverview";
-import { SlideshowImageList } from "@/components/admin/SlideshowImageList";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { ChartAreaInteractive } from "@/components/chart-area-interactive";
+import { DataTable } from "@/components/admin/data-table";
+import { supabase } from "@/integrations/supabase/client";
 
-export default function Admin() {
-	// const router = useRouter();
-	// const [isLoading, setIsLoading] = useState(true);
-	// const [refreshSlideshow, setRefreshSlideshow] = useState(0);
+export interface salesType {
+	id: number;
+	email: string;
+	user_id: string;
+	total_amount: string;
+	phone_number: string;
+	alternative_phone: string;
+	delivery_address: string;
+	extended_warranty: boolean;
+	fulfillment_status: "pending" | "delivered" | "cancelled";
+	gps_location: string;
+	product_id: string;
+	total_price: number;
+	status: string;
+	product: {
+		name: string;
+		quantity: number;
+		price: number;
+		id: string;
+	}[];
+}
+export default async function Page() {
+	let { data: sales, error } = await supabase.from("sales").select("*");
 
-	// // useEffect(() => {
-	// // 	checkAuth();
-	// // }, []);
-
-	// const checkAuth = async () => {
-	// 	try {
-	// 		const {
-	// 			data: { session },
-	// 		} = await supabase.auth.getSession();
-
-	// 		if (!session) {
-	// 			toast.error("Unauthorized", {
-	// 				description: "Please login to access the admin page",
-	// 			});
-	// 			router.push("/login");
-	// 			return;
-	// 		}
-
-	// 		// Check if the user has admin role
-	// 		const { data: userRole, error } = await supabase
-	// 			.from("user_roles")
-	// 			.select("role")
-	// 			.eq("user_id", session.user.id)
-	// 			.single();
-
-	// 		if (error || userRole?.role !== "admin") {
-	// 			toast.error("Unauthorized", {
-	// 				description: "You do not have admin privileges",
-	// 			});
-	// 			router.push("/");
-	// 			return;
-	// 		}
-
-	// 		setIsLoading(false);
-	// 	} catch (error) {
-	// 		console.error("Auth check error:", error);
-	// 		toast.error("Error", {
-	// 			description: "An error occurred while checking authentication",
-	// 		});
-	// 		router.push("/");
-	// 	}
-	// };
-
-	const handleProductAdded = () => {
-		toast("Success", {
-			description: "Product added successfully. Refreshing list...",
-		});
-	};
-
-	const handleSlideshowImageAdded = () => {
-		// setRefreshSlideshow((prev) => prev + 1);
-		toast("Success", {
-			description: "Slideshow image added successfully",
-		});
-	};
-
-	// if (isLoading) {
-	// 	return (
-	// 		<div className="flex items-center justify-center min-h-screen">
-	// 			<Loader2 className="h-8 w-8 animate-spin" />
-	// 		</div>
-	// 	);
-	// }
+	const sortedSales = sales?.sort((a, b) => {
+		if (
+			a.fulfillment_status === "pending" &&
+			b.fulfillment_status !== "pending"
+		)
+			return -1;
+		if (
+			a.fulfillment_status !== "pending" &&
+			b.fulfillment_status === "pending"
+		)
+			return 1;
+		return 0;
+	});
+	if (error) {
+		console.log("Error fetching sales data", error);
+	}
 
 	return (
-		<div className="container mx-auto">
-			<h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+		<div className="container space-y-5 mx-auto">
+			<div className="flex gap-5 items-center mb-6">
+				<SidebarTrigger />
+				<h1 className="text-3xl font-bold">Dashboard</h1>
+			</div>
 			<AdminOverview />
+			<ChartAreaInteractive />
+			<DataTable data={sortedSales as salesType[]} />
 			{/* <SlideshowImageList /> */}
 
 			{/* <div className="grid gap-8">

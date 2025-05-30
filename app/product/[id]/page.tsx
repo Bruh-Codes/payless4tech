@@ -323,7 +323,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const conditionInfo =
 		conditionDefinitions[conditionDisplay as keyof typeof conditionDefinitions];
 
-	function parseDetailedSpecs(
+	function parsedetailed_specs(
 		specText: string
 	): { title: string; items: string[] }[] {
 		const sections: { title: string; items: string[] }[] = [];
@@ -484,7 +484,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 									Detailed Specifications
 								</h2>
 								<div className="space-y-6 text-gray-700">
-									{parseDetailedSpecs(product.detailed_specs).map(
+									{parsedetailed_specs(product.detailed_specs).map(
 										(section, i) => (
 											<Card key={i}>
 												<CardContent className="p-4">

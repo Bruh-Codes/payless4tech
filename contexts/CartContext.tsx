@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useReducer } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import PaystackPop from "@paystack/inline-js";
 interface CartItem {
 	id: string;
 	name: string;
@@ -163,6 +162,15 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 					email: details.email,
 					extended_warranty: details.extendedWarranty,
 					alternative_phone: details?.alternativePhone,
+					fulfillment_status: "pending",
+					product: state.items.map((item) => {
+						return {
+							name: item.name,
+							quantity: item.quantity,
+							price: item.price,
+							id: item.id,
+						};
+					}),
 				})
 				.select()
 				.single();
@@ -225,8 +233,18 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 						email: details.email,
 						amount: totalAmount,
 						currency: "GHS",
-						onSuccess: function (transaction) {
+						metadata: {
+							custom_fields: [
+								{
+									display_name: "Sale ID",
+									variable_name: "sale_id",
+									value: sale.id,
+								},
+							],
+						},
+						onSuccess: async function (transaction) {
 							clearCart();
+
 							toast.success("Payment successful", {
 								description: `Transaction ID: ${transaction.reference}`,
 							});

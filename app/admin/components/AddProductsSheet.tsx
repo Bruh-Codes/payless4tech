@@ -35,17 +35,18 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
+import { ProductFormData, useProductForm } from "@/hooks/useProductForm";
 
 export const formSchema = z.object({
 	id: z.string().optional(),
 	name: z.string().min(1, "Product name is required"),
 	description: z.string().min(1, "Description is required"),
 	price: z.string().min(1, "Price is required"),
-	originalPrice: z.string().min(1, "Original price is required"),
-	stock: z.string().min(1, "Stock is required"),
-	category: z.string().min(1, "Category is required"),
+	original_price: z.string(),
+	stock: z.string(),
+	category: z.string().min(1, "category is required"),
 	condition: z.string().min(1, "Condition is required"),
-	detailedSpecs: z.string().min(1, "Specs are required"),
+	detailed_specs: z.string().min(1, "Detailed specifications are required"),
 	image_url: z.string().url("Must be a valid URL"),
 	status: z.enum(["available", "unavailable", "new", "low-stock"]),
 	image: z.union([z.instanceof(File), z.null(), z.undefined()]),
@@ -59,25 +60,134 @@ export function AddProductsSheet() {
 			id: "0",
 			name: "",
 			description: "",
-			price: "1",
+			price: "1", // string
 			image_url: "",
-			category: "",
+			category: "consumer-electronics",
 			status: "available",
-			stock: "1",
+			stock: "0", // string
 			additionalImages: [],
 			condition: "",
-			detailedSpecs: "",
+			detailed_specs: "",
 			image: undefined,
-			originalPrice: "",
+			original_price: "1", // string
+		},
+	});
+
+	// Use the hook for product creation
+	const {
+		newProduct,
+		isLoading,
+		session,
+		handleFormChange,
+		handleSubmit: hookHandleSubmit,
+	} = useProductForm({
+		isEditing: false,
+		onProductAdded: () => {
+			setToggleSheet(false);
+			setSelectedFiles([]);
+			form.reset();
+			// if (onProductAdded) {
+			// 	onProductAdded();
+			// }
 		},
 	});
 
 	const [toggleSheet, setToggleSheet] = useState(false);
 
-	const onSubmit = (values: z.infer<typeof formSchema>) => {
-		if (form.formState.errors) console.log(form.formState.errors);
-		console.log(values);
-		setToggleSheet(false);
+	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const files = e.target.files;
+		if (!files) return;
+
+		const fileArray = Array.from(files);
+		const totalFiles = selectedFiles.length + fileArray.length;
+
+		if (totalFiles > 5) {
+			toast.error("You can only upload a maximum of 5");
+			return;
+		}
+
+		const newFiles = [...selectedFiles, ...fileArray];
+		setSelectedFiles(newFiles);
+
+		// First image becomes image_url, rest become additionalImages
+		const [first, ...rest] = newFiles;
+
+		if (first) {
+			handleFormChange("image", first);
+		}
+		handleFormChange("additionalImages", rest);
+		// form.setValue("image_url", URL.createObjectURL(first)); // !change this into server image url
+		// form.setValue("additionalImages", rest); // Remaining images
+		// setExtraImages(rest);
+	};
+
+	const removeFile = (indexToRemove: number) => {
+		const updatedFiles = selectedFiles.filter(
+			(_, index) => index !== indexToRemove
+		);
+		setSelectedFiles(updatedFiles);
+
+		// Update hook with updated files
+		const [first, ...rest] = updatedFiles;
+		handleFormChange("image", first || null);
+		handleFormChange("additionalImages", rest);
+	};
+
+	const fileInputRef = useRef<HTMLInputElement>(null);
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+
+	const handleClick = () => {
+		fileInputRef.current?.click();
+	};
+
+	const onSubmit = async (values: z.infer<typeof formSchema>) => {
+		// console.log(values);
+		// setToggleSheet(false);
+
+		const result = formSchema.safeParse(values);
+		if (!result.success) {
+			toast.error("Validation errors. Please check all fields");
+			console.log("Validation errors:", result.error.flatten());
+			return;
+		}
+
+		// Generate a unique id if not provided
+		let generatedId = values.id;
+		if (!generatedId || generatedId === "0") {
+			if (typeof crypto !== "undefined" && crypto.randomUUID) {
+				generatedId = crypto.randomUUID();
+			} else {
+				generatedId = `${Date.now()}-${Math.random()
+					.toString(36)
+					.slice(2, 10)}`;
+			}
+		}
+
+		const formDataForHook: ProductFormData = {
+			id: generatedId,
+			name: values.name,
+			description: values.description,
+			price: values.price,
+			original_price: values.original_price || "",
+			category: values.category,
+			condition: values.condition,
+			detailed_specs: values.detailed_specs || "",
+			stock: values.stock || "",
+			status: values.status || "",
+			image: selectedFiles[0] ?? null, // First file as main image (File | null)
+			additionalImages: selectedFiles.length > 1 ? selectedFiles.slice(1) : [], // File[]
+		};
+
+		// Set each field individually using handleFormChange
+		Object.entries(formDataForHook).forEach(([key, value]) => {
+			handleFormChange(key as keyof typeof formDataForHook, value);
+		});
+		// Create a synthetic form event and submit using the hook
+		const syntheticEvent = {
+			preventDefault: () => {},
+		} as React.FormEvent;
+
+		await hookHandleSubmit(syntheticEvent, formDataForHook);
 	};
 
 	useEffect(() => {
@@ -114,7 +224,11 @@ export function AddProductsSheet() {
 									<FormItem>
 										<FormLabel>Product Name</FormLabel>
 										<FormControl>
-											<Input placeholder="Product name" {...field} />
+											<Input
+												placeholder="Product name"
+												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
+											/>
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -132,6 +246,7 @@ export function AddProductsSheet() {
 												min={1}
 												placeholder="Stock"
 												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -150,6 +265,7 @@ export function AddProductsSheet() {
 												min={1}
 												placeholder="Price"
 												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -158,16 +274,17 @@ export function AddProductsSheet() {
 							/>
 							<FormField
 								control={form.control}
-								name="originalPrice"
+								name="original_price"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Original Price (Ghc)</FormLabel>
+										<FormLabel>Market Price (Ghc)</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
 												min={1}
 												placeholder="Market Price"
 												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -185,6 +302,7 @@ export function AddProductsSheet() {
 												rows={3}
 												placeholder="Product description"
 												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -193,7 +311,7 @@ export function AddProductsSheet() {
 							/>
 							<FormField
 								control={form.control}
-								name="detailedSpecs"
+								name="detailed_specs"
 								render={({ field }) => (
 									<FormItem>
 										<FormLabel>Detailed Specifications</FormLabel>
@@ -202,6 +320,7 @@ export function AddProductsSheet() {
 												rows={3}
 												placeholder="Detailed Specifications"
 												{...field}
+												onChange={(e) => field.onChange(e.target.value)}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -212,42 +331,7 @@ export function AddProductsSheet() {
 							<FormField
 								control={form.control}
 								name="image_url"
-								render={({ field }) => {
-									const fileInputRef = useRef<HTMLInputElement>(null);
-									const [selectedFiles, setSelectedFiles] = useState<File[]>(
-										[]
-									);
-									const [extraImages, setExtraImages] = useState<File[]>([]);
-
-									const handleClick = () => {
-										fileInputRef.current?.click();
-									};
-
-									const handleChange = (
-										e: React.ChangeEvent<HTMLInputElement>
-									) => {
-										const files = e.target.files;
-										if (!files) return;
-
-										const fileArray = Array.from(files);
-										const totalFiles = selectedFiles.length + fileArray.length;
-
-										if (totalFiles > 5) {
-											toast.error("You can only upload a maximum of 5");
-											return;
-										}
-
-										const newFiles = [...selectedFiles, ...fileArray];
-										setSelectedFiles(newFiles);
-
-										// First image becomes image_url, rest become additionalImages
-										const [first, ...rest] = newFiles;
-
-										form.setValue("image_url", URL.createObjectURL(first)); // !change this into server image url
-										form.setValue("additionalImages", rest); // Remaining images
-										setExtraImages(rest);
-									};
-
+								render={() => {
 									return (
 										<FormItem>
 											<FormLabel>Upload Product Images</FormLabel>
@@ -256,10 +340,22 @@ export function AddProductsSheet() {
 													<Input
 														type="file"
 														accept="image/*"
-														multiple
+														multiple={false}
 														className="hidden"
 														ref={fileInputRef}
-														onChange={handleChange}
+														onChange={(e) => {
+															handleChange(e);
+															const files = e.target.files;
+															if (files && files.length > 0) {
+																// Set the first file's URL for validation
+																form.setValue(
+																	"image_url",
+																	URL.createObjectURL(files[0])
+																);
+															} else {
+																form.setValue("image_url", "");
+															}
+														}}
 													/>
 													<Button
 														variant="outline"
@@ -298,25 +394,7 @@ export function AddProductsSheet() {
 																		</span>
 																		<Button
 																			type="button"
-																			onClick={() => {
-																				const updatedFiles =
-																					selectedFiles.filter(
-																						(_, i) => i !== idx
-																					);
-																				setSelectedFiles(updatedFiles);
-
-																				const [newMain, ...newExtras] =
-																					updatedFiles;
-
-																				form.setValue(
-																					"image_url",
-																					URL.createObjectURL(newMain)
-																				);
-																				form.setValue(
-																					"additionalImages",
-																					newExtras
-																				);
-																			}}
+																			onClick={() => removeFile(idx)}
 																			className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-500 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
 																		>
 																			<X />
@@ -354,7 +432,7 @@ export function AddProductsSheet() {
 												</FormControl>
 												<SelectContent>
 													<SelectGroup>
-														<SelectItem value="electronics">
+														<SelectItem value="consumer-electronics">
 															Electronics
 														</SelectItem>
 														<SelectItem value="laptops">Laptops</SelectItem>
@@ -427,7 +505,9 @@ export function AddProductsSheet() {
 							</div>
 						</div>
 						<SheetFooter>
-							<Button type="submit">Add To Products</Button>
+							<Button type="submit">
+								{isLoading ? "please wait..." : "Add To Products"}
+							</Button>
 						</SheetFooter>
 					</form>
 				</Form>

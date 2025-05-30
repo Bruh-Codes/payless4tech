@@ -23,9 +23,14 @@ import { toast } from "sonner";
 interface PreorderFormProps {
 	isOpen: boolean;
 	onOpenChange: (open: boolean) => void;
+	handleOrderSuccess?: (data: boolean) => void;
 }
 
-export const PreorderForm = ({ isOpen, onOpenChange }: PreorderFormProps) => {
+export const PreorderForm = ({
+	isOpen,
+	onOpenChange,
+	handleOrderSuccess,
+}: PreorderFormProps) => {
 	const [formData, setFormData] = useState({
 		fullName: "",
 		email: "",
@@ -77,6 +82,7 @@ export const PreorderForm = ({ isOpen, onOpenChange }: PreorderFormProps) => {
 					"Thank you for the information, our team will contact you.",
 				duration: 5000, // Show for 5 seconds
 			});
+			handleOrderSuccess && handleOrderSuccess(true);
 
 			// Reset form and close dialog
 			setFormData({
