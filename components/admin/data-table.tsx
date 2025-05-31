@@ -157,10 +157,21 @@ const columns = (
 		accessorKey: "product",
 		header: "For Product",
 		cell: ({ row }) => {
-			const product = row?.original.product;
+			let product = row?.original?.product;
+			// Parse only if it's a string
+			if (typeof product === "string") {
+				try {
+					product = JSON.parse(product);
+				} catch (err) {
+					product = []; // fallback to empty array on bad JSON
+				}
+			}
+
+			const safeProduct = Array.isArray(product) ? product : [];
+
 			return (
 				<ul className="space-y-1 text-sm text-muted-foreground">
-					{product?.map(({ name, quantity, price, id }) => (
+					{[]?.map(({ name, quantity, price, id }) => (
 						<li key={id} className="flex items-start gap-2">
 							<span className="font-medium truncate text-foreground">
 								Name:
@@ -520,10 +531,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 											})
 										) : (
 											<TableRow>
-												<TableCell
-													colSpan={columns?.length}
-													className="h-24 text-center"
-												>
+												<TableCell colSpan={20} className="h-24 text-center">
 													No results.
 												</TableCell>
 											</TableRow>
