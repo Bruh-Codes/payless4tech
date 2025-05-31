@@ -81,15 +81,6 @@ export const ProductGrid = ({
 				return;
 			}
 
-			if (!data || data.length === 0) {
-				console.log("No products found for filters:", {
-					category,
-					excludeCategory,
-					brandFilter,
-					limit,
-				});
-			}
-
 			setProducts(data || []);
 		} catch (err) {
 			console.error("Unexpected error in ProductGrid:", err);

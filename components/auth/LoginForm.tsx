@@ -20,7 +20,6 @@ export const LoginForm = () => {
 
 		// Check if user is already logged in
 		const checkSession = async () => {
-			console.log("Checking session...");
 			try {
 				const {
 					data: { session },
@@ -36,7 +35,6 @@ export const LoginForm = () => {
 				}
 
 				if (session) {
-					console.log("User already logged in, redirecting to home");
 					router.push("/");
 				}
 			} catch (err) {
@@ -53,11 +51,7 @@ export const LoginForm = () => {
 		} = supabase.auth.onAuthStateChange((event, session) => {
 			if (!mounted) return;
 
-			console.log("Auth state changed:", event);
-			console.log("Session state:", session);
-
 			if (event === "SIGNED_IN" && session) {
-				console.log("Sign in successful, redirecting to home");
 				router.push("/");
 			}
 

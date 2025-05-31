@@ -141,9 +141,6 @@ export function AddProductsSheet() {
 	};
 
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
-		// console.log(values);
-		// setToggleSheet(false);
-
 		const result = formSchema.safeParse(values);
 		if (!result.success) {
 			toast.error("Validation errors. Please check all fields");

@@ -41,9 +41,6 @@ export default async function handler(
 	}
 
 	try {
-		console.log("Starting email send process...");
-		console.log("RESEND_API_KEY present:", !!process.env.RESEND_API_KEY);
-
 		if (!process.env.RESEND_API_KEY) {
 			throw new Error("RESEND_API_KEY is not configured");
 		}
@@ -137,8 +134,6 @@ export default async function handler(
       </html>
     `;
 
-		console.log("Attempting to send email...");
-
 		const emailResponse = await resend.emails.send({
 			from: "Payless4Tech <orders@payless4tech.com>",
 			to: ["joy@payless4tech.com"],
@@ -146,8 +141,6 @@ export default async function handler(
 			html: emailHtml,
 			replyTo: orderDetails.customerDetails.email,
 		});
-
-		console.log("Email API Response:", emailResponse);
 
 		res.setHeader("Access-Control-Allow-Origin", "*");
 		res.setHeader("Content-Type", "application/json");

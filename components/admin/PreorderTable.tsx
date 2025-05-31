@@ -166,7 +166,6 @@ const PreorderTable = () => {
 			let { data: preorder, error } = await supabase
 				.from("preorders")
 				.select("*");
-			if (error) console.log(error);
 			const sortedPreorders = preorder?.sort((a, b) => {
 				if (
 					a.fulfillment_status === "pending" &&

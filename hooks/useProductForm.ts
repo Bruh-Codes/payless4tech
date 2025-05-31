@@ -63,7 +63,8 @@ export const useProductForm = ({
 		} = supabase.auth.onAuthStateChange((_event, session) => {
 			setSession(session);
 			if (!session) {
-				// router.push("/");
+				toast.error("You need to login to access this page");
+				router.push("/");
 			}
 		});
 
@@ -79,7 +80,8 @@ export const useProductForm = ({
 			toast.error("Unauthorized", {
 				description: "Please login to access this page",
 			});
-			// router.push("/");
+
+			router.push("/");
 		}
 	};
 
@@ -87,8 +89,6 @@ export const useProductForm = ({
 		if (!productId) return;
 
 		try {
-			console.log("Loading product with ID:", productId);
-
 			const { data: product, error: productError } = await supabase
 				.from("products")
 				.select("*")

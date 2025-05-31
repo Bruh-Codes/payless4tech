@@ -13,7 +13,6 @@ export const Hero = () => {
 	const router = useRouter();
 
 	useEffect(() => {
-		console.log("Setting up realtime subscription for slideshow images...");
 		const channel = supabase
 			.channel("slideshow_changes")
 			.on(
@@ -24,19 +23,16 @@ export const Hero = () => {
 					table: "slideshow_images",
 				},
 				(payload) => {
-					console.log("Slideshow change detected:", payload);
 					fetchSlideShowImages();
 				}
 			)
 			.subscribe();
 
 		// Initial fetch
-		console.log("Fetching slideshow images...");
 		fetchSlideShowImages();
 
 		// Cleanup subscription
 		return () => {
-			console.log("Cleaning up realtime subscription...");
 			channel.unsubscribe();
 		};
 	}, []);
@@ -58,7 +54,6 @@ export const Hero = () => {
 				return;
 			}
 
-			console.log("Fetched slideshow images:", data);
 			setImages(data || []);
 		} catch (error) {
 			console.error("Unexpected error fetching slideshow images:", error);

@@ -1,26 +1,14 @@
 "use client";
 import { useEffect, useState, use } from "react";
-// import { useSession } from "@supabase/auth-helpers-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-// import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Trash2 } from "lucide-react";
-// import {
-// 	AlertDialog,
-// 	AlertDialogAction,
-// 	AlertDialogCancel,
-// 	AlertDialogContent,
-// 	AlertDialogDescription,
-// 	AlertDialogFooter,
-// 	AlertDialogHeader,
-// 	AlertDialogTitle,
-// 	AlertDialogTrigger,
-// } from "@/components/ui/alert-dialog";
+
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -75,13 +63,10 @@ const conditionDefinitions = {
 const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const { id } = use(params);
 	const router = useRouter();
-	// const session = useSession();
 	const { addItem } = useCart();
 	const [product, setProduct] = useState<Product | null>(null);
 	const [selectedImage, setSelectedImage] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	// const [newImages, setNewImages] = useState<File[]>([]);
-	// const [isEditing, setIsEditing] = useState(false);
 
 	useEffect(() => {
 		fetchProduct();
@@ -125,12 +110,8 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 
 			if (imagesError) throw imagesError;
 
-			// console.log("Product data:", productData);
-			// console.log("Additional images:", imagesData);
-
 			const fullProduct = { ...productData, images: imagesData || [] };
 			setProduct(fullProduct);
-			console.log(fullProduct);
 			setSelectedImage(fullProduct.image_url);
 
 			updateMetaTags(fullProduct);
@@ -144,52 +125,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		}
 	};
 
-	// const handleSaveImages = async () => {
-	// 	if (!session || !product) return;
-
-	// 	setIsLoading(true);
-	// 	try {
-	// 		for (const file of newImages) {
-	// 			const fileExt = file.name.split(".").pop();
-	// 			const fileName = `${Math.random()}.${fileExt}`;
-
-	// 			const { error: uploadError, data } = await supabase.storage
-	// 				.from("product-images")
-	// 				.upload(fileName, file);
-
-	// 			if (uploadError) throw uploadError;
-
-	// 			const {
-	// 				data: { publicUrl },
-	// 			} = supabase.storage.from("product-images").getPublicUrl(fileName);
-
-	// 			const { error: insertError } = await supabase
-	// 				.from("product_images")
-	// 				.insert({
-	// 					product_id: product.id,
-	// 					image_url: publicUrl,
-	// 					display_order: (product.images?.length || 0) + 1,
-	// 				});
-
-	// 			if (insertError) throw insertError;
-	// 		}
-
-	// 		toast("Success", {
-	// 			description: "Images uploaded successfully",
-	// 		});
-
-	// 		setNewImages([]);
-	// 		fetchProduct();
-	// 	} catch (error: any) {
-	// 		console.error("Error uploading images:", error);
-	// 		toast.error("Error", {
-	// 			description: error.message || "Failed to upload images",
-	// 		});
-	// 	} finally {
-	// 		setIsLoading(false);
-	// 	}
-	// };
-
 	const handleAddToCart = () => {
 		if (product) {
 			addItem({
@@ -202,73 +137,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		}
 	};
 
-	// const handleDelete = async () => {
-	// 	if (!product || !session) return;
-
-	// 	try {
-	// 		setIsLoading(true);
-
-	// 		// First, delete any related sale_items
-	// 		const { error: saleItemsError } = await supabase
-	// 			.from("sale_items")
-	// 			.delete()
-	// 			.eq("product_id", product.id);
-
-	// 		if (saleItemsError) throw saleItemsError;
-
-	// 		// Then delete any related images from storage
-	// 		if (product.image_url) {
-	// 			const mainImagePath = product.image_url.split("/").pop();
-	// 			if (mainImagePath) {
-	// 				await supabase.storage.from("product-images").remove([mainImagePath]);
-	// 			}
-	// 		}
-
-	// 		if (product.images && product.images.length > 0) {
-	// 			const additionalImagePaths = product.images
-	// 				.map((img) => img.image_url.split("/").pop())
-	// 				.filter(Boolean);
-
-	// 			if (additionalImagePaths.length > 0) {
-	// 				await supabase.storage
-	// 					.from("product-images")
-	// 					.remove(additionalImagePaths as string[]);
-	// 			}
-	// 		}
-
-	// 		// Delete additional images records
-	// 		if (product.images && product.images.length > 0) {
-	// 			const { error: deleteImagesError } = await supabase
-	// 				.from("product_images")
-	// 				.delete()
-	// 				.eq("product_id", product.id);
-
-	// 			if (deleteImagesError) throw deleteImagesError;
-	// 		}
-
-	// 		// Finally delete the product
-	// 		const { error: deleteError } = await supabase
-	// 			.from("products")
-	// 			.delete()
-	// 			.eq("id", product.id);
-
-	// 		if (deleteError) throw deleteError;
-
-	// 		toast("Success", {
-	// 			description: "Product deleted successfully",
-	// 		});
-
-	// 		router.push("/admin");
-	// 	} catch (error: any) {
-	// 		console.error("Error deleting product:", error);
-	// 		toast.error("Error", {
-	// 			description: error.message || "Failed to delete product",
-	// 		});
-	// 	} finally {
-	// 		setIsLoading(false);
-	// 	}
-	// };
-
 	if (isLoading) {
 		return <div>Loading...</div>;
 	}
@@ -276,48 +144,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	if (!product) {
 		return <div>Product not found</div>;
 	}
-
-	// if (isEditing) {
-	// 	return (
-	// 		<div className="min-h-screen">
-	// 			<Header />
-	// 			<main className="container mx-auto px-4 py-8">
-	// 				<div className="flex justify-between items-center mb-4">
-	// 					<Button variant="outline" onClick={() => setIsEditing(false)}>
-	// 						Cancel Editing
-	// 					</Button>
-	// 					<AlertDialog>
-	// 						<AlertDialogTrigger asChild>
-	// 							<Button variant="destructive">
-	// 								<Trash2 className="mr-2 h-4 w-4" />
-	// 								Delete Product
-	// 							</Button>
-	// 						</AlertDialogTrigger>
-	// 						<AlertDialogContent>
-	// 							<AlertDialogHeader>
-	// 								<AlertDialogTitle>Delete Product</AlertDialogTitle>
-	// 								<AlertDialogDescription>
-	// 									Are you sure you want to delete this product? This action
-	// 									cannot be undone and will remove all associated images and
-	// 									data.
-	// 								</AlertDialogDescription>
-	// 							</AlertDialogHeader>
-	// 							<AlertDialogFooter>
-	// 								<AlertDialogCancel>Cancel</AlertDialogCancel>
-	// 								<AlertDialogAction
-	// 									onClick={handleDelete}
-	// 									className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-	// 								>
-	// 									Delete
-	// 								</AlertDialogAction>
-	// 							</AlertDialogFooter>
-	// 						</AlertDialogContent>
-	// 					</AlertDialog>
-	// 				</div>
-	// 			</main>
-	// 		</div>
-	// 	);
-	// }
 
 	const conditionDisplay = product.condition?.trim() || "New";
 	const conditionInfo =

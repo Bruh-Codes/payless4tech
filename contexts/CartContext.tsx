@@ -251,7 +251,6 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 						},
 						onCancel: function () {
 							toast.error("Payment cancelled");
-							console.log("Payment cancelled");
 						},
 					});
 				} else {

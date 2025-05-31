@@ -4,10 +4,6 @@ import { SectionCards } from "../section-cards";
 const AdminOverview: React.FC = async () => {
 	const products = await supabase.from("products").select("*");
 
-	if (products.error) {
-		console.log("Error fetching products data", products.error);
-	}
-
 	const totalProducts =
 		(products.data?.length || 0) >= 1_000_000
 			? ((products.data?.length || 0) / 1_000_000).toFixed(2) + "M"

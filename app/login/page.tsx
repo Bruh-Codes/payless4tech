@@ -19,7 +19,6 @@ const Login = () => {
 			data: { subscription },
 		} = supabase.auth.onAuthStateChange((event, session) => {
 			if (event === "SIGNED_IN" && session) {
-				console.log("User signed in, navigating to home");
 				toast.success("Success", {
 					description: "Successfully logged in",
 				});
@@ -36,9 +35,7 @@ const Login = () => {
 				data: { session },
 				error,
 			} = await supabase.auth.getSession();
-			if (session) {
-				console.log("Initial session exists, navigating to home");
-			}
+
 			if (error) {
 				setError(error.message);
 			}
