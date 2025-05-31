@@ -52,6 +52,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const schema = z.object({
 	id: z.number(),
@@ -126,12 +127,13 @@ const columns = (
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem
 						onClick={() => handleMarkAsDelivered(row.original.id)}
-						disabled={row?.original.fulfillment_status !== "pending"}
+						disabled={row?.original.fulfillment_status === "pending"}
 					>
 						Mark Delivered
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
+						disabled={row?.original.fulfillment_status !== "pending"}
 						onClick={() => handleDelete(row.original.id)}
 						variant="destructive"
 					>
@@ -151,14 +153,16 @@ const PreorderTable = () => {
 		[]
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
-	const [data, setData] = React.useState<z.infer<typeof schema>[]>([]);
 	const [pagination, setPagination] = React.useState({
 		pageIndex: 0,
 		pageSize: 10,
 	});
 
-	React.useEffect(() => {
-		const fetchPreorders = async () => {
+	const queryClient = useQueryClient();
+
+	const { data, error } = useQuery({
+		queryKey: ["preorders"],
+		queryFn: async () => {
 			let { data: preorder, error } = await supabase
 				.from("preorders")
 				.select("*");
@@ -176,11 +180,15 @@ const PreorderTable = () => {
 					return 1;
 				return 0;
 			});
-			setData((sortedPreorders ?? []) as z.infer<typeof schema>[]);
-		};
+			return sortedPreorders;
+		},
+	});
 
-		fetchPreorders();
-	}, []);
+	React.useEffect(() => {
+		if (error) {
+			toast.error(error.message);
+		}
+	}, [error]);
 
 	const handleDelete = async (productId: number) => {
 		// Fetch the preorder to archive
@@ -216,7 +224,7 @@ const PreorderTable = () => {
 			return;
 		}
 
-		setData((prev) => prev.filter((item) => item.id !== productId));
+		queryClient.invalidateQueries({ queryKey: ["preorders"] });
 		toast.success("Preorder archived successfully.");
 	};
 
@@ -224,23 +232,20 @@ const PreorderTable = () => {
 		const { error: updateError } = await supabase
 			.from("preorders")
 			.update({ fulfillment_status: "delivered" })
-			.eq("id", id);
+			.eq("id", id.toString());
 
 		if (updateError) {
 			toast.error("Failed to mark as delivered.");
 			return;
 		}
 
-		setData((prev) =>
-			prev.map((item) =>
-				item.id === id ? { ...item, fulfillment_status: "delivered" } : item
-			)
-		);
+		queryClient.invalidateQueries({ queryKey: ["preorders"] });
+
 		toast.success("Marked as delivered.");
 	};
 
 	const table = useReactTable({
-		data,
+		data: data ?? [],
 		columns: columns(handleDelete, handleMarkAsDelivered),
 		state: {
 			sorting,
@@ -299,7 +304,7 @@ const PreorderTable = () => {
 							{table?.getRowModel().rows?.length ? (
 								table?.getRowModel().rows.map((row) => {
 									const isPending =
-										row.original.fulfillment_status === "pending";
+										row.original.fulfillment_status !== "pending";
 									return (
 										<TableRow
 											key={row.id}
