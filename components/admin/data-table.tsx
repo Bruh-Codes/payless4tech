@@ -171,7 +171,7 @@ const columns = (
 
 			return (
 				<ul className="space-y-1 text-sm text-muted-foreground">
-					{[]?.map(({ name, quantity, price, id }) => (
+					{safeProduct?.map(({ name, quantity, price, id }) => (
 						<li key={id} className="flex items-start gap-2">
 							<span className="font-medium truncate text-foreground">
 								Name:
@@ -300,6 +300,7 @@ const columns = (
 						Mark Delivered
 					</DropdownMenuItem>
 					<DropdownMenuItem
+						disabled={row?.original.status !== "pending"}
 						onClick={() => handleDelete(row.original.id)}
 						variant="destructive"
 					>
