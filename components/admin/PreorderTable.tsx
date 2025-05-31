@@ -127,13 +127,13 @@ const columns = (
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem
 						onClick={() => handleMarkAsDelivered(row.original.id)}
-						disabled={row?.original.fulfillment_status === "pending"}
+						disabled={row?.original.fulfillment_status !== "pending"}
 					>
 						Mark Delivered
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						disabled={row?.original.fulfillment_status !== "pending"}
+						disabled={row?.original.fulfillment_status === "pending"}
 						onClick={() => handleDelete(row.original.id)}
 						variant="destructive"
 					>
@@ -303,7 +303,7 @@ const PreorderTable = () => {
 							{table?.getRowModel().rows?.length ? (
 								table?.getRowModel().rows.map((row) => {
 									const isPending =
-										row.original.fulfillment_status !== "pending";
+										row.original.fulfillment_status === "pending";
 									return (
 										<TableRow
 											key={row.id}
