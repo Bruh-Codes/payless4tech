@@ -20,13 +20,7 @@ import {
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -94,9 +88,6 @@ function processData(rawData: RawSalesRow[]): SalesData[] {
 }
 
 export function ChartAreaInteractive() {
-	const [chartType, setChartType] = React.useState<"revenue" | "orders">(
-		"revenue"
-	);
 	const [dateRange, setDateRange] = React.useState<DateRange | undefined>({
 		from: subDays(new Date(), 7),
 		to: new Date(),
@@ -109,15 +100,16 @@ export function ChartAreaInteractive() {
 		mutationFn: async ({ from, to }: { from: string; to: string }) => {
 			const response = await supabase
 				.from("sales")
-				.select("created_at, total_amount, fulfillment_status")
+				.select("created_at,total_amount, fulfillment_status")
 				.eq("fulfillment_status", "delivered")
 				.gte("created_at", from)
 				.lte("created_at", to)
 				.order("created_at");
-			return response;
+			return response.data;
 		},
+
 		onSuccess: (data) => {
-			const processedData = processData(data.data as RawSalesRow[]);
+			const processedData = processData(data as RawSalesRow[]);
 			setSalesData(processedData);
 		},
 		onError: (error) => {
@@ -144,10 +136,6 @@ export function ChartAreaInteractive() {
 		});
 	};
 
-	const getChartTitle = () => {
-		return chartType === "revenue" ? "Revenue Over Time" : "Orders Over Time";
-	};
-
 	const totalRevenue = salesData.reduce(
 		(acc, item) => acc + item.total_sales,
 		0
@@ -165,21 +153,12 @@ export function ChartAreaInteractive() {
 			minimumFractionDigits: 0,
 		}).format(value);
 
-	const getDataKey = () =>
-		chartType === "revenue" ? "total_sales" : "order_count";
-	const getStroke = () =>
-		chartType === "revenue"
-			? "var(--color-total_sales)"
-			: "var(--color-order_count)";
-
 	return (
 		<Card className="w-full">
 			<CardHeader>
-				<CardTitle className="text-lg">{getChartTitle()}</CardTitle>
+				<CardTitle className="text-lg">Revenue Over Time</CardTitle>
 				<CardDescription className="text-orange-300">
-					{chartType === "revenue"
-						? `Total Revenue: ${formatCurrency(totalRevenue)}`
-						: `Total Orders: ${totalOrders}`}
+					Total Revenue: ${formatCurrency(totalRevenue)}
 					{" • "}
 					Avg Order Value: {formatCurrency(avgOrderValue)}
 				</CardDescription>
@@ -187,45 +166,34 @@ export function ChartAreaInteractive() {
 			<CardContent>
 				{/* Controls */}
 				<div className="flex flex-wrap gap-4 mb-6">
-					{/* Chart Type Selector */}
-					<Select
-						value={chartType}
-						onValueChange={(value: "revenue" | "orders") => setChartType(value)}
-					>
-						<SelectTrigger className="w-[140px]">
-							<SelectValue placeholder="Chart type" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="revenue">Revenue</SelectItem>
-							<SelectItem value="orders">Orders</SelectItem>
-						</SelectContent>
-					</Select>
-
 					{/* Date Range Picker */}
 					<Popover>
-						<PopoverTrigger asChild>
-							<Button
-								variant="outline"
-								className={cn(
-									"w-[280px] justify-start text-left font-normal",
-									!dateRange && "text-muted-foreground"
-								)}
-							>
-								<CalendarIcon className="mr-2 h-4 w-4" />
-								{dateRange?.from ? (
-									dateRange.to ? (
-										<>
-											{format(dateRange.from, "LLL dd, y")} -{" "}
-											{format(dateRange.to, "LLL dd, y")}
-										</>
+						<Select>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									className={cn(
+										"w-[280px] justify-start text-left font-normal",
+										!dateRange && "text-muted-foreground"
+									)}
+								>
+									<CalendarIcon className="mr-2 h-4 w-4" />
+									{dateRange?.from ? (
+										dateRange.to ? (
+											<>
+												{format(dateRange.from, "LLL dd, y")} -{" "}
+												{format(dateRange.to, "LLL dd, y")}
+											</>
+										) : (
+											format(dateRange.from, "LLL dd, y")
+										)
 									) : (
-										format(dateRange.from, "LLL dd, y")
-									)
-								) : (
-									<span>Pick a date range</span>
-								)}
-							</Button>
-						</PopoverTrigger>
+										<span>Pick a date range</span>
+									)}
+								</Button>
+							</PopoverTrigger>
+						</Select>
+
 						<PopoverContent className="w-auto p-0" align="start">
 							<Calendar
 								initialFocus
