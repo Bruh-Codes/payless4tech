@@ -1,6 +1,7 @@
 import { Shield, Headphones, CreditCard, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import Image from "next/image";
 
 export const TrustSection = () => {
 	const trustBadges = [
@@ -68,22 +69,25 @@ export const TrustSection = () => {
 								variant="outline"
 								className="py-2 px-4 text-xs font-normal border-gray-300 hover-scale"
 							>
-								<img
+								<Image
 									src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1200px-Visa_Inc._logo.svg.png"
 									alt="Visa"
-									className="h-6 w-auto"
+									width={74}
+									height={24}
 								/>
 							</Badge>
 							<Badge
 								variant="outline"
 								className="py-2 px-4 text-xs font-normal border-gray-300 hover-scale"
 							>
-								<img
+								<Image
 									src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png"
 									alt="Mastercard"
-									className="h-6 w-auto"
+									width={28}
+									height={24}
 								/>
 							</Badge>
+
 							<Badge
 								variant="outline"
 								className="py-2 px-4 text-xs font-normal border-gray-300 hover-scale"
@@ -91,7 +95,7 @@ export const TrustSection = () => {
 								<div className="flex items-center gap-1">
 									<div className="bg-yellow-400 rounded-full w-5 h-5"></div>
 									<span className="font-medium dark:text-black">
-										MTN Mobile Money
+										Mobile Money
 									</span>
 								</div>
 							</Badge>

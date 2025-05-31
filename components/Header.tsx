@@ -30,7 +30,7 @@ export const Header = () => {
 					<div className="w-full flex-1 md:w-auto md:flex-none">
 						{/* Add search functionality here if needed */}
 					</div>
-					<nav className="flex items-center space-x-4">
+					<div className="flex items-center space-x-4">
 						{/* Only show payment logos on desktop */}
 						<div className="hidden sm:flex gap-5">
 							<Image src={MTN} alt="MTN MoMo" className="size-10" />
@@ -39,7 +39,7 @@ export const Header = () => {
 						</div>
 						<Cart />
 						<AuthButtons />
-					</nav>
+					</div>
 				</div>
 			</div>
 		</header>

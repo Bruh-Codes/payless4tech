@@ -82,6 +82,8 @@ export const Cart = () => {
 				<Button
 					variant="outline"
 					size="icon"
+					title="cart"
+					aria-label="cart"
 					className="relative hover:bg-orange-400 hover:text-white cursor-pointer"
 				>
 					<ShoppingCart className="h-4 w-4" />

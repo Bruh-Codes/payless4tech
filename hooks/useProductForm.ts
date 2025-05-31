@@ -105,9 +105,6 @@ export const useProductForm = ({
 
 			if (imagesError) throw imagesError;
 
-			console.log("Loaded product data:", product);
-			console.log("Loaded additional images:", additionalImages);
-
 			if (product) {
 				setExistingImageUrl(product.image_url);
 				setExistingAdditionalImages(additionalImages || []);

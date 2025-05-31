@@ -10,10 +10,13 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useRouter } from "next/navigation";
+import { NavUser } from "../nav-user";
+import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
 
 export const AuthButtons = () => {
 	const [isAdmin, setIsAdmin] = useState(false);
@@ -86,18 +89,20 @@ export const AuthButtons = () => {
 					)}
 
 					<DropdownMenu modal={false}>
-						<DropdownMenuTrigger asChild disabled={isLoading}>
-							<Button
-								disabled={isLoading}
-								variant="ghost"
-								className="relative cursor-pointer h-10 w-10 rounded-full"
-							>
-								<Avatar className="h-10 w-10">
-									<AvatarImage src="" alt="Admin" />
-									<AvatarFallback>AD</AvatarFallback>
+						<DropdownMenuTrigger className="p-0 font-normal">
+							<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+								<Avatar className="h-8 w-8 rounded-lg">
+									<AvatarImage
+										src={session?.user?.user_metadata?.avatar_url}
+										alt={session?.user.user_metadata?.name}
+									/>
+									<AvatarFallback className="rounded-lg">
+										{session?.user.user_metadata?.name?.charAt(0)}
+									</AvatarFallback>
 								</Avatar>
-							</Button>
+							</div>
 						</DropdownMenuTrigger>
+
 						<DropdownMenuContent
 							onClick={handleLogout}
 							className="w-56 cursor-pointer"

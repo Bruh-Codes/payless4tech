@@ -103,6 +103,7 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 								alt={product.name}
 								priority
 								fill
+								sizes="(max-width: 768px) 100vw,"
 								className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105" // Use object-cover
 							/>
 						)}
@@ -128,7 +129,9 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 							</p>
 						)}
 						<div className="flex items-center justify-between mb-2">
-							<h3 className="font-semibold text-lg truncate">{product.name}</h3>
+							<h3 className="font-semibold text-lg truncate text-gray-600">
+								{product.name}
+							</h3>
 						</div>
 
 						<p
