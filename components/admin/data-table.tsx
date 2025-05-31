@@ -300,7 +300,7 @@ const columns = (
 						Mark Delivered
 					</DropdownMenuItem>
 					<DropdownMenuItem
-						disabled={row?.original.status !== "pending"}
+						disabled={row?.original.fulfillment_status === "pending"}
 						onClick={() => handleDelete(row.original.id)}
 						variant="destructive"
 					>
