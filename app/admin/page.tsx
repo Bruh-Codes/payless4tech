@@ -28,6 +28,9 @@ export interface salesType {
 export default async function Page() {
 	let { data: sales, error } = await supabase.from("sales").select("*");
 
+	console.log(sales);
+	console.log(error);
+
 	const sortedSales = sales?.sort((a, b) => {
 		if (
 			a.fulfillment_status === "pending" &&
