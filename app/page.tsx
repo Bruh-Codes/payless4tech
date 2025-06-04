@@ -1,25 +1,20 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { ProductGrid } from "@/components/ProductGrid";
 import { Map } from "@/components/Map";
 import { SocialMediaLinks } from "@/components/SocialMediaLinks";
 import { PreorderForm } from "@/components/PreorderForm";
 import { Button } from "@/components/ui/button";
-import { ArrowDown } from "lucide-react";
 import { FeaturedCategories } from "@/components/FeaturedCategories";
 import { TrustSection } from "@/components/TrustSection";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import Link from "next/link";
 
 const Page = () => {
 	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
-	const productsRef = useRef<HTMLDivElement>(null);
-
-	const scrollToProducts = () => {
-		productsRef.current?.scrollIntoView({ behavior: "smooth" });
-	};
 
 	return (
 		<>
@@ -47,17 +42,15 @@ const Page = () => {
 									Pre-order from the USA or buy in-store at Payless4Tech
 								</p>
 								<div className="flex items-center gap-5 justify-center ">
-									<Button
-										onClick={scrollToProducts}
-										size="lg"
-										className="bg-sky-500 cursor-pointer hover:bg-sky-500/90 text-white font-bold group button-animation"
-									>
-										Shop Now
-										<ArrowDown
-											className="ml-2 group-hover:animate-bounce"
-											size={18}
-										/>
-									</Button>
+									<Link href={"/shop"}>
+										<Button
+											size="lg"
+											className="bg-sky-500 cursor-pointer hover:bg-sky-500/90 text-white font-bold group button-animation"
+										>
+											Shop Now
+										</Button>
+									</Link>
+
 									<Button
 										onClick={() => setIsPreorderFormOpen(true)}
 										size="lg"
@@ -77,7 +70,7 @@ const Page = () => {
 					<TrustSection />
 
 					{/* Laptop Products Section */}
-					<section className="py-20" ref={productsRef}>
+					<section className="py-20">
 						<div className="container mx-auto px-4">
 							<h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">
 								Featured Laptops

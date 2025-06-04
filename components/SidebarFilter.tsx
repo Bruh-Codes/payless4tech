@@ -51,7 +51,7 @@ export const SidebarFilter = ({
 
 			// Group products by category and extract unique brands
 			const categoryMap = new Map<string, Set<string>>();
-			
+
 			products.forEach((product) => {
 				// Skip products with empty categories
 				if (!product.category) return;

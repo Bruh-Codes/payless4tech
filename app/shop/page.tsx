@@ -31,7 +31,7 @@ const Shop = () => {
 				<Header />
 
 				<main className="container mx-auto py-8">
-					<div className="flex flex-col lg:flex-row gap-6">
+					<div className="flex flex-col lg:flex-row gap-5">
 						<aside className="w-full md:w-64 px-4">
 							<SidebarFilter
 								selectedCategory={selectedCategory}

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { useState } from "react";
 import { PreorderForm } from "./PreorderForm";
+import { useSession } from "@supabase/auth-helpers-react";
 
 interface Product {
 	id: string;
@@ -32,13 +33,22 @@ interface ProductCardProps {
 export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 	const { addItem } = useCart();
 	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
-
 	const [preordered, setPreordered] = useState(false);
+	const session = useSession();
+
+	const userDetails = {
+		email: session?.user.email ?? "",
+		fullName:
+			session?.user.user_metadata.full_name || session?.user.user_metadata.name,
+		phoneNumber: session?.user.phone ?? "",
+		itemType: product.category ?? "",
+		specifications: product.detailed_specs ?? undefined,
+		productName: product.name ?? "",
+	};
 
 	const handleOrderSuccess = (data: boolean) => {
 		setPreordered(data);
 	};
-
 	const handleAddToCart = (e: React.MouseEvent) => {
 		e.preventDefault(); // Prevent navigation
 		addItem({
@@ -49,36 +59,7 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 			image_url: product.image_url,
 		});
 	};
-	const renderStatusBadge = (status: string) => {
-		switch (status) {
-			case "new":
-				return (
-					<span className="bg-purple-300 text-purple-800 font-semibold px-3 py-2 rounded-2xl">
-						New
-					</span>
-				);
-			case "available":
-				return (
-					<span className="bg-green-200 text-green-800 font-semibold px-3 py-2 rounded-2xl">
-						Available
-					</span>
-				);
-			case "unavailable":
-				return (
-					<span className="bg-red-200 text-red-800 font-semibold px-3 py-2 rounded-2xl">
-						Unavailable
-					</span>
-				);
-			case "low-stock":
-				return (
-					<span className="bg-yellow-200 text-yellow-800 font-semibold px-3 py-2 rounded-2xl">
-						Low Stock
-					</span>
-				);
-			default:
-				return null;
-		}
-	};
+
 	return (
 		<>
 			<Card
@@ -93,9 +74,6 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 						href={`/product/${product.id}`}
 						className="max-w-full relative h-[60%] overflow-hidden"
 					>
-						<div className="absolute top-4 right-2 z-5">
-							{product.status && renderStatusBadge(product?.status)}
-						</div>{" "}
 						{/* Fixed height for image container */}
 						{product.image_url && (
 							<Image
@@ -208,6 +186,7 @@ export const ProductCard = ({ product, inCart }: ProductCardProps) => {
 				handleOrderSuccess={handleOrderSuccess}
 				isOpen={isPreorderFormOpen}
 				onOpenChange={setIsPreorderFormOpen}
+				userDetails={userDetails}
 			/>
 		</>
 	);

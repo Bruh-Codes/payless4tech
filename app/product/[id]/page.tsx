@@ -231,23 +231,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 											))}
 									</div>
 								)}
-
-								{/* {session && (
-									<div className="space-y-2">
-										<Input
-											type="file"
-											accept="image/*"
-											multiple
-											onChange={handleImageUpload}
-											disabled={isLoading}
-										/>
-										{newImages.length > 0 && (
-											<Button onClick={handleSaveImages} disabled={isLoading}>
-												{isLoading ? "Uploading..." : "Save Images"}
-											</Button>
-										)}
-									</div>
-								)} */}
 							</div>
 
 							<div className="space-y-4">
@@ -263,7 +246,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 										<Badge variant="secondary">{product?.category}</Badge>
 									</div>
 									{conditionInfo && (
-										<div className="bg-secondary/10 p-4 rounded-lg space-y-2">
+										<div className="bg-[#FFF2E5] p-4 rounded-lg space-y-2">
 											<p className="text-sm text-muted-foreground">
 												{conditionInfo.definition}
 											</p>
@@ -273,7 +256,7 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 													extendable to 12 months for a fee.{" "}
 													<Link
 														href="/warranty-policy"
-														className="text-primary hover:underline"
+														className="text-blue-400 underline"
 													>
 														Learn more about our warranty policy
 													</Link>

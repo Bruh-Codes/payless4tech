@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -24,12 +24,21 @@ interface PreorderFormProps {
 	isOpen: boolean;
 	onOpenChange: (open: boolean) => void;
 	handleOrderSuccess?: (data: boolean) => void;
+	userDetails?: {
+		email?: string;
+		fullName?: string;
+		phoneNumber?: string;
+		itemType?: string;
+		specifications?: string;
+		productName?: string;
+	};
 }
 
 export const PreorderForm = ({
 	isOpen,
 	onOpenChange,
 	handleOrderSuccess,
+	userDetails,
 }: PreorderFormProps) => {
 	const [formData, setFormData] = useState({
 		fullName: "",
@@ -37,8 +46,22 @@ export const PreorderForm = ({
 		phoneNumber: "",
 		itemType: "",
 		specifications: "",
+		productName: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	useEffect(() => {
+		if (userDetails) {
+			setFormData({
+				fullName: userDetails.fullName || "",
+				email: userDetails.email || "",
+				phoneNumber: userDetails.phoneNumber || "",
+				itemType: userDetails.itemType || "",
+				specifications: userDetails.specifications || "",
+				productName: userDetails.productName || "",
+			});
+		}
+	}, [userDetails]);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -51,7 +74,7 @@ export const PreorderForm = ({
 					full_name: formData.fullName,
 					email: formData.email,
 					phone_number: formData.phoneNumber,
-					item_type: formData.itemType,
+					item_type: formData.itemType === "",
 					specifications: { details: formData.specifications },
 				},
 			]);
@@ -91,6 +114,7 @@ export const PreorderForm = ({
 				phoneNumber: "",
 				itemType: "",
 				specifications: "",
+				productName: "",
 			});
 			onOpenChange(false);
 		} catch (error: any) {
@@ -109,17 +133,37 @@ export const PreorderForm = ({
 				<DialogHeader>
 					<DialogTitle>Preorder Request</DialogTitle>
 				</DialogHeader>
-				<form onSubmit={handleSubmit} className="space-y-4">
-					<div className="space-y-2">
-						<Label htmlFor="fullName">Full Name</Label>
-						<Input
-							id="fullName"
-							required
-							value={formData.fullName}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, fullName: e.target.value }))
-							}
-						/>
+				<form
+					onSubmit={handleSubmit}
+					className="space-y-4 overflow-y-auto h-full"
+				>
+					<div className="grid grid-cols-2 gap-2">
+						<div className="space-y-2">
+							<Label htmlFor="fullName">Full Name</Label>
+							<Input
+								id="fullName"
+								required
+								value={formData.fullName}
+								onChange={(e) =>
+									setFormData((prev) => ({ ...prev, fullName: e.target.value }))
+								}
+							/>
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="phoneNumber">Phone Number</Label>
+							<Input
+								id="phoneNumber"
+								required
+								value={formData.phoneNumber}
+								onChange={(e) =>
+									setFormData((prev) => ({
+										...prev,
+										phoneNumber: e.target.value,
+									}))
+								}
+							/>
+						</div>
 					</div>
 					<div className="space-y-2">
 						<Label htmlFor="email">Email</Label>
@@ -134,15 +178,15 @@ export const PreorderForm = ({
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="phoneNumber">Phone Number</Label>
+						<Label htmlFor="product-name">Product Name</Label>
 						<Input
-							id="phoneNumber"
+							id="product-name"
 							required
-							value={formData.phoneNumber}
+							value={formData.productName}
 							onChange={(e) =>
 								setFormData((prev) => ({
 									...prev,
-									phoneNumber: e.target.value,
+									productName: e.target.value,
 								}))
 							}
 						/>
@@ -159,9 +203,11 @@ export const PreorderForm = ({
 								<SelectValue placeholder="Select item type" />
 							</SelectTrigger>
 							<SelectContent>
-								<SelectItem value="laptop">Laptop</SelectItem>
-								<SelectItem value="phone">Phone</SelectItem>
-								<SelectItem value="accessories">Accessories</SelectItem>
+								<SelectItem value="laptops">Laptop</SelectItem>
+								<SelectItem value="phones">Phone</SelectItem>
+								<SelectItem value="consumer-electronics">
+									Consumer Electronic
+								</SelectItem>
 								<SelectItem value="other">Other</SelectItem>
 							</SelectContent>
 						</Select>

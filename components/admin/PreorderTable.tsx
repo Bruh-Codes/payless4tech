@@ -127,13 +127,17 @@ const columns = (
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem
 						onClick={() => handleMarkAsDelivered(row.original.id)}
-						disabled={row?.original.fulfillment_status !== "pending"}
+						disabled={
+							row?.original.fulfillment_status?.toLowerCase() !== "pending"
+						}
 					>
 						Mark Delivered
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						disabled={row?.original.fulfillment_status === "pending"}
+						disabled={
+							row?.original.fulfillment_status?.toLowerCase() === "pending"
+						}
 						onClick={() => handleDelete(row.original.id)}
 						variant="destructive"
 					>

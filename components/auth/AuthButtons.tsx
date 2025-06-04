@@ -10,13 +10,10 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuLabel,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useRouter } from "next/navigation";
-import { NavUser } from "../nav-user";
-import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
 
 export const AuthButtons = () => {
 	const [isAdmin, setIsAdmin] = useState(false);
