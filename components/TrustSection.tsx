@@ -73,6 +73,7 @@ export const TrustSection = () => {
 									src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/1200px-Visa_Inc._logo.svg.png"
 									alt="Visa"
 									width={74}
+									priority
 									height={24}
 								/>
 							</Badge>
@@ -84,6 +85,7 @@ export const TrustSection = () => {
 									src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/1280px-Mastercard-logo.svg.png"
 									alt="Mastercard"
 									width={28}
+									priority
 									height={24}
 								/>
 							</Badge>

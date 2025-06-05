@@ -50,6 +50,8 @@ export const ProductGrid = ({
 
 			if (category) {
 				query = query.eq("category", category);
+			} else {
+				query = query.eq("category", "laptops");
 			}
 
 			if (excludeCategory) {

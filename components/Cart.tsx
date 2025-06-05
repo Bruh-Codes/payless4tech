@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import Image from "next/image";
 
 export const Cart = () => {
 	const { state, removeItem, updateQuantity, checkout, toggleWarranty } =
@@ -115,7 +116,9 @@ export const Cart = () => {
 										className="flex items-center flex-col sm:flex-row justify-between space-x-4 bg-white/50 p-4 rounded-lg shadow-sm"
 									>
 										<div className="flex items-center space-x-4">
-											<img
+											<Image
+												height={70}
+												width={70}
 												src={item.image_url || " "}
 												alt={item.name}
 												className="h-16 w-16 rounded-md object-cover"

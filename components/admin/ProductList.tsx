@@ -22,6 +22,7 @@ import {
 	AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface Product {
 	id: string;
@@ -90,7 +91,9 @@ export const ProductList = () => {
 					{products.map((product) => (
 						<Card key={product.id}>
 							<CardContent className="flex items-center gap-4 p-4">
-								<img
+								<Image
+									height={70}
+									width={70}
 									src={product.image_url || " "}
 									alt={product.name}
 									className="w-20 h-20 object-cover rounded"

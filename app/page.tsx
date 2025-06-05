@@ -12,6 +12,7 @@ import { TrustSection } from "@/components/TrustSection";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import Link from "next/link";
+import Image from "next/image";
 
 const Page = () => {
 	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
@@ -25,7 +26,10 @@ const Page = () => {
 					<section className="relative h-[85vh] overflow-hidden">
 						{/* Background Image */}
 						<div className="absolute inset-0 z-0">
-							<img
+							<Image
+								height={468}
+								width={1264}
+								priority
 								src="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b"
 								alt="Laptop background"
 								className="w-full h-full object-cover brightness-[0.6]"

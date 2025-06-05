@@ -24,12 +24,14 @@ interface UseProductFormProps {
 	productId?: string;
 	isEditing?: boolean;
 	onProductAdded?: () => void;
+	refetchAdditionalImages?: () => void;
 }
 
 export const useProductForm = ({
 	productId,
 	isEditing = false,
 	onProductAdded,
+	refetchAdditionalImages,
 }: UseProductFormProps) => {
 	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
@@ -168,6 +170,7 @@ export const useProductForm = ({
 			if (updateError) throw updateError;
 
 			setExistingImageUrl(null);
+			if (refetchAdditionalImages) refetchAdditionalImages(); // Add this
 			toast("Success", {
 				description: "Main image deleted successfully",
 			});
@@ -201,6 +204,7 @@ export const useProductForm = ({
 			setExistingAdditionalImages((prev) =>
 				prev.filter((img) => img.id !== imageId)
 			);
+			if (refetchAdditionalImages) refetchAdditionalImages();
 			toast("Success", {
 				description: "Additional image deleted successfully",
 			});
@@ -256,13 +260,9 @@ export const useProductForm = ({
 				mainImageUrl = await uploadImage(dataToUse.image);
 			}
 
-			if (newProduct.image) {
-				mainImageUrl = await uploadImage(newProduct.image);
-			}
-
-			if (newProduct.additionalImages.length > 0) {
+			if (dataToUse.additionalImages && dataToUse.additionalImages.length > 0) {
 				additionalImageUrls = await Promise.all(
-					newProduct.additionalImages.map(uploadImage)
+					dataToUse.additionalImages.map(uploadImage)
 				);
 			}
 

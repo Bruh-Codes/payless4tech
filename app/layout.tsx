@@ -60,11 +60,8 @@ export default async function RootLayout({
 			enableSystem
 			disableTransitionOnChange
 		>
-			<html lang="en">
-				<body
-					className={`${roboto.variable} antialiased`}
-					suppressHydrationWarning
-				>
+			<html lang="en" suppressHydrationWarning>
+				<body className={`${roboto.variable} antialiased`}>
 					<NextTopLoader
 						color="#FF8904"
 						initialPosition={0.04}

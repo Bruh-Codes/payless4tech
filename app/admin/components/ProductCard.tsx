@@ -72,6 +72,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { ProductFormData, useProductForm } from "@/hooks/useProductForm";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProductCardProps {
 	product: Product;
@@ -88,24 +90,30 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
 	const [toggleSheet, setToggleSheet] = useState(false);
 	const [disableUpdate, setDisableUpdate] = useState(true);
-	const fileInputRef = useRef<HTMLInputElement>(null);
-	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-	const [extraImages, setExtraImages] = useState<File[]>([]);
+
+	// Separate refs for main and additional images
+	const mainImageInputRef = useRef<HTMLInputElement>(null);
+	const additionalImagesInputRef = useRef<HTMLInputElement>(null);
+
+	// Separate state for main and additional images
+	const [newMainImage, setNewMainImage] = useState<File | null>(null);
+	const [newAdditionalImages, setNewAdditionalImages] = useState<File[]>([]);
 	const [hasImageChanges, setHasImageChanges] = useState(false);
+	const [mainImageRemoved, setMainImageRemoved] = useState(false);
+	const [isDeletingLoading, setisDeletingLoading] = useState(false);
 
 	// Use the hook for product creation
 	const {
 		isLoading,
 		handleFormChange,
 		handleSubmit: hookHandleSubmit,
+		handleDeleteMainImage,
+		handleDeleteAdditionalImage,
 	} = useProductForm({
 		isEditing: true,
 		productId: product.id,
-		onProductAdded: () => {
-			setToggleSheet(false);
-			setSelectedFiles([]);
-			setHasImageChanges(false);
-			form.reset();
+		refetchAdditionalImages: () => {
+			refetchAdditionalImages();
 		},
 	});
 
@@ -127,8 +135,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 			stock: String(product.stock ?? ""),
 			original_price: String(product.original_price ?? ""),
 		});
-		setSelectedFiles([]);
+		setNewMainImage(null);
+		setNewAdditionalImages([]);
 		setHasImageChanges(false);
+		setMainImageRemoved(false);
 	}, [product]);
 
 	const renderStatusBadge = (status: string) => {
@@ -162,6 +172,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		}
 	};
 
+	const { data: additionalImages, refetch: refetchAdditionalImages } = useQuery(
+		{
+			queryKey: ["productAdditionalImages", product.id],
+			queryFn: async () => {
+				const response = await supabase
+					.from("product_images")
+					.select("*")
+					.eq("product_id", product.id)
+					.order("display_order", { ascending: true });
+
+				return response.data;
+			},
+		}
+	);
+
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
 		const result = formSchema.safeParse(values);
 		if (!result.success) {
@@ -181,9 +206,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 			detailed_specs: values.detailed_specs || "",
 			stock: values.stock || "",
 			status: values.status || "",
-			// Only include image data if there are new images selected
-			image: selectedFiles.length > 0 ? selectedFiles[0] : null,
-			additionalImages: selectedFiles.length > 1 ? selectedFiles.slice(1) : [],
+			// Include new main image if selected
+			image: newMainImage,
+			// Include new additional images
+			additionalImages: newAdditionalImages,
 		};
 
 		// Set each field individually using handleFormChange
@@ -219,44 +245,51 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		return () => subscription.unsubscribe();
 	}, [form, product, hasImageChanges]);
 
-	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	// Handle main image upload
+	const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		setNewMainImage(file);
+		setHasImageChanges(true);
+
+		// Update form with new image URL for preview
+		form.setValue("image_url", URL.createObjectURL(file));
+	};
+
+	// Handle additional images upload
+	const handleAdditionalImagesChange = (
+		e: React.ChangeEvent<HTMLInputElement>
+	) => {
 		const files = e.target.files;
 		if (!files) return;
 
 		const fileArray = Array.from(files);
-		const totalFiles = selectedFiles.length + fileArray.length;
+		const updatedAdditionalImages = [...newAdditionalImages, ...fileArray];
 
-		if (totalFiles > 1) {
-			toast.error("You can only upload 1 image for product");
-			return;
-		}
-
-		const newFiles = [...selectedFiles, ...fileArray];
-		setSelectedFiles(newFiles);
+		setNewAdditionalImages(updatedAdditionalImages);
 		setHasImageChanges(true);
 
-		// Update form with new image URL for preview
-		if (newFiles.length > 0) {
-			form.setValue("image_url", URL.createObjectURL(newFiles[0]));
-			form.setValue("additionalImages", newFiles.slice(1));
-			setExtraImages(newFiles.slice(1));
-		}
+		// Update form
+		form.setValue("additionalImages", updatedAdditionalImages);
 	};
 
-	const removeFile = (indexToRemove: number) => {
-		const updatedFiles = selectedFiles.filter((_, i) => i !== indexToRemove);
-		setSelectedFiles(updatedFiles);
+	// Remove new main image
+	const removeNewMainImage = () => {
+		setNewMainImage(null);
+		// Reset to original image if no new image selected
+		form.setValue("image_url", product.image_url);
+		setHasImageChanges(newAdditionalImages.length > 0);
+	};
 
-		if (updatedFiles.length === 0) {
-			// Reset to original image if no files selected
-			form.setValue("image_url", product.image_url);
-			setHasImageChanges(false);
-		} else {
-			// Update with new main image
-			form.setValue("image_url", URL.createObjectURL(updatedFiles[0]));
-			form.setValue("additionalImages", updatedFiles.slice(1));
-			setExtraImages(updatedFiles.slice(1));
-		}
+	// Remove new additional image
+	const removeNewAdditionalImage = (indexToRemove: number) => {
+		const updatedFiles = newAdditionalImages.filter(
+			(_, i) => i !== indexToRemove
+		);
+		setNewAdditionalImages(updatedFiles);
+		form.setValue("additionalImages", updatedFiles);
+		setHasImageChanges(newMainImage !== null || updatedFiles.length > 0);
 	};
 
 	return (
@@ -499,38 +532,39 @@ const ProductCard: React.FC<ProductCardProps> = ({
 										)}
 									/>
 
+									{/* Main Image Upload Section */}
 									<FormField
 										control={form.control}
 										name="image_url"
 										render={({ field }) => (
 											<FormItem>
-												<FormLabel>Product Images</FormLabel>
+												<FormLabel>Main Product Image</FormLabel>
 												<FormControl>
 													<div className="flex flex-col items-start gap-2">
 														<Input
 															type="file"
 															accept="image/*"
-															multiple
 															className="hidden"
-															ref={fileInputRef}
-															onChange={handleFileChange}
+															ref={mainImageInputRef}
+															onChange={handleMainImageChange}
 														/>
+
 														<Button
 															variant="outline"
 															type="button"
-															onClick={() => fileInputRef.current?.click()}
-															className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
+															onClick={() => mainImageInputRef.current?.click()}
+															className="flex items-center gap-2 cursor-pointer hover:bg-blue-300 bg-blue-200 text-blue-900"
 														>
 															<UploadCloud className="w-4 h-4" />
-															Upload New Product Images
+															Upload New Main Image
 														</Button>
 													</div>
 												</FormControl>
 
-												{/* Current and new images preview */}
+												{/* Current and new main image preview */}
 												<div className="grid grid-cols-2 gap-4 mt-4">
-													{/* Current product image */}
-													{selectedFiles.length === 0 && (
+													{/* Current main image */}
+													{!newMainImage && !mainImageRemoved && (
 														<div className="relative border rounded-lg overflow-hidden shadow-sm group">
 															<Image
 																priority
@@ -541,13 +575,139 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																className="object-cover w-full h-[150px]"
 															/>
 															<span className="absolute bg-blue-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
-																Current Image
+																Current Main Image
 															</span>
+															<Button
+																type="button"
+																onClick={async () => {
+																	await handleDeleteMainImage();
+																	setMainImageRemoved(true);
+																	setHasImageChanges(true);
+																}}
+																className="absolute top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
+															>
+																<X className="w-3 h-3" />
+															</Button>
 														</div>
 													)}
 
-													{/* New selected images */}
-													{selectedFiles.map((file, idx) => (
+													{/* New main image */}
+													{newMainImage && (
+														<div className="relative border rounded-lg overflow-hidden shadow-sm group">
+															<Image
+																alt={newMainImage.name}
+																src={URL.createObjectURL(newMainImage)}
+																width={200}
+																height={200}
+																className="object-cover w-full h-[150px]"
+															/>
+															<span className="absolute bg-green-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
+																New Main Image
+															</span>
+															<Button
+																type="button"
+																onClick={removeNewMainImage}
+																className="absolute top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
+															>
+																<X className="w-3 h-3" />
+															</Button>
+															<p className="text-sm text-center py-2 px-1 bg-gray-50 text-gray-700 truncate">
+																{newMainImage.name}
+															</p>
+														</div>
+													)}
+												</div>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+
+									{/* Additional Images Upload Section */}
+									<FormField
+										control={form.control}
+										name="additionalImages"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Additional Product Images</FormLabel>
+												<FormControl>
+													<div className="flex flex-col items-start gap-2">
+														<Input
+															type="file"
+															accept="image/*"
+															className="hidden"
+															multiple={true}
+															ref={additionalImagesInputRef}
+															onChange={handleAdditionalImagesChange}
+														/>
+
+														<Button
+															variant="outline"
+															type="button"
+															onClick={() =>
+																additionalImagesInputRef.current?.click()
+															}
+															className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
+														>
+															<UploadCloud className="w-4 h-4" />
+															Upload Additional Images
+														</Button>
+													</div>
+												</FormControl>
+
+												{/* Current and new additional images preview */}
+												<div className="grid grid-cols-2 gap-4 mt-4">
+													{/* Current additional images */}
+													{additionalImages &&
+														additionalImages.map((additionalImage, idx) => {
+															const imageUrl = additionalImage?.image_url;
+
+															return (
+																<div
+																	key={idx}
+																	className="relative border rounded-lg overflow-hidden shadow-sm group"
+																>
+																	{isLoading ? (
+																		<div className="w-full h-[150px] flex items-center justify-center bg-black">
+																			<span className="animate-spin rounded-full border-4 border-gray-300 border-t-blue-500 h-8 w-8"></span>
+																		</div>
+																	) : imageUrl ? (
+																		<Image
+																			alt={additionalImage.id}
+																			src={imageUrl}
+																			width={200}
+																			height={200}
+																			className="object-cover w-full h-[150px]"
+																		/>
+																	) : (
+																		<div className="w-full h-[150px] flex items-center justify-center text-gray-400 text-sm italic">
+																			No Image
+																		</div>
+																	)}
+
+																	<span className="absolute bg-gray-800 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
+																		Current Additional
+																	</span>
+
+																	{!isLoading && (
+																		<Button
+																			disabled={isLoading}
+																			type="button"
+																			onClick={() =>
+																				handleDeleteAdditionalImage(
+																					additionalImage?.id
+																				)
+																			}
+																			className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
+																		>
+																			<X className="w-3 h-3" />
+																		</Button>
+																	)}
+																</div>
+															);
+														})}
+
+													{/* New additional images */}
+													{newAdditionalImages.map((file, idx) => (
 														<div
 															key={idx}
 															className="relative border rounded-lg overflow-hidden shadow-sm group"
@@ -559,20 +719,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																height={200}
 																className="object-cover w-full h-[150px]"
 															/>
-															<span
-																className={cn(
-																	"absolute top-1 left-1 text-xs px-2 py-0.5 rounded",
-																	{
-																		"bg-blue-500 text-white": idx === 0,
-																		"bg-gray-800 text-white": idx !== 0,
-																	}
-																)}
-															>
-																{idx === 0 ? "New Main Image" : "Additional"}
+															<span className="absolute bg-green-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
+																New Additional
 															</span>
 															<Button
 																type="button"
-																onClick={() => removeFile(idx)}
+																onClick={() => removeNewAdditionalImage(idx)}
 																className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
 															>
 																<X className="w-3 h-3" />
@@ -587,6 +739,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 											</FormItem>
 										)}
 									/>
+
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
 											control={form.control}
