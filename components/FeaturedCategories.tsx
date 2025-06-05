@@ -15,7 +15,7 @@ const CategoryCard = ({ title, icon, bgImage, link }: CategoryCardProps) => {
 
 	return (
 		<Card
-			className="cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-hover hover:scale-105 relative h-48"
+			className="group cursor-pointer overflow-hidden transition-all duration-300 hover:shadow-hover hover:scale-105 relative h-48"
 			onClick={() => router.push(link)}
 		>
 			{bgImage && (
@@ -31,10 +31,10 @@ const CategoryCard = ({ title, icon, bgImage, link }: CategoryCardProps) => {
 				</div>
 			)}
 			<CardContent className="relative z-10 flex flex-col items-center justify-center h-full text-center p-4 group">
-				<div className="mb-4 text-primary bg-primary/10 p-4 rounded-full transition-all duration-300 hover:bg-primary/20">
+				<div className="mb-4 bg-gray-950/20 group-hover:text-white p-4 rounded-full transition-all duration-300">
 					{icon}
 				</div>
-				<h3 className="font-bold text-xl">{title}</h3>
+				<h3 className="font-bold text-xl group-hover:text-white">{title}</h3>
 			</CardContent>
 		</Card>
 	);
