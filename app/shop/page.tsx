@@ -53,7 +53,7 @@ const Shop = () => {
 						<div className="container mx-auto px-4 py-6 md:py-8 flex flex-col items-center justify-center space-y-4 text-center">
 							<p className="text-lg md:text-xl font-medium text-gray-800 max-w-2xl mx-auto leading-relaxed">
 								Can't see the gadget or specification you need? Preorder
-								directly from the USA and receive your purchase within 21 days!
+								directly from the USA and receive your purchase within 14 days!
 							</p>
 							<Button
 								variant="secondary"
