@@ -52,13 +52,13 @@ export const FeaturedCategories = () => {
 			title: "Laptops",
 			icon: <HardDrive size={24} />,
 			bgImage: "https://images.unsplash.com/photo-1611078489935-0cb964de46d6",
-			link: "/shop?brand=laptop",
+			link: "/shop",
 		},
 		{
 			title: "Audio devices",
 			icon: <Gamepad size={24} />,
 			bgImage: "https://images.unsplash.com/photo-1593640408182-31c70c8268f5",
-			link: "/category/renewed-gadgets",
+			link: "/category/consumer-electronics",
 		},
 		{
 			title: "Consumer Electronics",
