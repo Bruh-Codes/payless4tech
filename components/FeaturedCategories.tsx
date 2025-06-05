@@ -57,8 +57,8 @@ export const FeaturedCategories = () => {
 		{
 			title: "Audio devices",
 			icon: <Gamepad size={24} />,
-			bgImage: "https://images.unsplash.com/photo-1593640408182-31c70c8268f5",
-			link: "/category/consumer-electronics",
+			bgImage: "https://images.unsplash.com/photo-1630152836113-ccbf6d1e5fa5",
+			link: "http://localhost:3001/category/consumer-electronics?brand=JBL",
 		},
 		{
 			title: "Consumer Electronics",
