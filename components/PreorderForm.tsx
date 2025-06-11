@@ -74,7 +74,7 @@ export const PreorderForm = ({
 					full_name: formData.fullName,
 					email: formData.email,
 					phone_number: formData.phoneNumber,
-					item_type: formData.itemType === "",
+					item_type: formData.itemType,
 					specifications: { details: formData.specifications },
 				},
 			]);
