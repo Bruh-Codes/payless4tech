@@ -14,6 +14,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { cn } from "@/lib/utils";
+import { PreorderForm } from "@/components/PreorderForm";
+import { useSession } from "@supabase/auth-helpers-react";
 
 interface ProductImage {
 	created_at: string;
@@ -34,6 +37,7 @@ interface Product {
 	image_url: string | null;
 	original_price: number | null;
 	detailed_specs: string | null;
+	status: string;
 	images?: ProductImage[];
 }
 
@@ -63,10 +67,13 @@ const conditionDefinitions = {
 const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const { id } = use(params);
 	const router = useRouter();
-	const { addItem } = useCart();
+	const { addItem, state } = useCart();
 	const [product, setProduct] = useState<Product | null>(null);
 	const [selectedImage, setSelectedImage] = useState<string | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
+	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
+	const [preordered, setPreordered] = useState(false);
+	const session = useSession();
 
 	useEffect(() => {
 		fetchProduct();
@@ -149,6 +156,10 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const conditionInfo =
 		conditionDefinitions[conditionDisplay as keyof typeof conditionDefinitions];
 
+	const handleOrderSuccess = (data: boolean) => {
+		setPreordered(data);
+	};
+
 	function parsedetailed_specs(
 		specText: string
 	): { title: string; items: string[] }[] {
@@ -174,6 +185,17 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		return sections;
 	}
 
+	const userDetails = {
+		email: session?.user.email ?? "",
+		fullName:
+			session?.user.user_metadata.full_name || session?.user.user_metadata.name,
+		phoneNumber: session?.user.phone ?? "",
+		itemType: product.category ?? "",
+		specifications: product.detailed_specs ?? undefined,
+		productName: product.name ?? "",
+	};
+
+	const inCart = state.items.some((cartItems) => cartItems.id === product.id);
 	return (
 		<>
 			<div className="min-h-screen">
@@ -281,10 +303,47 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 									)}
 								</div>
 
-								<Button onClick={handleAddToCart} className="w-full" size="lg">
-									<ShoppingCart className="mr-2" />
-									Add to Cart
-								</Button>
+								{product.status === "unavailable" ? (
+									<Button
+										size="sm"
+										onClick={() => setIsPreorderFormOpen(true)}
+										className={cn(
+											"cursor-pointer hover:opacity-90 mr-auto m-0 ml-auto block w-full",
+											{
+												"bg-green-500 text-white cursor-not-allowed": inCart,
+											},
+											{
+												"bg-orange-500 hover:bg-orange-600":
+													product.status === "unavailable",
+											}
+										)}
+										disabled={preordered || inCart}
+									>
+										{preordered
+											? "preordered"
+											: inCart
+											? "In Cart"
+											: "Preorder"}
+									</Button>
+								) : (
+									<Button
+										size="sm"
+										onClick={() => {
+											if (!inCart) {
+												handleAddToCart();
+											}
+										}}
+										className={cn(
+											"cursor-pointer hover:opacity-90 mr-auto m-0 ml-auto block w-full",
+											{
+												"bg-green-500 text-white cursor-not-allowed": inCart,
+											}
+										)}
+										disabled={inCart}
+									>
+										{inCart ? "In Cart" : "Add to Cart"}
+									</Button>
+								)}
 							</div>
 						</div>
 					</Card>
@@ -313,6 +372,12 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 						)}
 					</div>
 				</main>
+				<PreorderForm
+					handleOrderSuccess={handleOrderSuccess}
+					isOpen={isPreorderFormOpen}
+					onOpenChange={setIsPreorderFormOpen}
+					userDetails={userDetails}
+				/>
 			</div>
 			<Footer /> <WhatsAppButton />
 		</>
