@@ -77,6 +77,7 @@
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4",
 		"@types/lodash": "^4.17.17",
+		"@types/minimatch": "^6.0.0",
 		"@types/next-pwa": "^5.6.9",
 		"@types/node": "^20",
 		"@types/paystack__inline-js": "^1.0.1",
