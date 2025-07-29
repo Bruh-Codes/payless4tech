@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev --turbopack",
-		"build": "NEXT_LINT=false next build",
+		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
 		"ngrok start": " ngrok http 3000"
