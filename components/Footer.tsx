@@ -68,21 +68,17 @@ export const Footer = () => {
 
 					{/* Newsletter */}
 					<div>
-						<h3 className="text-xl font-bold mb-4">Stay Updated</h3>
-						<p className="mb-4 text-gray-300">
-							Subscribe href receive updates on new products, exclusive offers,
-							and promotions.
-						</p>
-						<div className="flex flex-col sm:flex-row gap-2">
-							<Input
-								type="email"
-								placeholder="Your email"
-								className="bg-gray-800 border-gray-700 focus:border-primary"
-							/>
-							<Button className="bg-secondary hover:bg-secondary/90 whitespace-nowrap">
-								Subscribe
-							</Button>
-						</div>
+						<h3 className="text-xl font-bold mb-4">Legal</h3>
+						<ul>
+							<li>
+								<Link
+									href="/privacy-policy"
+									className="hover:text-white/30 transition-colors"
+								>
+									Privacy Policy
+								</Link>
+							</li>
+						</ul>
 					</div>
 				</div>
 
