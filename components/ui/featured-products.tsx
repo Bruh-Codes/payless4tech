@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { featuredProducts } from "@/lib/products";
-import ProductCard from "../product-card";
+import ProductCard from "@/components/product-card";
 
 const FeaturedProducts = () => {
 	return (

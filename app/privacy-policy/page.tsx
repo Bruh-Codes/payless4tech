@@ -1,11 +1,11 @@
-import { Header } from "@/components/Header";
-import React from "react";
+import Footer from "@/components/Footer";
+import Navbar from "@/components/navbar";
 
-const PrivacyPolicyPage = () => {
+const Page = () => {
 	return (
-		<div className={`bg-gray-100`}>
-			<Header />
-			<div className="max-w-xl mx-auto px-5 py-8 space-y-5">
+		<div>
+			<Navbar />
+			<div className="max-w-2xl mx-auto px-5 py-8 space-y-5">
 				<div>
 					<h1 className="text-3xl font-bold">Privacy Policy</h1>
 					<p className="py-3 italic">Effective Date: July 29, 2025</p>
@@ -142,8 +142,9 @@ const PrivacyPolicyPage = () => {
 					</ul>
 				</div>
 			</div>
+			<Footer />
 		</div>
 	);
 };
 
-export default PrivacyPolicyPage;
+export default Page;

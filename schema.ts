@@ -129,6 +129,7 @@ export const archivedSales = pgTable("archived_sales", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 
 	userId: text("user_id"),
+	name: text("name"),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	totalAmount: bigint("total_amount", { mode: "number" }),
 	status: text(),
@@ -187,20 +188,31 @@ export const products = pgTable("products", {
 	stock: bigint({ mode: "number" }).default(sql`'300'`),
 });
 
-export const saleItems = pgTable("sale_items", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	saleId: text("sale_id").notNull(),
-	productId: text("product_id"),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	quantity: bigint({ mode: "number" }),
-	priceAtTime: doublePrecision("price_at_time"),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-});
+export const saleItems = pgTable(
+	"sale_items",
+	{
+		id: uuid().defaultRandom().primaryKey().notNull(),
+		saleId: uuid("sale_id").notNull(),
+		productId: text("product_id"),
+		// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+		quantity: bigint({ mode: "number" }),
+		priceAtTime: doublePrecision("price_at_time"),
+		createdAt: timestamp("created_at", { withTimezone: true, mode: "string" }),
+		// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.saleId],
+			foreignColumns: [sales.id],
+			name: "sale_items_sale_id_fkey",
+		}),
+	],
+);
 
 export const sales = pgTable("sales", {
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	userId: text("user_id"),
+	name: text("name"),
 	totalAmount: doublePrecision("total_amount"),
 	status: text(),
 	createdAt: timestamp("created_at", {

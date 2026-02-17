@@ -1,8 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useReducer } from "react";
+import React, {
+	createContext,
+	useContext,
+	useReducer,
+	useCallback,
+} from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
 interface CartItem {
 	id: string;
 	name: string;
@@ -21,7 +27,7 @@ interface CheckoutDetails {
 	phoneNumber: string;
 	alternativePhone?: string;
 	deliveryAddress: string;
-	gpsLocation?: string;
+	name: string;
 	email: string;
 	extendedWarranty?: boolean;
 }
@@ -32,6 +38,12 @@ type CartAction =
 	| { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
 	| { type: "TOGGLE_WARRANTY"; payload: boolean }
 	| { type: "CLEAR_CART" };
+
+const initialState: CartState = {
+	items: [],
+	total: 0,
+	extendedWarranty: false,
+};
 
 const CartContext = createContext<{
 	state: CartState;
@@ -47,7 +59,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 	switch (action.type) {
 		case "ADD_ITEM": {
 			const existingItem = state.items.find(
-				(item) => item.id === action.payload.id
+				(item) => item.id === action.payload.id,
 			);
 			if (existingItem) {
 				return {
@@ -55,7 +67,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 					items: state.items.map((item) =>
 						item.id === action.payload.id
 							? { ...item, quantity: item.quantity + 1 }
-							: item
+							: item,
 					),
 					total: state.total + action.payload.price,
 				};
@@ -92,7 +104,7 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 				items: state.items.map((item) =>
 					item.id === action.payload.id
 						? { ...item, quantity: action.payload.quantity }
-						: item
+						: item,
 				),
 				total: state.total + item.price * quantityDiff,
 			};
@@ -113,159 +125,133 @@ const cartReducer = (state: CartState, action: CartAction): CartState => {
 	}
 };
 
-export const CartProvider = ({ children }: { children: React.ReactNode }) => {
-	const [state, dispatch] = useReducer(cartReducer, {
-		items: [],
-		total: 0,
-		extendedWarranty: false,
-	});
+export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
+	children,
+}) => {
+	const [state, dispatch] = useReducer(cartReducer, initialState);
+	const { data: session } = authClient.useSession();
 
-	const addItem = (item: CartItem) => {
+	const addItem = useCallback((item: CartItem) => {
 		dispatch({ type: "ADD_ITEM", payload: item });
 		toast("Added to cart", {
 			description: `${item.name} has been added to your cart.`,
 			duration: 2000,
 		});
-	};
+	}, []);
 
-	const removeItem = (id: string) => {
+	const removeItem = useCallback((id: string) => {
 		dispatch({ type: "REMOVE_ITEM", payload: id });
-	};
+	}, []);
 
-	const updateQuantity = (id: string, quantity: number) => {
+	const updateQuantity = useCallback((id: string, quantity: number) => {
 		dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
-	};
+	}, []);
 
-	const toggleWarranty = (value: boolean) => {
+	const toggleWarranty = useCallback((value: boolean) => {
 		dispatch({ type: "TOGGLE_WARRANTY", payload: value });
-	};
+	}, []);
 
-	const clearCart = () => {
+	const clearCart = useCallback(() => {
 		dispatch({ type: "CLEAR_CART" });
-	};
+	}, []);
 
-	const checkout = async (details: CheckoutDetails) => {
-		try {
-			// Calculate total with warranty if selected
-			const warrantyAmount = details.extendedWarranty ? 500 : 0;
-			const totalWithWarranty = state.total + warrantyAmount;
+	const checkout = useCallback(
+		async (details: CheckoutDetails) => {
+			try {
+				// Calculate total with warranty if selected
+				const warrantyAmount = details.extendedWarranty ? 500 : 0;
+				const totalWithWarranty = state.total + warrantyAmount;
 
-			// Create a new sale record
-			const { data: sale, error: saleError } = await supabase
-				.from("sales")
-				.insert({
-					total_amount: totalWithWarranty,
-					status: "pending",
-					phone_number: details.phoneNumber,
-					delivery_address: details.deliveryAddress,
-					gps_location: details.gpsLocation,
-					email: details.email,
-					extended_warranty: details.extendedWarranty,
-					alternative_phone: details?.alternativePhone,
-					fulfillment_status: "pending",
-					product: state.items.map((item) => {
-						return {
-							name: item.name,
-							quantity: item.quantity,
-							price: item.price,
-							id: item.id,
-						};
-					}),
-				})
-				.select()
-				.single();
-
-			if (saleError) {
-				console.error("Error creating sale:", saleError);
-				throw new Error(`Failed to create sale: ${saleError.message}`);
-			}
-
-			const saleItems = state.items.map((item) => ({
-				sale_id: sale.id,
-				product_id: item.id,
-				quantity: item.quantity,
-				price_at_time: item.price,
-			}));
-
-			const { error: itemsError } = await supabase
-				.from("sale_items")
-				.insert(saleItems);
-
-			if (itemsError) {
-				console.error("Error creating sale items:", itemsError);
-				throw new Error(`Failed to create sale items: ${itemsError.message}`);
-			}
-
-			const totalAmount =
-				saleItems.reduce(
-					(sum, item) => sum + item.quantity * item.price_at_time,
-					0
-				) * 100;
-
-			await initiatePayment(details.email, totalAmount.toString(), saleItems);
-
-			// 💡 define this outside or above for cleaner code
-			async function initiatePayment(
-				email: string,
-				amount: string,
-				items: {
-					sale_id: string;
-					product_id: string;
-					quantity: number;
-					price_at_time: number;
-				}[]
-			) {
-				const response = await fetch("/api/paystack/init", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({ email, amount, items }),
-				});
-
-				const data = await response.json();
-
-				if (response.ok && data?.url.access_code) {
-					const PaystackPop = (await import("@paystack/inline-js")).default;
-					const paystack = new PaystackPop();
-					paystack?.newTransaction({
-						key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
+				// Create a new sale record
+				const { data: sale, error: saleError } = await supabase
+					.from("sales")
+					.insert({
+						user_id: session?.user?.id,
+						name: details.name,
+						total_amount: totalWithWarranty,
+						status: "pending",
+						phone_number: details.phoneNumber,
+						delivery_address: details.deliveryAddress,
 						email: details.email,
-						amount: totalAmount,
-						currency: "GHS",
-						metadata: {
-							custom_fields: [
-								{
-									display_name: "Sale ID",
-									variable_name: "sale_id",
-									value: sale.id,
-								},
-							],
-						},
-						onSuccess: async function (transaction) {
-							clearCart();
+						extended_warranty: details.extendedWarranty,
+						alternative_phone: details?.alternativePhone,
+						fulfillment_status: "pending",
+						product: state.items.map((item) => {
+							return {
+								name: item.name,
+								quantity: item.quantity,
+								price: item.price,
+								id: item.id,
+							};
+						}),
+					})
+					.select()
+					.single();
 
-							toast.success("Payment successful", {
-								description: `Transaction ID: ${transaction.reference}`,
-							});
-						},
-						onCancel: function () {
-							toast.error("Payment cancelled");
-						},
-					});
-				} else {
-					toast.error("Payment failed: " + (data?.error || "Unknown error"));
+				if (saleError) {
+					console.error("Error creating sale:", saleError);
+					throw new Error(`Failed to create sale: ${saleError.message}`);
 				}
+
+				const saleItems = state.items.map((item) => ({
+					sale_id: sale.id,
+					product_id: item.id,
+					quantity: item.quantity,
+					price_at_time: item.price,
+				}));
+
+				const { error: itemsError } = await supabase
+					.from("sale_items")
+					.insert(saleItems);
+
+				if (itemsError) {
+					console.error("Error creating sale items:", itemsError);
+					throw new Error(`Failed to create sale items: ${itemsError.message}`);
+				}
+
+				const totalAmount = totalWithWarranty * 100;
+
+				await initiatePayment(details.email, totalAmount.toString(), saleItems);
+
+				// 💡 define this outside or above for cleaner code
+				async function initiatePayment(
+					email: string,
+					amount: string,
+					items: {
+						sale_id: string;
+						product_id: string;
+						quantity: number;
+						price_at_time: number;
+					}[],
+				) {
+					const response = await fetch("/api/paystack/init", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({ email, amount, items }),
+					});
+
+					const data = await response.json();
+
+					if (response.ok && data?.url.access_code) {
+						// Redirect to Paystack payment page
+						window.location.href = data.url.authorization_url;
+					} else {
+						toast.error("Payment failed: " + (data?.error || "Unknown error"));
+					}
+				}
+				return;
+			} catch (error: any) {
+				console.error("Checkout error:", error);
+				toast.error("Checkout failed", {
+					description: error.message || "An error occurred during checkout",
+				});
+				throw error;
 			}
-			return;
-		} catch (error: any) {
-			console.error("Checkout error:", error);
-			toast.error("Checkout failed", {
-				description: error.message || "An error occurred during checkout",
-			});
-			throw error;
-		}
-	};
+		},
+		[state.total, session],
+	);
 
 	return (
 		<CartContext.Provider

@@ -1,66 +1,39 @@
 "use client";
 
-import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
-import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { Loading } from "@/components/LoadingSkeletons";
+import { useQuery } from "@tanstack/react-query";
 
 const AdminAuth = ({ children }: { children: React.ReactNode }) => {
 	const router = useRouter();
-	const [isLoading, setIsLoading] = useState(true);
-	const [refreshSlideshow, setRefreshSlideshow] = useState(0);
+	const { data: session } = authClient.useSession();
 
-	useEffect(() => {
-		checkAuth();
-	}, []);
-
-	const checkAuth = async () => {
-		try {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-
-			if (!session) {
-				toast.error("Unauthorized", {
-					description: "Please login to access the admin page",
-				});
-				router.push("/login");
-				return;
-			}
-
-			// Check if the user has admin role
-			const { data: userRole, error } = await supabase
-				.from("user_roles")
-				.select("role")
-				.eq("user_id", session.user.id)
-				.single();
-
-			if (error || userRole?.role !== "admin") {
-				toast.error("Unauthorized", {
-					description: "You do not have admin privileges",
-				});
-				router.push("/");
-				return;
-			}
-
-			setIsLoading(false);
-		} catch (error) {
-			console.error("Auth check error:", error);
-			toast.error("Error", {
-				description: "An error occurred while checking authentication",
+	const { data: isAdmin, isPending } = useQuery({
+		queryKey: ["admin-auth", session?.user?.id],
+		queryFn: async () => {
+			const response = await authClient.admin.hasPermission({
+				permissions: {
+					products: ["create", "update", "delete"],
+				},
 			});
-			router.push("/");
-		}
-	};
+			return response.data?.success;
+		},
+		enabled: !!session?.user?.id,
+	});
 
-	if (isLoading) {
-		return (
-			<div className="flex items-center justify-center min-h-screen">
-				<Loader2 className="h-8 w-8 animate-spin" />
-			</div>
-		);
+	if (isPending) {
+		return <Loading />;
 	}
+
+	if (!isAdmin) {
+		toast.error("Unauthorized", {
+			description: "You do not have admin privileges",
+		});
+		router.push("/");
+	}
+
 	return <>{children}</>;
 };
 

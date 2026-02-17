@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, memo } from "react";
+import { useDebounce } from "use-debounce";
+import dynamic from "next/dynamic";
 import {
 	Search,
 	Menu,
@@ -9,38 +11,98 @@ import {
 	Facebook,
 	MessageCircle,
 	ChevronDown,
+	Twitter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/public/71f241a6-a4bb-422f-b7e6-29032fee0ed6.png";
 
 import { searchProducts, Product, categories } from "@/lib/products";
+import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ThemeToggle from "./ui/theme-toggle";
 import { AuthButtons } from "./auth/AuthButtons";
-import { Cart } from "./Cart";
+import { Loading } from "./LoadingSkeletons";
+const Cart = dynamic(() => import("./Cart"), {
+	loading: () => <Loading size="sm" />,
+	ssr: false,
+});
 import Link from "next/link";
 
-const Navbar = () => {
+// Extract static social links to avoid recreation on every render
+const SocialLinks = [
+	{ href: "https://x.com/payless4tech", icon: Twitter, label: "Twitter" },
+	{
+		href: "https://www.instagram.com/payless4tech",
+		icon: Instagram,
+		label: "Instagram",
+	},
+	{
+		href: "https://web.facebook.com/p/Payless4Tech",
+		icon: Facebook,
+		label: "Facebook",
+	},
+	{
+		href: "https://wa.me/+233245151416",
+		icon: MessageCircle,
+		label: "WhatsApp",
+	},
+];
+
+const DesktopSocialLinks = () => (
+	<>
+		{SocialLinks.map(({ href, icon: Icon, label }) => (
+			<a
+				key={label}
+				href={href}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="hover:text-primary transition-colors"
+			>
+				<Icon className="h-3.5 w-3.5" />
+			</a>
+		))}
+		<span className="text-xs ml-2">Accra, Ghana</span>
+	</>
+);
+
+const Navbar = memo(() => {
 	const [query, setQuery] = useState("");
-	const [results, setResults] = useState<Product[]>([]);
+	const [debouncedQuery] = useDebounce(query, 300);
 	const [showDropdown, setShowDropdown] = useState(false);
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+	// Search source from environment variable, default to 'local'
+	const searchSource =
+		(process.env.NEXT_PUBLIC_SEARCH_SOURCE as "local" | "ebay") || "local";
 	const router = useRouter();
 	const dropdownRef = useRef<HTMLFormElement>(null);
 	const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
+	// eBay search hooks - use debounced query
+	const ebaySearch = useEbaySearch(debouncedQuery);
+
+	// Local search results - use debounced query
+	const localResults =
+		debouncedQuery.trim().length > 0 ? searchProducts(debouncedQuery) : [];
+
+	// Combined results (local + eBay)
+	const allResults =
+		searchSource === "ebay"
+			? (ebaySearch.data?.items || []).map(convertEbayToLocalProduct)
+			: localResults;
+
+	// Loading states
+	const isLoading = searchSource === "ebay" ? ebaySearch.isLoading : false;
+
 	useEffect(() => {
-		if (query.trim().length > 0) {
-			const found = searchProducts(query);
-			setResults(found);
+		if (debouncedQuery.trim().length > 0) {
 			setShowDropdown(true);
 		} else {
-			setResults([]);
 			setShowDropdown(false);
 		}
-	}, [query]);
+	}, [debouncedQuery]);
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
@@ -57,28 +119,40 @@ const Navbar = () => {
 				setCategoryDropdownOpen(false);
 			}
 		};
-		document.addEventListener("mousedown", handleClickOutside);
+		document.addEventListener("mousedown", handleClickOutside, {
+			passive: true,
+		});
 		return () => document.removeEventListener("mousedown", handleClickOutside);
 	}, []);
 
-	const handleSelect = (product: Product) => {
-		setShowDropdown(false);
-		setQuery("");
-		router.push(`/search?q=${encodeURIComponent(product.title)}`);
-	};
-
-	const handleCategorySelect = (categorySlug: string) => {
-		setCategoryDropdownOpen(false);
-		router.push(`/search?q=${encodeURIComponent(categorySlug)}`);
-	};
-
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (query.trim()) {
+	const handleSelect = useCallback(
+		(product: Product) => {
 			setShowDropdown(false);
-			router.push(`/search?q=${encodeURIComponent(query.trim())}`);
-		}
-	};
+			setQuery("");
+			// Navigate to search results page for both local and eBay products
+			router.push(`/search?q=${encodeURIComponent(product.title)}`);
+		},
+		[router],
+	);
+
+	const handleCategorySelect = useCallback(
+		(categorySlug: string) => {
+			setCategoryDropdownOpen(false);
+			router.push(`/search?q=${encodeURIComponent(categorySlug)}`);
+		},
+		[router],
+	);
+
+	const handleSubmit = useCallback(
+		(e: React.FormEvent) => {
+			e.preventDefault();
+			if (query.trim()) {
+				setShowDropdown(false);
+				router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+			}
+		},
+		[query, router],
+	);
 
 	return (
 		<>
@@ -86,31 +160,7 @@ const Navbar = () => {
 				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 					{/* Top bar with socials */}
 					<div className="hidden md:flex items-center justify-end gap-3 py-1.5 text-muted-foreground border-b border-border/30">
-						<a
-							href="https://instagram.com"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="hover:text-primary transition-colors"
-						>
-							<Instagram className="h-3.5 w-3.5" />
-						</a>
-						<a
-							href="https://facebook.com"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="hover:text-primary transition-colors"
-						>
-							<Facebook className="h-3.5 w-3.5" />
-						</a>
-						<a
-							href="https://wa.me/+233245151416"
-							target="_blank"
-							rel="noopener noreferrer"
-							className="hover:text-primary transition-colors"
-						>
-							<MessageCircle className="h-3.5 w-3.5" />
-						</a>
-						<span className="text-xs ml-2">Accra, Ghana</span>
+						<DesktopSocialLinks />
 					</div>
 
 					<div className="flex h-16 items-center justify-between gap-4">
@@ -182,7 +232,7 @@ const Navbar = () => {
 										value={query}
 										onChange={(e) => setQuery(e.target.value)}
 										onFocus={() => query.trim() && setShowDropdown(true)}
-										placeholder="Search for tech deals... e.g. iPhone 11 Pro"
+										placeholder={`Search for tech deals on ${searchSource === "ebay" ? "eBay" : "local inventory"}... e.g. iPhone 11 Pro`}
 										className="w-full rounded-lg border border-border bg-secondary py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
 									/>
 								</div>
@@ -190,8 +240,17 @@ const Navbar = () => {
 								{/* Dropdown results */}
 								{showDropdown && (
 									<div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-border bg-popover shadow-lg z-50 max-h-80 overflow-y-auto">
-										{results.length > 0 ? (
-											results.map((product) => (
+										{isLoading ? (
+											<div className="px-4 py-6 text-center">
+												<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+												<p className="text-sm text-muted-foreground mt-2">
+													Searching{" "}
+													{searchSource === "ebay" ? "eBay" : "local inventory"}
+													...
+												</p>
+											</div>
+										) : allResults.length > 0 ? (
+											allResults.map((product) => (
 												<button
 													type="button"
 													key={product.id}
@@ -207,23 +266,31 @@ const Navbar = () => {
 														<p className="text-sm font-medium text-foreground truncate">
 															{product.title}
 														</p>
-														<p className="text-xs text-muted-foreground">
-															${product.price.toFixed(2)}
-														</p>
+														<div className="flex items-center gap-2">
+															<p className="text-xs text-muted-foreground">
+																${product.price.toFixed(2)}
+															</p>
+															{product.id.startsWith("ebay-") && (
+																<span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
+																	eBay
+																</span>
+															)}
+														</div>
 													</div>
 												</button>
 											))
 										) : (
 											<div className="px-4 py-6 text-center">
 												<p className="text-sm text-muted-foreground">
-													No results for "{query}"
+													No results for "{query}" on{" "}
+													{searchSource === "ebay" ? "eBay" : "local inventory"}
 												</p>
 												<p className="text-xs text-muted-foreground mt-1">
 													Try "iPhone", "MacBook", or "headphones"
 												</p>
 											</div>
 										)}
-										{results.length > 0 && (
+										{allResults.length > 0 && (
 											<button
 												type="button"
 												onClick={() => {
@@ -232,7 +299,7 @@ const Navbar = () => {
 												}}
 												className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-accent transition-colors border-t border-border"
 											>
-												View all results for "{query}" →
+												View all results →
 											</button>
 										)}
 									</div>
@@ -349,13 +416,13 @@ const Navbar = () => {
 										type="text"
 										value={query}
 										onChange={(e) => setQuery(e.target.value)}
-										placeholder="Search for tech deals..."
+										placeholder={`Search ${searchSource === "ebay" ? "eBay" : "local"}...`}
 										className="w-full rounded-lg border border-border bg-secondary/50 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
 									/>
 								</div>
-								{showDropdown && results.length > 0 && (
-									<div className="mt-1 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
-										{results.map((product) => (
+								{showDropdown && !isLoading && allResults.length > 0 && (
+									<div className="mt-2 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
+										{allResults.map((product) => (
 											<button
 												type="button"
 												key={product.id}
@@ -367,11 +434,31 @@ const Navbar = () => {
 													alt={product.title}
 													className="h-8 w-8 rounded object-cover"
 												/>
-												<p className="text-sm text-foreground truncate">
-													{product.title}
-												</p>
+												<div className="flex-1 min-w-0">
+													<p className="text-sm text-foreground truncate">
+														{product.title}
+													</p>
+													<div className="flex items-center gap-2">
+														<p className="text-xs text-muted-foreground">
+															${product.price.toFixed(2)}
+														</p>
+														{product.id.startsWith("ebay-") && (
+															<span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
+																eBay
+															</span>
+														)}
+													</div>
+												</div>
 											</button>
 										))}
+									</div>
+								)}
+								{isLoading && (
+									<div className="mt-2 text-center py-4">
+										<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto"></div>
+										<p className="text-xs text-muted-foreground mt-1">
+											Searching...
+										</p>
 									</div>
 								)}
 							</form>
@@ -411,6 +498,8 @@ const Navbar = () => {
 			</nav>
 		</>
 	);
-};
+});
+
+Navbar.displayName = "Navbar";
 
 export default Navbar;

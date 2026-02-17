@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "../ui/skeleton";
+import { Package } from "lucide-react";
 
 export const AuthButtons = () => {
 	const [isLoading, setIsLoading] = useState(false);
@@ -60,7 +61,7 @@ export const AuthButtons = () => {
 			{session ? (
 				<>
 					{isPending ? (
-						<Skeleton className="h-9 w-24 bg-blue-100" />
+						<Skeleton className="h-9 w-24" />
 					) : isAdmin?.data?.success ? (
 						<Link href="/admin" className="m-0">
 							<Button size="sm">Dashboard</Button>
@@ -89,6 +90,12 @@ export const AuthButtons = () => {
 							align="end"
 							forceMount
 						>
+							<DropdownMenuItem asChild>
+								<Link href="/orders" className="flex items-center gap-2">
+									<Package className="h-4 w-4" />
+									My Orders
+								</Link>
+							</DropdownMenuItem>
 							<DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
 								{isLoading ? "Logging out..." : "Log out"}
 							</DropdownMenuItem>

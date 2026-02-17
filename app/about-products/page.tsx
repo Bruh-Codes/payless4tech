@@ -1,6 +1,5 @@
 "use client";
 
-import { Header } from "@/components/Header";
 import { Card } from "@/components/ui/card";
 import {
 	Breadcrumb,
@@ -11,8 +10,9 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/Footer";
 
 const conditions = [
 	{
@@ -45,7 +45,7 @@ export default function AboutProducts() {
 	return (
 		<>
 			<div className="min-h-screen">
-				<Header />
+				<Navbar />
 				<main className="container mx-auto px-4 py-8">
 					<Breadcrumb className="mb-6 max-w-4xl mx-auto">
 						<BreadcrumbList>

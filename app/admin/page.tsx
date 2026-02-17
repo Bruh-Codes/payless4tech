@@ -1,8 +1,30 @@
 import AdminOverview from "@/components/admin/AdminOverview";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { ChartAreaInteractive } from "@/components/chart-area-interactive";
-import { DataTable } from "@/components/admin/data-table";
+import dynamicImport from "next/dynamic";
+import { Suspense } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ChartSkeleton, TableSkeleton } from "@/components/LoadingSkeletons";
+
+// Dynamically import heavy components for better performance
+const ChartAreaInteractive = dynamicImport(
+	() =>
+		import("@/components/chart-area-interactive").then((mod) => ({
+			default: mod.ChartAreaInteractive,
+		})),
+	{
+		loading: () => <ChartSkeleton />,
+	},
+);
+
+const DataTable = dynamicImport(
+	() =>
+		import("@/components/admin/data-table").then((mod) => ({
+			default: mod.DataTable,
+		})),
+	{
+		loading: () => <TableSkeleton />,
+	},
+);
 
 export interface salesType {
 	id: number;
@@ -55,8 +77,12 @@ export default async function Page() {
 				<h1 className="text-3xl font-bold">Dashboard</h1>
 			</div>
 			<AdminOverview />
-			<ChartAreaInteractive />
-			<DataTable data={sortedSales as salesType[]} />
+			<Suspense fallback={<ChartSkeleton />}>
+				<ChartAreaInteractive />
+			</Suspense>
+			<Suspense fallback={<TableSkeleton />}>
+				<DataTable data={sortedSales as salesType[]} />
+			</Suspense>
 			{/* <SlideshowImageList /> */}
 
 			{/* <div className="grid gap-8">

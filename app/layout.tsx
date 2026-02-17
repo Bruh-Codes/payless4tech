@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,11 +9,20 @@ import icon from "@/public/app.png";
 import openGraphImage from "@/app/opengraph-image.png";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import QueryProvider from "@/components/QueryProvider";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import dynamic from "next/dynamic";
+import { Suspense } from "react";
+import { Loading, LoadingSpinner } from "@/components/LoadingSkeletons";
 
-const roboto = Roboto({
-	variable: "--font-roboto",
-	subsets: ["latin", "greek"],
+// Dynamically import React Query DevTools only in development
+const ReactQueryDevtools = dynamic(() =>
+	import("@tanstack/react-query-devtools").then((mod) => ({
+		default: mod.ReactQueryDevtools,
+	})),
+);
+
+const inter = Inter({
+	variable: "--font-inter",
+	subsets: ["latin", "greek", "cyrillic"],
 });
 
 export const metadata: Metadata = {
@@ -55,14 +64,14 @@ export default async function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<ThemeProvider
-			attribute="class"
-			defaultTheme="light"
-			enableSystem
-			disableTransitionOnChange
-		>
-			<html lang="en" suppressHydrationWarning>
-				<body className={`${roboto.variable} antialiased`}>
+		<html lang="en" suppressHydrationWarning>
+			<body className={`${inter.variable} antialiased`}>
+				<ThemeProvider
+					attribute="class"
+					defaultTheme="light"
+					enableSystem
+					disableTransitionOnChange
+				>
 					<NextTopLoader
 						color="#FF8904"
 						initialPosition={0.04}
@@ -78,10 +87,14 @@ export default async function RootLayout({
 						<CartProvider>{children}</CartProvider>
 						<WhatsAppButton />
 						<Toaster richColors />
-						<ReactQueryDevtools />
+						{process.env.NODE_ENV === "development" && (
+							<Suspense fallback={<Loading />}>
+								<ReactQueryDevtools />
+							</Suspense>
+						)}
 					</QueryProvider>
-				</body>
-			</html>
-		</ThemeProvider>
+				</ThemeProvider>
+			</body>
+		</html>
 	);
 }

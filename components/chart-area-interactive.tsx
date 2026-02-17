@@ -62,7 +62,7 @@ const chartConfig = {
 function processData(rawData: RawSalesRow[]): SalesData[] {
 	// Filter only completed sales
 	const completedSales = rawData.filter(
-		(sale) => sale.fulfillment_status === "delivered"
+		(sale) => sale.fulfillment_status === "delivered",
 	);
 	// Group by date
 	const groupedByDate = _.groupBy(completedSales, (sale) => {
@@ -138,11 +138,11 @@ export function ChartAreaInteractive() {
 
 	const totalRevenue = salesData.reduce(
 		(acc, item) => acc + item.total_sales,
-		0
+		0,
 	);
 	const totalOrders = salesData.reduce(
 		(acc, item) => acc + item.order_count,
-		0
+		0,
 	);
 	const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -174,7 +174,7 @@ export function ChartAreaInteractive() {
 									variant="outline"
 									className={cn(
 										"w-[280px] justify-start text-left font-normal",
-										!dateRange && "text-muted-foreground"
+										!dateRange && "text-muted-foreground",
 									)}
 								>
 									<CalendarIcon className="mr-2 h-4 w-4" />

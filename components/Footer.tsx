@@ -21,7 +21,7 @@ const Footer = () => {
 						</p>
 						<div className="flex gap-3 mt-4">
 							<a
-								href="https://instagram.com"
+								href="https://www.instagram.com/payless4tech"
 								target="_blank"
 								rel="noopener noreferrer"
 								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
@@ -29,7 +29,7 @@ const Footer = () => {
 								<Instagram className="h-4 w-4" />
 							</a>
 							<a
-								href="https://facebook.com"
+								href="https://web.facebook.com/p/Payless4Tech"
 								target="_blank"
 								rel="noopener noreferrer"
 								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
@@ -37,7 +37,7 @@ const Footer = () => {
 								<Facebook className="h-4 w-4" />
 							</a>
 							<a
-								href="https://twitter.com"
+								href="https://x.com/payless4tech"
 								target="_blank"
 								rel="noopener noreferrer"
 								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
@@ -101,22 +101,27 @@ const Footer = () => {
 						</h4>
 						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
-								<a href="#" className="hover:text-primary transition-colors">
+								<a
+									href="https://wa.me/+233245151416"
+									className="hover:text-primary transition-colors"
+								>
 									Help Center
 								</a>
 							</li>
+
 							<li>
-								<a href="#" className="hover:text-primary transition-colors">
-									Returns
-								</a>
-							</li>
-							<li>
-								<a href="#" className="hover:text-primary transition-colors">
+								<a
+									href="/warranty-policy"
+									className="hover:text-primary transition-colors"
+								>
 									Warranty
 								</a>
 							</li>
 							<li>
-								<a href="#" className="hover:text-primary transition-colors">
+								<a
+									href="https://wa.me/+233245151416"
+									className="hover:text-primary transition-colors"
+								>
 									Contact Us
 								</a>
 							</li>
@@ -129,23 +134,20 @@ const Footer = () => {
 						</h4>
 						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
-								<a href="#" className="hover:text-primary transition-colors">
+								<a
+									href="/about-products"
+									className="hover:text-primary transition-colors"
+								>
 									About
 								</a>
 							</li>
+
 							<li>
-								<a href="#" className="hover:text-primary transition-colors">
-									Careers
-								</a>
-							</li>
-							<li>
-								<a href="#" className="hover:text-primary transition-colors">
+								<a
+									href="/privacy-policy"
+									className="hover:text-primary transition-colors"
+								>
 									Privacy Policy
-								</a>
-							</li>
-							<li>
-								<a href="#" className="hover:text-primary transition-colors">
-									Terms
 								</a>
 							</li>
 						</ul>

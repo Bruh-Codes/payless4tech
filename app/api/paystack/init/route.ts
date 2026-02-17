@@ -4,10 +4,12 @@ import https from "https";
 export async function POST(req: NextRequest): Promise<NextResponse> {
 	const body = await req.json();
 	const { email, amount, items } = body;
+	const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
 	const params = JSON.stringify({
 		email,
 		amount,
+		callback_url: `${baseUrl}/api/paystack/redirect`,
 		metadata: {
 			items: items?.map((item: any) => ({ ...item })),
 		},
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 					resolve(NextResponse.json({ url: result.data }));
 				} else {
 					resolve(
-						NextResponse.json({ error: result.message }, { status: 400 })
+						NextResponse.json({ error: result.message }, { status: 400 }),
 					);
 				}
 			});
@@ -49,8 +51,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 			resolve(
 				NextResponse.json(
 					{ error: "Payment initialization failed" },
-					{ status: 500 }
-				)
+					{ status: 500 },
+				),
 			);
 		});
 

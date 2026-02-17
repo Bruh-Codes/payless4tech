@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1771330645065,
-      "tag": "0000_keen_squadron_sinister",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1771330977229,
-      "tag": "0001_sparkling_galactus",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1771331627590,
-      "tag": "0002_gorgeous_jack_murdock",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1771332150662,
-      "tag": "0003_greedy_nebula",
+      "when": 1771369002897,
+      "tag": "0000_dear_jimmy_woo",
       "breakpoints": true
     }
   ]
