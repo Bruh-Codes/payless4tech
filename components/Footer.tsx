@@ -1,93 +1,190 @@
+import { Instagram, Facebook, MessageCircle, Twitter } from "lucide-react";
 import { Mail, Phone, MapPin } from "lucide-react";
-import { Input } from "./ui/input";
-import { Button } from "./ui/button";
+
+import logo from "@/public/71f241a6-a4bb-422f-b7e6-29032fee0ed6.png";
+
+import Image from "next/image";
 import Link from "next/link";
 
-export const Footer = () => {
+const Footer = () => {
 	return (
-		<footer className="bg-gray-900 text-white py-12">
-			<div className="container mx-auto px-4">
-				<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-					{/* Company Info */}
+		<footer className="border-t border-border dark:bg-card/50 bg-secondary">
+			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+				<div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
 					<div>
-						<h3 className="text-xl font-bold mb-4">Payless4Tech</h3>
-						<ul className="space-y-3">
-							<li className="flex items-center gap-2">
-								<Mail size={18} className="text-gray-400" />
-								<span>joy@payless4tech.com</span>
+						<Link href="/" className="shrink-0">
+							<Image src={logo} alt="Payless4Tech" className="h-10 w-auto" />
+						</Link>
+						<p className="text-sm mt-2 text-muted-foreground">
+							Your trusted source for premium tech at unbeatable prices. Based
+							in Accra, Ghana
+						</p>
+						<div className="flex gap-3 mt-4">
+							<a
+								href="https://instagram.com"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+							>
+								<Instagram className="h-4 w-4" />
+							</a>
+							<a
+								href="https://facebook.com"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+							>
+								<Facebook className="h-4 w-4" />
+							</a>
+							<a
+								href="https://twitter.com"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+							>
+								<Twitter className="h-4 w-4" />
+							</a>
+							<a
+								href="https://wa.me/+233245151416"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="h-9 w-9 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all"
+							>
+								<MessageCircle className="h-4 w-4" />
+							</a>
+						</div>
+					</div>
+
+					<div>
+						<h4 className="font-display font-semibold text-foreground mb-3">
+							Shop
+						</h4>
+						<ul className="space-y-2 text-sm text-muted-foreground">
+							<li>
+								<a
+									href="/search?q=smartphones"
+									className="hover:text-primary transition-colors"
+								>
+									Smartphones
+								</a>
 							</li>
-							<li className="flex items-center gap-2">
-								<Phone size={18} className="text-gray-400" />
-								<span>+233 245 151 416</span>
+							<li>
+								<a
+									href="/search?q=laptops"
+									className="hover:text-primary transition-colors"
+								>
+									Laptops
+								</a>
 							</li>
-							<li className="flex items-start gap-2">
-								<MapPin size={18} className="text-gray-400 mt-1" />
-								<span>Shop 42, Accra Mall, Spintex Road, Accra, Ghana</span>
+							<li>
+								<a
+									href="/search?q=audio"
+									className="hover:text-primary transition-colors"
+								>
+									Audio
+								</a>
+							</li>
+							<li>
+								<a
+									href="/search?q=gaming"
+									className="hover:text-primary transition-colors"
+								>
+									Gaming
+								</a>
 							</li>
 						</ul>
 					</div>
 
-					{/* Quick Links */}
 					<div>
-						<h3 className="text-xl font-bold mb-4">Quick Links</h3>
-						<ul className="space-y-2">
+						<h4 className="font-display font-semibold text-foreground mb-3">
+							Support
+						</h4>
+						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
-								<Link
-									href="/about-products"
-									className="hover:text-white/30 transition-colors"
-								>
-									About Products
-								</Link>
+								<a href="#" className="hover:text-primary transition-colors">
+									Help Center
+								</a>
 							</li>
 							<li>
-								<Link
-									href="/faq"
-									className="hover:text-white/30 transition-colors"
-								>
-									FAQ
-								</Link>
+								<a href="#" className="hover:text-primary transition-colors">
+									Returns
+								</a>
 							</li>
 							<li>
-								<Link
-									href="/warranty-policy"
-									className="hover:text-white/30 transition-colors"
-								>
-									Returns & Warranty
-								</Link>
+								<a href="#" className="hover:text-primary transition-colors">
+									Warranty
+								</a>
 							</li>
 							<li>
-								<Link
-									href="/shop"
-									className="hover:text-white/30 transition-colors"
-								>
-									Shop
-								</Link>
+								<a href="#" className="hover:text-primary transition-colors">
+									Contact Us
+								</a>
 							</li>
 						</ul>
 					</div>
 
-					{/* Newsletter */}
 					<div>
-						<h3 className="text-xl font-bold mb-4">Legal</h3>
-						<ul>
+						<h4 className="font-display font-semibold text-foreground mb-3">
+							Company
+						</h4>
+						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
-								<Link
-									href="/privacy-policy"
-									className="hover:text-white/30 transition-colors"
-								>
+								<a href="#" className="hover:text-primary transition-colors">
+									About
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-primary transition-colors">
+									Careers
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-primary transition-colors">
 									Privacy Policy
-								</Link>
+								</a>
+							</li>
+							<li>
+								<a href="#" className="hover:text-primary transition-colors">
+									Terms
+								</a>
 							</li>
 						</ul>
 					</div>
 				</div>
 
-				<div className="border-t border-gray-800 mt-8 pt-6 text-center text-gray-400 text-sm">
-					<p>
-						&copy; {new Date().getFullYear()} Payless4Tech. All rights reserved.
+				<div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+					<p className="text-xs text-muted-foreground">
+						2026 Payless4Tech. All rights reserved.
 					</p>
+					<div className="flex gap-3">
+						<a
+							href="mailto:joy@payless4tech.com"
+							className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+						>
+							<Mail className="h-4 w-4" />
+							<span>joy@payless4tech.com</span>
+						</a>
+						<a
+							href="tel:+233245151416"
+							className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+						>
+							<Phone className="h-4 w-4" />
+							<span>+233 245 151 416</span>
+						</a>
+						<a
+							href="https://maps.google.com/?q=Shop+42,+Accra+Mall,+Spintex+Road,+Accra,+Ghana"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+						>
+							<MapPin className="h-4 w-4" />
+							<span>Shop 42, Accra Mall, Spintex Road, Accra, Ghana</span>
+						</a>
+					</div>
 				</div>
 			</div>
 		</footer>
 	);
 };
+
+export default Footer;

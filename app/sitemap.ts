@@ -1,5 +1,5 @@
 import { MetadataRoute } from "next";
-const NEXT_PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 
 type changeFrequency =
 	| "always"
@@ -21,7 +21,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		"/about-products",
 		"/faq",
 	].map((route) => ({
-		url: `${NEXT_PUBLIC_SITE_URL}${route}`,
+		url: `${BETTER_AUTH_URL}${route}`,
 		lastModified: new Date(),
 		changeFrequency,
 		priority: 1,

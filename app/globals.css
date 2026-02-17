@@ -128,6 +128,17 @@
 	text-align: center;
 }
 
+.text-brand-color {
+	color: #fa7e06;
+}
+
+.bg-brand-color {
+	background-color: #f1800f;
+}
+
+.brand-color-bg:hover {
+	background-color: #f1800fd0;
+}
 .logo {
 	height: 6em;
 	padding: 1.5em;

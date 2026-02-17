@@ -1,6 +1,6 @@
 import { MetadataRoute } from "next";
 
-const NEXT_PUBLIC_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
+const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 
 export default function robots(): MetadataRoute.Robots {
 	return {
@@ -8,6 +8,6 @@ export default function robots(): MetadataRoute.Robots {
 			userAgent: "*",
 			disallow: "/private/",
 		},
-		sitemap: `${NEXT_PUBLIC_SITE_URL}/sitemap.xml`,
+		sitemap: `${BETTER_AUTH_URL}/sitemap.xml`,
 	};
 }

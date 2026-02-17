@@ -3,12 +3,13 @@ import { Roboto } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
 import { Toaster } from "@/components/ui/sonner";
-import { SupabaseSessionInitializer } from "@/contexts/SupabaseSessionInitializer";
 import NextTopLoader from "nextjs-toploader";
-import { ThemeProvider } from "@/components/admin/theme-provider";
-import ThemeHander from "@/components/ThemeHandler";
+import { ThemeProvider } from "@/components/theme-provider";
 import icon from "@/public/app.png";
 import openGraphImage from "@/app/opengraph-image.png";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import QueryProvider from "@/components/QueryProvider";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 const roboto = Roboto({
 	variable: "--font-roboto",
@@ -45,7 +46,7 @@ export const metadata: Metadata = {
 		"smart gadgets",
 		"smart prices",
 	],
-	metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL as string),
+	metadataBase: new URL(process.env.BETTER_AUTH_URL as string),
 };
 
 export default async function RootLayout({
@@ -73,11 +74,12 @@ export default async function RootLayout({
 						shadow="0 0 10px #FF8904,0 0 5px #FF8904"
 						zIndex={9999}
 					/>
-					<ThemeHander />
-					<CartProvider>
-						<SupabaseSessionInitializer>{children}</SupabaseSessionInitializer>
-					</CartProvider>
-					<Toaster richColors />
+					<QueryProvider>
+						<CartProvider>{children}</CartProvider>
+						<WhatsAppButton />
+						<Toaster richColors />
+						<ReactQueryDevtools />
+					</QueryProvider>
 				</body>
 			</html>
 		</ThemeProvider>

@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -17,8 +17,9 @@ import {
 	SelectValue,
 } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { Separator } from "./ui/separator";
 
 interface PreorderFormProps {
 	isOpen: boolean;
@@ -31,6 +32,9 @@ interface PreorderFormProps {
 		itemType?: string;
 		specifications?: string;
 		productName?: string;
+		productImage?: string;
+		productId?: string;
+		productCategory?: string;
 	};
 }
 
@@ -41,15 +45,33 @@ export const PreorderForm = ({
 	userDetails,
 }: PreorderFormProps) => {
 	const [formData, setFormData] = useState({
-		fullName: "",
-		email: "",
-		phoneNumber: "",
-		itemType: "",
-		specifications: "",
-		productName: "",
+		fullName: userDetails?.fullName || "",
+		email: userDetails?.email || "",
+		phoneNumber: userDetails?.phoneNumber || "",
+		itemType: userDetails?.itemType || "",
+		specifications: userDetails?.specifications || "",
+		productName: userDetails?.productName || "",
+		productImage: userDetails?.productImage || "",
 	});
+
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
+	useEffect(() => {
+		if (!isOpen) {
+			// Reset form to empty state when closing
+			setFormData({
+				fullName: "",
+				email: "",
+				phoneNumber: "",
+				itemType: "",
+				specifications: "",
+				productName: "",
+				productImage: "",
+			});
+		}
+	}, [isOpen]);
+
+	// Pre-fill form with user details when available
 	useEffect(() => {
 		if (userDetails) {
 			setFormData({
@@ -59,27 +81,66 @@ export const PreorderForm = ({
 				itemType: userDetails.itemType || "",
 				specifications: userDetails.specifications || "",
 				productName: userDetails.productName || "",
+				productImage: userDetails.productImage || "",
 			});
 		}
 	}, [userDetails]);
+
+	// Listen for custom preorder events from product cards
+	useEffect(() => {
+		const handlePreorderEvent = (event: Event) => {
+			// console.log("Preorder event received:", event);
+
+			// Check if this is a custom event with product data
+			if (event instanceof CustomEvent && event.type === "preorder") {
+				const eventDetail = (event as any).detail;
+
+				if (eventDetail && typeof eventDetail === "object") {
+					console.log("Pre-filling form with product data:", eventDetail);
+
+					// Update form with product information
+					setFormData((prev) => ({
+						...prev,
+						fullName: prev.fullName || eventDetail.productName || "",
+						email: prev.email || "",
+						phoneNumber: prev.phoneNumber || "",
+						itemType: prev.itemType || eventDetail.productCategory || "",
+						specifications: prev.specifications || "",
+						productName: prev.productName || eventDetail.productName || "",
+						productImage: prev.productImage || eventDetail.productImage || "",
+					}));
+				}
+			}
+		};
+
+		// Add multiple event listeners to ensure we catch the event
+		window.addEventListener("preorder", handlePreorderEvent);
+		document.addEventListener("preorder", handlePreorderEvent);
+
+		return () => {
+			// Clean up both listeners
+			window.removeEventListener("preorder", handlePreorderEvent);
+			document.removeEventListener("preorder", handlePreorderEvent);
+		};
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsSubmitting(true);
 
 		try {
-			// Insert into Supabase
-			const { error: dbError } = await supabase.from("preorders").insert([
-				{
-					full_name: formData.fullName,
-					email: formData.email,
-					phone_number: formData.phoneNumber,
-					item_type: formData.itemType,
-					specifications: { details: formData.specifications },
-				},
-			]);
+			// // Insert into Supabase
+			// const { error: dbError } = await supabase.from("preorders").insert([
+			// 	{
+			// 		full_name: formData.fullName,
+			// 		email: formData.email,
+			// 		phone_number: formData.phoneNumber,
+			// 		item_type: formData.itemType,
+			// 		specifications: { details: formData.specifications },
+			// 	},
+			// ]);
 
-			if (dbError) throw dbError;
+			// if (dbError) throw dbError;
 
 			// Send email notification
 			// const { error: emailError } = await supabase.functions.invoke(
@@ -115,6 +176,7 @@ export const PreorderForm = ({
 				itemType: "",
 				specifications: "",
 				productName: "",
+				productImage: "",
 			});
 			onOpenChange(false);
 		} catch (error: any) {
@@ -129,32 +191,65 @@ export const PreorderForm = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[425px]">
+			<DialogContent className="sm:max-w-[600px] max-w-[90vw] p-4">
 				<DialogHeader>
 					<DialogTitle>Preorder Request</DialogTitle>
+					<DialogDescription>
+						Fill out the form below to place a preorder request.
+					</DialogDescription>
 				</DialogHeader>
-				<form
+				<Separator />
+
+				<motion.form
+					initial={{ opacity: 0, y: 20 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.3, ease: "easeOut" }}
 					onSubmit={handleSubmit}
-					className="space-y-4 overflow-y-auto h-full"
+					className="space-y-6 overflow-y-auto max-h-[75vh] px-6 py-4"
 				>
-					<div className="grid grid-cols-2 gap-2">
-						<div className="space-y-2">
+					{formData.productImage && (
+						<div className="space-y-4">
+							<Label>Product Image</Label>
+							<img
+								src={formData.productImage}
+								alt={formData.productName}
+								className="w-full h-52 object-cover rounded-lg border border-border"
+							/>
+						</div>
+					)}
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div className="space-y-4">
 							<Label htmlFor="fullName">Full Name</Label>
 							<Input
 								id="fullName"
 								required
+								placeholder="Enter your full name"
 								value={formData.fullName}
 								onChange={(e) =>
 									setFormData((prev) => ({ ...prev, fullName: e.target.value }))
 								}
 							/>
 						</div>
-
-						<div className="space-y-2">
+						<div className="space-y-4">
+							<Label htmlFor="email">Email Address</Label>
+							<Input
+								id="email"
+								type="email"
+								required
+								placeholder="Enter your email address"
+								value={formData.email}
+								onChange={(e) =>
+									setFormData((prev) => ({ ...prev, email: e.target.value }))
+								}
+							/>
+						</div>
+						<div className="space-y-4">
 							<Label htmlFor="phoneNumber">Phone Number</Label>
 							<Input
 								id="phoneNumber"
+								type="tel"
 								required
+								placeholder="Enter your phone number"
 								value={formData.phoneNumber}
 								onChange={(e) =>
 									setFormData((prev) => ({
@@ -165,23 +260,13 @@ export const PreorderForm = ({
 							/>
 						</div>
 					</div>
-					<div className="space-y-2">
-						<Label htmlFor="email">Email</Label>
-						<Input
-							id="email"
-							type="email"
-							required
-							value={formData.email}
-							onChange={(e) =>
-								setFormData((prev) => ({ ...prev, email: e.target.value }))
-							}
-						/>
-					</div>
-					<div className="space-y-2">
+
+					<div className="space-y-4">
 						<Label htmlFor="product-name">Product Name</Label>
 						<Input
 							id="product-name"
 							required
+							placeholder="Enter product name or model"
 							value={formData.productName}
 							onChange={(e) =>
 								setFormData((prev) => ({
@@ -191,7 +276,8 @@ export const PreorderForm = ({
 							}
 						/>
 					</div>
-					<div className="space-y-2">
+
+					<div className="space-y-4">
 						<Label htmlFor="itemType">Item Type</Label>
 						<Select
 							value={formData.itemType}
@@ -212,12 +298,11 @@ export const PreorderForm = ({
 							</SelectContent>
 						</Select>
 					</div>
-					<div className="space-y-2">
-						<Label htmlFor="specifications">Specifications</Label>
+					<div className="space-y-4">
+						<Label htmlFor="specifications">Optional Note</Label>
 						<Textarea
 							id="specifications"
-							required
-							placeholder="Please describe your requirements..."
+							placeholder="Any specific requirements or preferences..."
 							value={formData.specifications}
 							onChange={(e) =>
 								setFormData((prev) => ({
@@ -227,10 +312,11 @@ export const PreorderForm = ({
 							}
 						/>
 					</div>
+
 					<Button type="submit" disabled={isSubmitting}>
 						{isSubmitting ? "Submitting..." : "Submit Preorder"}
 					</Button>
-				</form>
+				</motion.form>
 			</DialogContent>
 		</Dialog>
 	);
