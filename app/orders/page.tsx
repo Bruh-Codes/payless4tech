@@ -142,7 +142,7 @@ const OrdersPage = () => {
 					<Card>
 						<CardContent className="text-center py-12">
 							<Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-							<h2 className="text-xl font-semibold mb-2">No orders yet</h2>
+							<h3 className="text-xl font-semibold mb-2">No orders yet</h3>
 							<p className="text-muted-foreground mb-4">
 								You haven't placed any orders. Start shopping to see your orders
 								here!
@@ -155,8 +155,8 @@ const OrdersPage = () => {
 				) : (
 					<div className="space-y-6">
 						{orders?.map((order) => (
-							<Card key={order.id} className="overflow-hidden">
-								<CardHeader className="bg-muted/50">
+							<Card key={order.id} className="overflow-hidden py-0">
+								<CardHeader className="bg-primary/10 dark:bg-muted/50 py-2">
 									<div className="flex items-center justify-between">
 										<div>
 											<CardTitle className="text-lg">
@@ -235,7 +235,7 @@ const OrdersPage = () => {
 										</div>
 									</div>
 
-									<div className="mt-6 p-4 bg-muted/30 rounded-lg">
+									<div className="mt-6 p-4 bg-primary/10 dark:bg-muted/50 rounded-lg">
 										<h4 className="font-medium mb-2">Order Status Timeline</h4>
 										<div className="space-y-2 text-sm">
 											<div className="flex items-center gap-2">

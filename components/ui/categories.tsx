@@ -40,7 +40,7 @@ const Categories = () => {
 							whileHover={{
 								boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
 							}}
-							onClick={() => router.push(`/search?q=${cat.slug}`)}
+							onClick={() => router.push(`/shop?category=${cat.slug}`)}
 							className="group relative rounded-xl overflow-hidden bg-card aspect-square flex flex-col items-center justify-end p-4 transition-all shadow-sm"
 						>
 							<img

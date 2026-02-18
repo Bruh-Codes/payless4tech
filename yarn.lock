@@ -2313,13 +2313,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@paystack/inline-js@npm:^2.22.4":
-  version: 2.22.7
-  resolution: "@paystack/inline-js@npm:2.22.7"
-  checksum: 10c0/520e65de971c84f23af22cd662a7f3c0ee6e78ace32563849384cdf97f8634bdd370af17eeaea3aa18fd48102a9a053f78acd33c11ff32f5c6f499c6a553e02d
-  languageName: node
-  linkType: hard
-
 "@radix-ui/number@npm:1.1.1":
   version: 1.1.1
   resolution: "@radix-ui/number@npm:1.1.1"
@@ -3856,13 +3849,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@streamparser/json@npm:^0.0.6":
-  version: 0.0.6
-  resolution: "@streamparser/json@npm:0.0.6"
-  checksum: 10c0/09796b615ce199436afdcb529278ce3400a9b18259719b0f220ae36c840d67e8a755f70881e192e23def0c895fcf0c55e43f93221ea9fde75ba26c5acb556690
-  languageName: node
-  linkType: hard
-
 "@supabase/auth-helpers-react@npm:^0.5.0":
   version: 0.5.0
   resolution: "@supabase/auth-helpers-react@npm:0.5.0"
@@ -4355,13 +4341,6 @@ __metadata:
   dependencies:
     undici-types: "npm:~6.21.0"
   checksum: 10c0/a1a6234a2b6fa577fbb1ccc471e5e54a79c6e1a51be10a67b034461b752a50017854810e943494f20b3c3c6d14df84c93757e0a2ec57aa81c830d6faeab72cf2
-  languageName: node
-  linkType: hard
-
-"@types/paystack__inline-js@npm:^1.0.1":
-  version: 1.0.2
-  resolution: "@types/paystack__inline-js@npm:1.0.2"
-  checksum: 10c0/72839c739efc3b1a6c5e66071ab5d88bb7f471f7606e6dda16d83dd1cc121b9f81f87309c845445cc2a48a31daa136be6435960b5ff0e1a412b53deb080fe0c7
   languageName: node
   linkType: hard
 
@@ -4973,13 +4952,6 @@ __metadata:
   version: 2.20.3
   resolution: "commander@npm:2.20.3"
   checksum: 10c0/74c781a5248c2402a0a3e966a0a2bba3c054aad144f5c023364be83265e796b20565aa9feff624132ff629aa64e16999fa40a743c10c12f7c61e96a794b99288
-  languageName: node
-  linkType: hard
-
-"commander@npm:^6.2.0":
-  version: 6.2.1
-  resolution: "commander@npm:6.2.1"
-  checksum: 10c0/85748abd9d18c8bc88febed58b98f66b7c591d9b5017cad459565761d7b29ca13b7783ea2ee5ce84bf235897333706c4ce29adf1ce15c8252780e7000e2ce9ea
   languageName: node
   linkType: hard
 
@@ -6931,19 +6903,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"json2csv@npm:6.0.0-alpha.2":
-  version: 6.0.0-alpha.2
-  resolution: "json2csv@npm:6.0.0-alpha.2"
-  dependencies:
-    "@streamparser/json": "npm:^0.0.6"
-    commander: "npm:^6.2.0"
-    lodash.get: "npm:^4.4.2"
-  bin:
-    json2csv: bin/json2csv.js
-  checksum: 10c0/9d239a9dc6e7983832b75ebd98b77d891d2488613d964a0f519632560584e9b9f845ef879ad9014c7badff48f1f87ef4c285fe031719d0bebd9b8a58a3f0c25c
-  languageName: node
-  linkType: hard
-
 "json5@npm:^2.1.2, json5@npm:^2.2.0, json5@npm:^2.2.3":
   version: 2.2.3
   resolution: "json5@npm:2.2.3"
@@ -7138,13 +7097,6 @@ __metadata:
   version: 4.0.8
   resolution: "lodash.debounce@npm:4.0.8"
   checksum: 10c0/762998a63e095412b6099b8290903e0a8ddcb353ac6e2e0f2d7e7d03abd4275fe3c689d88960eb90b0dde4f177554d51a690f22a343932ecbc50a5d111849987
-  languageName: node
-  linkType: hard
-
-"lodash.get@npm:^4.4.2":
-  version: 4.4.2
-  resolution: "lodash.get@npm:4.4.2"
-  checksum: 10c0/48f40d471a1654397ed41685495acb31498d5ed696185ac8973daef424a749ca0c7871bf7b665d5c14f5cc479394479e0307e781f61d5573831769593411be6e
   languageName: node
   linkType: hard
 
@@ -7787,7 +7739,6 @@ __metadata:
   resolution: "payless4tech@workspace:."
   dependencies:
     "@hookform/resolvers": "npm:^5.0.1"
-    "@paystack/inline-js": "npm:^2.22.4"
     "@radix-ui/react-accordion": "npm:^1.2.8"
     "@radix-ui/react-alert-dialog": "npm:^1.1.11"
     "@radix-ui/react-aspect-ratio": "npm:^1.1.4"
@@ -7826,7 +7777,6 @@ __metadata:
     "@types/minimatch": "npm:^6.0.0"
     "@types/next-pwa": "npm:^5.6.9"
     "@types/node": "npm:^20"
-    "@types/paystack__inline-js": "npm:^1.0.1"
     "@types/pg": "npm:^8.16.0"
     "@types/react": "npm:19.2.14"
     "@types/react-dom": "npm:19.2.3"
@@ -7842,7 +7792,6 @@ __metadata:
     framer-motion: "npm:^12.34.0"
     i: "npm:^0.3.7"
     input-otp: "npm:^1.4.2"
-    json2csv: "npm:6.0.0-alpha.2"
     lodash: "npm:^4.17.21"
     lucide-react: "npm:^0.503.0"
     next: "npm:16.1.6"
@@ -7858,7 +7807,6 @@ __metadata:
     recharts: "npm:^2.15.3"
     resend: "npm:^4.5.0"
     sonner: "npm:^2.0.7"
-    swiper: "npm:^10.3.1"
     tailwind-merge: "npm:^3.2.0"
     tailwindcss: "npm:^4"
     tailwindcss-animate: "npm:^1.0.7"
@@ -9084,13 +9032,6 @@ __metadata:
   version: 1.0.0
   resolution: "supports-preserve-symlinks-flag@npm:1.0.0"
   checksum: 10c0/6c4032340701a9950865f7ae8ef38578d8d7053f5e10518076e6554a9381fa91bd9c6850193695c141f32b21f979c985db07265a758867bac95de05f7d8aeb39
-  languageName: node
-  linkType: hard
-
-"swiper@npm:^10.3.1":
-  version: 10.3.1
-  resolution: "swiper@npm:10.3.1"
-  checksum: 10c0/1e9ad5480cbf451d99fab280553d5105eb314f381d98610771f0808cac03962d87967a190696686d62bce8e4ebcbf34962c369f9d502b34fef1582ced17f6f98
   languageName: node
   linkType: hard
 

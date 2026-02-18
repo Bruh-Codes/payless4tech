@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { useDebounce } from "use-debounce";
-import dynamic from "next/dynamic";
 import {
 	Search,
 	Menu,
@@ -12,6 +11,7 @@ import {
 	MessageCircle,
 	ChevronDown,
 	Twitter,
+	ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/public/71f241a6-a4bb-422f-b7e6-29032fee0ed6.png";
@@ -23,11 +23,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import ThemeToggle from "./ui/theme-toggle";
 import { AuthButtons } from "./auth/AuthButtons";
-import { Loading } from "./LoadingSkeletons";
-const Cart = dynamic(() => import("./Cart"), {
-	loading: () => <Loading size="sm" />,
-	ssr: false,
-});
+import Cart from "./Cart";
 import Link from "next/link";
 
 // Extract static social links to avoid recreation on every render
@@ -112,9 +108,11 @@ const Navbar = memo(() => {
 			) {
 				setShowDropdown(false);
 			}
+			// Only close category dropdown if clicking outside, not on category items
 			if (
 				categoryDropdownRef.current &&
-				!categoryDropdownRef.current.contains(e.target as Node)
+				!categoryDropdownRef.current.contains(e.target as Node) &&
+				!(e.target as Element).closest(".category-dropdown-item")
 			) {
 				setCategoryDropdownOpen(false);
 			}
@@ -166,7 +164,7 @@ const Navbar = memo(() => {
 					<div className="flex h-16 items-center justify-between gap-4">
 						{/* Logo */}
 						<Link href="/" className="shrink-0">
-							<Image src={logo} alt="Payless4Tech" className="h-10 w-auto" />
+							<Image src={logo} alt="Payless4Tech" className="h-8 w-auto" />
 						</Link>
 
 						{/* Category Dropdown and Search Bar - Desktop */}
@@ -191,21 +189,21 @@ const Navbar = memo(() => {
 												<div key={category.slug} className="pb-4">
 													<button
 														onClick={() => handleCategorySelect(category.slug)}
-														className="flex items-center gap-2 w-full mb-2 text-left"
+														className="flex items-center gap-2 w-full mb-2 text-left category-dropdown-item"
 													>
 														<p className="text-sm font-semibold text-foreground">
 															{category.name}
 														</p>
 													</button>
 													{category.children && (
-														<div className=" border-l border-border/30 pl-3 space-y-1">
+														<div className="border-l border-border/30 pl-3 space-y-1">
 															{category.children.map((child) => (
 																<button
 																	key={child.slug}
 																	onClick={() =>
 																		handleCategorySelect(child.slug)
 																	}
-																	className="block w-full text-left text-sm text-muted-foreground hover:text-foreground transition-colors"
+																	className="block w-full text-left text-sm text-muted-foreground/70 hover:text-primary hover:bg-accent/10 transition-colors cursor-pointer p-2 rounded-md category-dropdown-item"
 																>
 																	{child.name}
 																</button>
@@ -218,6 +216,15 @@ const Navbar = memo(() => {
 									</div>
 								)}
 							</div>
+
+							{/* Shop Link */}
+							<Link
+								href="/shop"
+								className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors px-3 py-2 rounded-lg hover:bg-accent"
+							>
+								<ShoppingBag className="h-4 w-4" />
+								Shop
+							</Link>
 
 							{/* Search Form */}
 							<form
@@ -370,7 +377,7 @@ const Navbar = memo(() => {
 															onClick={() =>
 																handleCategorySelect(category.slug)
 															}
-															className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-accent transition-colors text-left rounded-md"
+															className="flex items-center gap-3 w-full px-3 py-2.5 hover:bg-accent transition-colors text-left rounded-md category-dropdown-item"
 														>
 															<div className="flex-1">
 																<p className="text-sm font-medium text-foreground">
@@ -386,9 +393,9 @@ const Navbar = memo(() => {
 																		onClick={() =>
 																			handleCategorySelect(child.slug)
 																		}
-																		className="flex items-center w-full px-3 py-2 hover:bg-accent transition-colors text-left rounded-md"
+																		className="flex items-center w-full px-3 py-2 hover:bg-accent transition-colors text-left rounded-md category-dropdown-item"
 																	>
-																		<p className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+																		<p className="text-xs text-muted-foreground/70 hover:text-primary transition-colors">
 																			{child.name}
 																		</p>
 																	</button>
@@ -468,7 +475,7 @@ const Navbar = memo(() => {
 									href="https://www.instagram.com/payless4tech"
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-muted-foreground hover:text-primary"
+									className="text-muted-foreground/70 hover:text-primary"
 								>
 									<Instagram className="h-4 w-4" />
 								</Link>
@@ -476,7 +483,7 @@ const Navbar = memo(() => {
 									href="https://web.facebook.com/p/Payless4Tech"
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-muted-foreground hover:text-primary"
+									className="text-muted-foreground/70 hover:text-primary"
 								>
 									<Facebook className="h-4 w-4" />
 								</Link>
@@ -484,7 +491,7 @@ const Navbar = memo(() => {
 									href="https://wa.me/+233245151416"
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-muted-foreground hover:text-primary"
+									className="text-muted-foreground/70 hover:text-primary"
 								>
 									<MessageCircle className="h-4 w-4" />
 								</Link>

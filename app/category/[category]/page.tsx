@@ -2,7 +2,6 @@
 
 import { ProductGrid } from "@/components/ProductGrid";
 import { Card } from "@/components/ui/card";
-import { Header } from "@/components/Header";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -12,11 +11,12 @@ import {
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import Link from "next/link";
-import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { SidebarFilter } from "@/components/SidebarFilter";
 import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
+import Navbar from "@/components/navbar";
+import Footer from "@/components/Footer";
 
 const categories = [
 	{ name: "Laptops", path: "laptops" },
@@ -37,7 +37,7 @@ export default function CategoryPage() {
 
 	const handleFilterChange = (
 		newCategory: string | null,
-		brand: string | null
+		brand: string | null,
 	) => {
 		// If the category changes, navigate to the new category page with brand as query param
 		if (newCategory && newCategory !== category) {
@@ -62,7 +62,7 @@ export default function CategoryPage() {
 	return (
 		<>
 			<div>
-				<Header />
+				<Navbar />
 				<main className="flex flex-col lg:flex-row">
 					<aside className="p-5">
 						<SidebarFilter

@@ -87,5 +87,42 @@ export const LoadingSpinner = ({
 	);
 };
 
+// Product card skeleton for shop page
+export const ProductCardSkeleton = () => (
+	<div className="rounded-xl border border-border bg-card overflow-hidden">
+		{/* Image skeleton */}
+		<div className="relative aspect-square bg-muted/50">
+			<div className="absolute inset-0 bg-muted animate-pulse" />
+			{/* Condition badge skeleton */}
+			<div className="absolute top-3 right-3 h-6 w-16 rounded-lg bg-muted animate-pulse" />
+		</div>
+
+		{/* Content skeleton */}
+		<div className="p-4 space-y-3">
+			{/* Title skeleton */}
+			<div className="h-4 w-full bg-muted animate-pulse rounded-md" />
+			<div className="h-4 w-3/4 bg-muted animate-pulse rounded-md" />
+
+			{/* Price skeleton */}
+			<div className="flex items-baseline gap-2">
+				<div className="h-6 w-20 bg-muted animate-pulse rounded-md" />
+				<div className="h-4 w-16 bg-muted animate-pulse rounded-md" />
+			</div>
+
+			{/* Button skeleton */}
+			<div className="h-8 w-full bg-muted/70 animate-pulse rounded-md" />
+		</div>
+	</div>
+);
+
+// Grid of product card skeletons
+export const ProductGridSkeleton = ({ count = 6 }: { count?: number }) => (
+	<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+		{Array.from({ length: count }).map((_, i) => (
+			<ProductCardSkeleton key={i} />
+		))}
+	</div>
+);
+
 // Export for consistency - alias to LoadingSpinner
 export { LoadingSpinner as Loading };

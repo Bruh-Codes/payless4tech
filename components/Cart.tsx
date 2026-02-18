@@ -288,12 +288,7 @@ const Cart = () => {
 								<Checkbox
 									id="warranty"
 									checked={checkoutDetails.extendedWarranty}
-									onCheckedChange={(checked) =>
-										setCheckoutDetails({
-											...checkoutDetails,
-											extendedWarranty: checked as boolean,
-										})
-									}
+									onCheckedChange={handleWarrantyChange}
 								/>
 								<Label htmlFor="warranty">
 									Add Extended Warranty (+₵500.00)

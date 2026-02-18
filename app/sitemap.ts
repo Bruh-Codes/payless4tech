@@ -1,4 +1,6 @@
+import { supabase } from "@/integrations/supabase/client";
 import { MetadataRoute } from "next";
+
 const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL;
 
 type changeFrequency =
@@ -10,9 +12,11 @@ type changeFrequency =
 	| "yearly"
 	| "never";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-	const changeFrequency = "monthly" as changeFrequency;
-	const routes = [
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+	const changeFrequency = "weekly" as changeFrequency;
+
+	// Static routes
+	const staticRoutes = [
 		"",
 		"/shop",
 		"/laptops",
@@ -20,11 +24,40 @@ export default function sitemap(): MetadataRoute.Sitemap {
 		"/consumer-electronics",
 		"/about-products",
 		"/faq",
+		"/warranty-policy",
 	].map((route) => ({
 		url: `${BETTER_AUTH_URL}${route}`,
 		lastModified: new Date(),
-		changeFrequency,
-		priority: 1,
+		changeFrequency: "monthly" as changeFrequency,
+		priority: 0.8,
 	}));
-	return [...routes];
+
+	try {
+		// Fetch all products from database
+		const { data: products, error } = await supabase
+			.from("products")
+			.select("id, updated_at")
+			.eq("status", "available");
+
+		if (error) {
+			console.error("Error fetching products for sitemap:", error);
+			return [...staticRoutes];
+		}
+
+		// Create product routes
+		const productRoutes =
+			products?.map((product) => ({
+				url: `${BETTER_AUTH_URL}/product/${product.id}`,
+				lastModified: product.updated_at
+					? new Date(product.updated_at)
+					: new Date(),
+				changeFrequency,
+				priority: 1,
+			})) || [];
+
+		return [...staticRoutes, ...productRoutes];
+	} catch (error) {
+		console.error("Error generating sitemap:", error);
+		return [...staticRoutes];
+	}
 }

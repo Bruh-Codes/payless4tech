@@ -11,7 +11,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import QueryProvider from "@/components/QueryProvider";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { Loading, LoadingSpinner } from "@/components/LoadingSkeletons";
+import { Loading } from "@/components/LoadingSkeletons";
 
 // Dynamically import React Query DevTools only in development
 const ReactQueryDevtools = dynamic(() =>
@@ -68,9 +68,10 @@ export default async function RootLayout({
 			<body className={`${inter.variable} antialiased`}>
 				<ThemeProvider
 					attribute="class"
-					defaultTheme="light"
+					defaultTheme="dark"
 					enableSystem
 					disableTransitionOnChange
+					storageKey="theme"
 				>
 					<NextTopLoader
 						color="#FF8904"
@@ -84,7 +85,9 @@ export default async function RootLayout({
 						zIndex={9999}
 					/>
 					<QueryProvider>
-						<CartProvider>{children}</CartProvider>
+						<CartProvider>
+							<main>{children}</main>
+						</CartProvider>
 						<WhatsAppButton />
 						<Toaster richColors />
 						{process.env.NODE_ENV === "development" && (

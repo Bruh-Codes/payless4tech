@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ProductCard } from "./ProductCard";
 import { LoadingState } from "./LoadingState";
 import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils";
 import { type ClassValue } from "clsx";
 import { toast } from "sonner";
+import ProductCard from "./product-card";
 
 interface Product {
 	id: string;
@@ -113,19 +113,30 @@ export const ProductGrid = ({
 					<div
 						className={cn(
 							"grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-5",
-							className
+							className,
 						)}
 					>
 						{products.map((product) => {
 							const productInCart = state.items.some(
-								(cartItems) => cartItems.id === product.id
+								(cartItems) => cartItems.id === product.id,
 							);
 
 							return (
 								<ProductCard
 									key={product.id}
-									product={product}
-									inCart={productInCart}
+									product={{
+										id: product.id,
+										title: product.name,
+										price: product.price,
+										originalPrice: product.original_price || undefined,
+										image: product.image_url || "",
+										category: product.category,
+										condition: product.condition,
+										rating: 0,
+										reviews: 0,
+										shipping: "Standard",
+										seller: "Payless4Tech",
+									}}
 								/>
 							);
 						})}

@@ -10,8 +10,8 @@ const Footer = () => {
 	return (
 		<footer className="border-t border-border dark:bg-card/50 bg-secondary">
 			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
-				<div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
-					<div>
+				<div className="flex flex-wrap gap-8">
+					<div className="flex-1 p-4">
 						<Link href="/" className="shrink-0">
 							<Image src={logo} alt="Payless4Tech" className="h-10 w-auto" />
 						</Link>
@@ -55,7 +55,7 @@ const Footer = () => {
 						</div>
 					</div>
 
-					<div>
+					<div className="flex-1 p-4">
 						<h4 className="font-display font-semibold text-foreground mb-3">
 							Shop
 						</h4>
@@ -95,15 +95,25 @@ const Footer = () => {
 						</ul>
 					</div>
 
-					<div>
+					<div className="flex-1 p-4">
 						<h4 className="font-display font-semibold text-foreground mb-3">
 							Support
 						</h4>
 						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
 								<a
+									href="/faq"
+									className="hover:text-primary transition-colors"
+									aria-label="View frequently asked questions"
+								>
+									FAQ
+								</a>
+							</li>
+							<li>
+								<a
 									href="https://wa.me/+233245151416"
 									className="hover:text-primary transition-colors"
+									aria-label="Contact us on WhatsApp for support"
 								>
 									Help Center
 								</a>
@@ -113,6 +123,7 @@ const Footer = () => {
 								<a
 									href="/warranty-policy"
 									className="hover:text-primary transition-colors"
+									aria-label="View our warranty policy information"
 								>
 									Warranty
 								</a>
@@ -121,6 +132,7 @@ const Footer = () => {
 								<a
 									href="https://wa.me/+233245151416"
 									className="hover:text-primary transition-colors"
+									aria-label="Contact Payless4Tech on WhatsApp"
 								>
 									Contact Us
 								</a>
@@ -128,7 +140,7 @@ const Footer = () => {
 						</ul>
 					</div>
 
-					<div>
+					<div className="flex-1 p-4">
 						<h4 className="font-display font-semibold text-foreground mb-3">
 							Company
 						</h4>
@@ -154,11 +166,11 @@ const Footer = () => {
 					</div>
 				</div>
 
-				<div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4">
+				<div className="mt-10 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-start gap-6 sm:gap-4">
 					<p className="text-xs text-muted-foreground">
 						2026 Payless4Tech. All rights reserved.
 					</p>
-					<div className="flex gap-3">
+					<div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
 						<a
 							href="mailto:joy@payless4tech.com"
 							className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -180,7 +192,9 @@ const Footer = () => {
 							className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
 						>
 							<MapPin className="h-4 w-4" />
-							<span>Shop 42, Accra Mall, Spintex Road, Accra, Ghana</span>
+							<span className="text-xs leading-tight">
+								Shop 42, Accra Mall, Spintex Road, Accra, Ghana
+							</span>
 						</a>
 					</div>
 				</div>

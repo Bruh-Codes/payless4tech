@@ -206,11 +206,10 @@ function getMockEbayData(
 
 // Convert eBay product to local Product interface
 export function convertEbayToLocalProduct(ebayProduct: EbayProduct) {
-	return {
+	const result: any = {
 		id: `ebay-${ebayProduct.id}`,
 		title: ebayProduct.title,
 		price: ebayProduct.price.value,
-		originalPrice: undefined,
 		image: ebayProduct.image,
 		category: ebayProduct.category,
 		condition: ebayProduct.condition,
@@ -220,4 +219,12 @@ export function convertEbayToLocalProduct(ebayProduct: EbayProduct) {
 		seller: `${ebayProduct.seller} (eBay)`,
 		isPreorder: ebayProduct.isPreorder,
 	};
+
+	// Only include originalPrice if it has a value
+	if (ebayProduct.price.value !== undefined) {
+		// You could add logic here to calculate originalPrice if available
+		// For now, we omit it entirely
+	}
+
+	return result;
 }

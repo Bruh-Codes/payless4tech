@@ -146,7 +146,7 @@ export const LoginForm = () => {
 				<div className="space-y-4">
 					<Button
 						onClick={handleGoogleLogin}
-						className="w-full bg-accent hover:bg-accent/80"
+						className="w-full dark:bg-accent bg-secondary hover:bg-primary/10 text-primary dark:hover:bg-accent/80"
 						disabled={isLoading}
 						variant="outline"
 					>
@@ -184,10 +184,10 @@ export const LoginForm = () => {
 				{/* Divider */}
 				<div className="relative">
 					<div className="absolute inset-0 flex items-center">
-						<span className="w-full border-t dark:border-gray-600" />
+						<span className="w-full border-t border-primary/30" />
 					</div>
 					<div className="relative flex justify-center text-xs uppercase">
-						<span className="bg-white px-2 text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+						<span className="bg-white px-2 bg-accent/30 text-primary dark:text-black">
 							Or
 						</span>
 					</div>
@@ -196,7 +196,9 @@ export const LoginForm = () => {
 				{/* Magic Link Login */}
 				<form onSubmit={handleMagicLink} className="space-y-4">
 					<div className="space-y-2">
-						<Label htmlFor="magic-email">Email</Label>
+						<Label htmlFor="magic-email" className="text-primary">
+							Email
+						</Label>
 						<Input
 							id="magic-email"
 							type="email"
@@ -204,7 +206,7 @@ export const LoginForm = () => {
 							value={magicLinkEmail}
 							onChange={(e) => setMagicLinkEmail(e.target.value)}
 							required
-							className="bg-accent"
+							className="bg-secondary"
 							disabled={magicLinkLoading}
 						/>
 					</div>

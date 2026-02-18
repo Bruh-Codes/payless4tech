@@ -56,36 +56,10 @@ export const useProductForm = ({
 	});
 
 	useEffect(() => {
-		checkAuth();
 		if (isEditing && productId) {
 			loadExistingProduct();
 		}
-		const {
-			data: { subscription },
-		} = supabase.auth.onAuthStateChange((_event, session) => {
-			setSession(session);
-			if (!session) {
-				toast.error("You need to login to access this page");
-				router.push("/");
-			}
-		});
-
-		return () => subscription.unsubscribe();
-	}, [router.push, productId, isEditing]);
-
-	const checkAuth = async () => {
-		const {
-			data: { session },
-		} = await supabase.auth.getSession();
-		setSession(session);
-		if (!session) {
-			toast.error("Unauthorized", {
-				description: "Please login to access this page",
-			});
-
-			router.push("/");
-		}
-	};
+	}, [productId, isEditing]);
 
 	const loadExistingProduct = async () => {
 		if (!productId) return;
@@ -136,7 +110,7 @@ export const useProductForm = ({
 
 	const handleFormChange = (
 		field: keyof ProductFormData,
-		value: string | File | null | File[]
+		value: string | File | null | File[],
 	) => {
 		setNewProduct((prev) => ({ ...prev, [field]: value }));
 	};
@@ -188,7 +162,7 @@ export const useProductForm = ({
 		try {
 			setIsLoading(true);
 			const imageToDelete = existingAdditionalImages.find(
-				(img) => img.id === imageId
+				(img) => img.id === imageId,
 			);
 			if (!imageToDelete) return;
 
@@ -202,7 +176,7 @@ export const useProductForm = ({
 			if (deleteError) throw deleteError;
 
 			setExistingAdditionalImages((prev) =>
-				prev.filter((img) => img.id !== imageId)
+				prev.filter((img) => img.id !== imageId),
 			);
 			if (refetchAdditionalImages) refetchAdditionalImages();
 			toast("Success", {
@@ -237,7 +211,7 @@ export const useProductForm = ({
 
 	const handleSubmit = async (
 		e: React.FormEvent,
-		formData?: ProductFormData
+		formData?: ProductFormData,
 	) => {
 		e.preventDefault();
 
@@ -262,7 +236,7 @@ export const useProductForm = ({
 
 			if (dataToUse.additionalImages && dataToUse.additionalImages.length > 0) {
 				additionalImageUrls = await Promise.all(
-					dataToUse.additionalImages.map(uploadImage)
+					dataToUse.additionalImages.map(uploadImage),
 				);
 			}
 
@@ -300,7 +274,7 @@ export const useProductForm = ({
 								image_url: url,
 								display_order:
 									(existingAdditionalImages.length || 0) + index + 1,
-							}))
+							})),
 						);
 
 					if (imageError) throw imageError;
@@ -321,7 +295,7 @@ export const useProductForm = ({
 								product_id: data.id,
 								image_url: url,
 								display_order: index + 1,
-							}))
+							})),
 						);
 
 					if (imageError) throw imageError;

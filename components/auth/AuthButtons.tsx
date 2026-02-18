@@ -27,7 +27,7 @@ export const AuthButtons = () => {
 	const handleLogout = async () => {
 		try {
 			setIsLoading(true);
-			const { error } = await supabase.auth.signOut();
+			const { error } = await authClient.signOut();
 			if (error) throw error;
 
 			toast("Logged out successfully", {
@@ -63,7 +63,11 @@ export const AuthButtons = () => {
 					{isPending ? (
 						<Skeleton className="h-9 w-24" />
 					) : isAdmin?.data?.success ? (
-						<Link href="/admin" className="m-0">
+						<Link
+							href="/admin"
+							className="m-0"
+							aria-label="Access admin dashboard"
+						>
 							<Button size="sm">Dashboard</Button>
 						</Link>
 					) : null}
@@ -91,7 +95,11 @@ export const AuthButtons = () => {
 							forceMount
 						>
 							<DropdownMenuItem asChild>
-								<Link href="/orders" className="flex items-center gap-2">
+								<Link
+									href="/orders"
+									className="flex items-center gap-2"
+									aria-label="View your order history and track orders"
+								>
 									<Package className="h-4 w-4" />
 									My Orders
 								</Link>
@@ -103,7 +111,7 @@ export const AuthButtons = () => {
 					</DropdownMenu>
 				</>
 			) : (
-				<Link href="/login">
+				<Link href="/login" aria-label="Sign in to your account">
 					<Button
 						size="sm"
 						className="hover:bg-orange-400 hover:text-white cursor-pointer"

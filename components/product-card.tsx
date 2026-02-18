@@ -1,18 +1,18 @@
 "use client";
 import { motion } from "framer-motion";
-import { Star } from "lucide-react";
 import { Product } from "@/lib/products";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
-import { toast } from "sonner";
+import { memo } from "react";
 
 interface ProductCardProps {
 	product: Product;
 	index?: number;
 }
 
-const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
+const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
 	const router = useRouter();
 	const { addItem, state: cartState } = useCart();
 	const discount = product.originalPrice
@@ -59,29 +59,29 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 				duration: 0.3,
 				ease: "easeOut",
 			}}
-			whileHover={{ y: -2 }}
-			onClick={() =>
-				router.push(`/search?q=${encodeURIComponent(product.title)}`)
-			}
-			className="group cursor-pointer rounded-xl border border-border bg-card overflow-hidden transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5"
+			onClick={() => router.push(`/product/${product.id}`)}
+			className="group cursor-pointer rounded-xl border border-border bg-card overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
 		>
 			{/* Image */}
-			<div className="relative aspect-square overflow-hidden bg-secondary/30">
-				<img
+			<div className="relative aspect-square overflow-hidden bg-secondary/30 group-hover:bg-secondary/40">
+				<Image
 					src={product.image}
 					alt={product.title}
 					className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
 					loading="lazy"
+					sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+					width={300}
+					height={300}
 				/>
 				<span
 					className={`absolute top-3 right-3 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm ${
 						product.condition === "New"
-							? "bg-emerald-500 text-white border-emerald-600"
+							? "bg-emerald-500 text-white border-emerald-600 group-hover:bg-emerald-600"
 							: product.condition === "Refurbished"
-								? "bg-slate-700 text-white border-slate-800"
+								? "bg-slate-700 text-white border-slate-800 group-hover:bg-slate-600"
 								: product.condition === "Like New"
-									? "bg-amber-600 text-white border-amber-700"
-									: "bg-rose-500 text-white border-rose-600"
+									? "bg-amber-600 text-white border-amber-700 group-hover:bg-amber-500"
+									: "bg-rose-500 text-white border-rose-600 group-hover:bg-rose-400"
 					}`}
 				>
 					{product.condition === "New"
@@ -110,7 +110,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 								${product.originalPrice.toFixed(2)}
 							</span>
 							{discount > 0 && (
-								<span className="text-sm font-bold text-emerald-500">
+								<span className="text-sm font-bold text-orange-500">
 									(Save {discount}%)
 								</span>
 							)}
@@ -123,7 +123,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 						<Button
 							size="sm"
 							variant="outline"
-							className="flex-1 text-xs"
+							className="flex-1 text-xs transition-all duration-200 cursor-pointer"
 							onClick={handlePreorder}
 						>
 							Pre-Order
@@ -132,7 +132,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 						<Button
 							size="sm"
 							variant="secondary"
-							className="flex-1 text-xs bg-green-100 text-green-800 hover:bg-green-200 border-green-300"
+							className="flex-1 text-xs bg-green-100 text-green-800 hover:bg-green-200 border-green-300 transition-all duration-200 cursor-pointer"
 							onClick={(e) => e.stopPropagation()}
 						>
 							In Cart ✓
@@ -140,7 +140,7 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 					) : (
 						<Button
 							size="sm"
-							className="flex-1 text-xs"
+							className="flex-1 text-xs transition-all duration-200 hover:bg-primary/90 hover:text-primary-foreground border-primary/30 hover:shadow-primary/20 cursor-pointer"
 							onClick={handleAddToCart}
 						>
 							Add to Cart
@@ -150,6 +150,6 @@ const ProductCard = ({ product, index = 0 }: ProductCardProps) => {
 			</div>
 		</motion.div>
 	);
-};
+});
 
 export default ProductCard;

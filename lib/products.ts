@@ -98,8 +98,8 @@ export const featuredProducts: Product[] = [
 		condition: "Refurbished",
 		rating: 4.8,
 		reviews: 342,
-		shipping: "Free Shipping",
-		seller: "TechDeals Pro",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: false,
 	},
 	{
@@ -113,8 +113,8 @@ export const featuredProducts: Product[] = [
 		condition: "Like New",
 		rating: 4.9,
 		reviews: 567,
-		shipping: "Free Shipping",
-		seller: "Apple Reseller",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: true,
 	},
 	{
@@ -128,8 +128,8 @@ export const featuredProducts: Product[] = [
 		condition: "New",
 		rating: 4.7,
 		reviews: 891,
-		shipping: "Free Shipping",
-		seller: "AudioWorld",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: false,
 	},
 	{
@@ -144,7 +144,7 @@ export const featuredProducts: Product[] = [
 		rating: 4.8,
 		reviews: 234,
 		shipping: "Free Shipping",
-		seller: "TabletKing",
+		seller: "Payless4tech",
 		isPreorder: true,
 	},
 	{
@@ -158,8 +158,8 @@ export const featuredProducts: Product[] = [
 		condition: "New",
 		rating: 4.9,
 		reviews: 1203,
-		shipping: "Free Shipping",
-		seller: "GameStation",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: false,
 	},
 	{
@@ -173,8 +173,8 @@ export const featuredProducts: Product[] = [
 		condition: "Like New",
 		rating: 4.7,
 		reviews: 456,
-		shipping: "Free Shipping",
-		seller: "MobileMart",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: false,
 	},
 	{
@@ -188,8 +188,8 @@ export const featuredProducts: Product[] = [
 		condition: "New",
 		rating: 4.8,
 		reviews: 178,
-		shipping: "Free Shipping",
-		seller: "WatchHub",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: true,
 	},
 	{
@@ -203,18 +203,88 @@ export const featuredProducts: Product[] = [
 		condition: "Refurbished",
 		rating: 4.6,
 		reviews: 312,
-		shipping: "Free Shipping",
-		seller: "LaptopWorld",
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
+		isPreorder: false,
+	},
+];
+
+export const newArrivals: Product[] = [
+	{
+		id: "9",
+		title: "iPhone 15 Pro Max 256GB - Natural Titanium",
+		price: 1099.99,
+		originalPrice: 1199.99,
+		image:
+			"https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=400&q=80",
+		category: "smartphones",
+		condition: "New",
+		rating: 4.9,
+		reviews: 128,
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
+		isPreorder: false,
+	},
+	{
+		id: "10",
+		title: "MacBook Pro 14-inch M3 Pro 18GB 512GB",
+		price: 1799.99,
+		originalPrice: 1999.99,
+		image:
+			"https://images.unsplash.com/photo-1541807084-5c52b6b3adef?w=400&q=80",
+		category: "laptops",
+		condition: "New",
+		rating: 4.8,
+		reviews: 89,
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
+		isPreorder: true,
+	},
+	{
+		id: "11",
+		title: "AirPods Pro 2nd Gen with USB-C",
+		price: 199.99,
+		originalPrice: 249.99,
+		image:
+			"https://images.unsplash.com/photo-1606277542356-31cf91165b6e?w=400&q=80",
+		category: "audio",
+		condition: "New",
+		rating: 4.7,
+		reviews: 245,
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
+		isPreorder: false,
+	},
+	{
+		id: "12",
+		title: "Samsung Galaxy Watch 6 Classic 47mm",
+		price: 329.99,
+		originalPrice: 399.99,
+		image:
+			"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80",
+		category: "accessories",
+		condition: "New",
+		rating: 4.6,
+		reviews: 167,
+		shipping: "Request Delivery",
+		seller: "Payless4tech",
 		isPreorder: false,
 	},
 ];
 
 export function searchProducts(query: string): Product[] {
 	const q = query.toLowerCase();
-	return featuredProducts.filter(
+	const allProducts = [...featuredProducts, ...newArrivals];
+	return allProducts.filter(
 		(p) =>
 			p.title.toLowerCase().includes(q) ||
 			p.category.toLowerCase().includes(q) ||
 			p.seller.toLowerCase().includes(q),
+	);
+}
+
+export function getProductById(id: string): Product | undefined {
+	return [...featuredProducts, ...newArrivals].find(
+		(product) => product.id === id,
 	);
 }
