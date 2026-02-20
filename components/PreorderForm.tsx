@@ -20,6 +20,7 @@ import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Separator } from "./ui/separator";
+import { authClient } from "@/lib/auth-client";
 
 interface PreorderFormProps {
 	isOpen: boolean;
@@ -48,13 +49,14 @@ export const PreorderForm = ({
 		fullName: userDetails?.fullName || "",
 		email: userDetails?.email || "",
 		phoneNumber: userDetails?.phoneNumber || "",
-		itemType: userDetails?.itemType || "",
+		itemType: userDetails?.itemType || "other",
 		specifications: userDetails?.specifications || "",
 		productName: userDetails?.productName || "",
 		productImage: userDetails?.productImage || "",
 	});
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const { data: session } = authClient.useSession();
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -73,18 +75,14 @@ export const PreorderForm = ({
 
 	// Pre-fill form with user details when available
 	useEffect(() => {
-		if (userDetails) {
-			setFormData({
-				fullName: userDetails.fullName || "",
-				email: userDetails.email || "",
-				phoneNumber: userDetails.phoneNumber || "",
-				itemType: userDetails.itemType || "",
-				specifications: userDetails.specifications || "",
-				productName: userDetails.productName || "",
-				productImage: userDetails.productImage || "",
-			});
+		if (session?.user) {
+			setFormData((prev) => ({
+				...prev,
+				fullName: session?.user?.name || prev.fullName,
+				email: session?.user?.email || prev.email,
+			}));
 		}
-	}, [userDetails]);
+	}, [session?.user]);
 
 	// Listen for custom preorder events from product cards
 	useEffect(() => {

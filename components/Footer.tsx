@@ -13,7 +13,11 @@ const Footer = () => {
 				<div className="flex flex-wrap gap-8">
 					<div className="flex-1 p-4">
 						<Link href="/" className="shrink-0">
-							<Image src={logo} alt="Payless4Tech" className="h-10 w-auto" />
+							<Image
+								src={logo}
+								alt="Payless4Tech"
+								className="h-7 md:h-8 w-auto"
+							/>
 						</Link>
 						<p className="text-sm mt-2 text-muted-foreground">
 							Your trusted source for premium tech at unbeatable prices. Based

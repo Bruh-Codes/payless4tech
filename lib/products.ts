@@ -86,12 +86,3 @@ export const categories = [
 		],
 	},
 ];
-
-// Legacy functions - now return empty arrays since we use eBay
-export function searchProducts(query: string): Product[] {
-	return [];
-}
-
-export function getProductById(id: string): Product | undefined {
-	return undefined;
-}

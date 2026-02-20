@@ -8,6 +8,13 @@
       "when": 1771369002897,
       "tag": "0000_dear_jimmy_woo",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771605665900,
+      "tag": "0001_aspiring_stryfe",
+      "breakpoints": true
     }
   ]
 }

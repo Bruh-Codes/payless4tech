@@ -50,8 +50,6 @@ export const session = pgTable(
 		userAgent: text(),
 		userId: text().notNull(),
 		impersonatedBy: text(),
-		ocId: text("OCId"),
-		ethAddress: text(),
 		role: text(),
 	},
 	(table) => [
@@ -78,9 +76,6 @@ export const user = pgTable(
 		banned: boolean(),
 		banReason: text(),
 		banExpires: timestamp({ mode: "string" }),
-		ocid: text(),
-		ethAddress: text(),
-		ocId: text("OCId"),
 	},
 	(table) => [
 		index("temp_idx_user_role").using(
@@ -88,7 +83,6 @@ export const user = pgTable(
 			table.role.asc().nullsLast().op("text_ops"),
 		),
 		unique("user_email_key").on(table.email),
-		uniqueIndex("user_ocid_key").on(table.ocid),
 		pgPolicy("anon can select all", {
 			as: "permissive",
 			for: "select",

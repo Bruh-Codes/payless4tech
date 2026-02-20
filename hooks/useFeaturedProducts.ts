@@ -15,14 +15,14 @@ export const TECH_CATEGORIES = [
 
 // Search terms mapped to categories for better eBay results
 const CATEGORY_SEARCH_TERMS = {
-	smartphones: "smartphone -used -refurbished -broken -for parts",
-	laptops: "laptop -used -refurbished -broken -for parts",
-	tablets: "tablet -used -refurbished -broken -for parts",
-	audio: "headphones -used -refurbished -broken -for parts",
-	gaming: "gaming console -used -refurbished -broken -for parts",
-	accessories: "phone accessories -used -refurbished -broken -for parts",
-	"consumer-electronics": "electronics -used -refurbished -broken -for parts",
-	all: "electronics -used -refurbished -broken -for parts",
+	smartphones: "smartphone",
+	laptops: "laptop",
+	tablets: "tablet",
+	audio: "headphones",
+	gaming: "gaming console",
+	accessories: "phone accessories",
+	"consumer-electronics": "electronics",
+	all: "electronics",
 } as const;
 
 type CategorySlug = (typeof TECH_CATEGORIES)[number]["slug"];
@@ -127,21 +127,40 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 				const categories = ["smartphones", "laptops", "audio", "gaming"];
 				console.log("Fetching products for categories:", categories);
 
-				const promises = categories.map((category) =>
-					searchEbayProducts(
+				const promises = categories.map((category) => {
+					const searchTerm =
 						CATEGORY_SEARCH_TERMS[
 							category as keyof typeof CATEGORY_SEARCH_TERMS
-						],
+						];
+					console.log(`Searching for ${category} with term: "${searchTerm}"`);
+
+					return searchEbayProducts(
+						searchTerm,
 						1,
 						12, // Increased limit to get more results
 						"GHS", // Use GHS currency
 						"newlyListed", // Get latest products
-						undefined, // Temporarily disable category filtering to get more results
-					),
-				);
+						category, // Pass category for filtering
+					);
+				});
 
 				const results = await Promise.allSettled(promises);
 				console.log("Category search results:", results);
+
+				// Log each result for debugging
+				results.forEach((result, index) => {
+					if (result.status === "fulfilled") {
+						console.log(`Category ${categories[index]} success:`, {
+							itemsCount: result.value.items?.length || 0,
+							totalCount: result.value.totalCount || 0,
+						});
+					} else {
+						console.error(
+							`Category ${categories[index]} failed:`,
+							result.reason,
+						);
+					}
+				});
 
 				// Combine successful results and take first few from each
 				const allProducts = results
@@ -150,7 +169,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 							result.status === "fulfilled",
 					)
 					.flatMap((result) => result.value.items || [])
-					.slice(0, 15); // Increased to 20 products for better variety
+					.slice(0, 20); // Increased to 20 products for better variety
 
 				console.log("Final combined products:", allProducts.length);
 

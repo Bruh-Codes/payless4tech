@@ -76,6 +76,128 @@ async function convertPrice(
 	};
 }
 
+export async function getItemsByItemGroup(
+	itemGroupId: string,
+	targetCurrency: "USD" | "GHS" = "GHS",
+) {
+	// console.log("getItemsByItemGroup called with:", itemGroupId);
+
+	const baseUrl =
+		process.env.EBAY_ENV === "sandbox"
+			? "https://api.sandbox.ebay.com"
+			: "https://api.ebay.com";
+
+	const clientId = process.env.EBAY_CLIENT_ID!;
+	const clientSecret = process.env.EBAY_CLIENT_SECRET!;
+	const marketplaceId = process.env.EBAY_MARKETPLACE_ID || "EBAY_US";
+
+	// ---- Get token (cache later; keeping simple here) ----
+	const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
+
+	const tokenRes = await fetch(`${baseUrl}/identity/v1/oauth2/token`, {
+		method: "POST",
+		headers: {
+			Authorization: `Basic ${basic}`,
+			"Content-Type": "application/x-www-form-urlencoded",
+		},
+		body: new URLSearchParams({
+			grant_type: "client_credentials",
+			scope: "https://api.ebay.com/oauth/api_scope",
+		}),
+	});
+
+	if (!tokenRes.ok) {
+		const errorText = await tokenRes.text();
+		// console.error("Token fetch error:", tokenRes.status, errorText);
+		throw new Error(`Token fetch failed: ${tokenRes.status} - ${errorText}`);
+	}
+	const { access_token } = await tokenRes.json();
+
+	// ---- Get items by item group ----
+	const res = await fetch(
+		`${baseUrl}/buy/browse/v1/item/get_items_by_item_group?item_group_id=${encodeURIComponent(itemGroupId)}`,
+		{
+			headers: {
+				Authorization: `Bearer ${access_token}`,
+				"X-EBAY-C-MARKETPLACE-ID": marketplaceId,
+				Accept: "application/json",
+			},
+		},
+	);
+
+	if (!res.ok) {
+		const errorText = await res.text();
+		// console.error("Item Group API Error:", res.status, errorText);
+		// console.error(
+		// 	"Request URL:",
+		// 	`${baseUrl}/buy/browse/v1/item/get_items_by_item_group?item_group_id=${encodeURIComponent(itemGroupId)}`,
+		// );
+		throw new Error(`Item Group API failed: ${res.status} - ${errorText}`);
+	}
+
+	const data = await res.json();
+	// console.log("Data structure:", Object.keys(data));
+	// console.log("ItemSummaries:", data.itemSummaries);
+	// console.log("Item Group API Response items[0]:", data.items?.[0]);
+	// console.log("Category ID from first item:", data.items?.[0]?.categoryId);
+	// console.log("Category from first item:", data.items?.[0]?.categories?.[0]);
+
+	// Process items similar to searchEbayProducts function
+	const processedItems = await Promise.all(
+		(data.items ?? [])
+			.filter((it: any) => it.image?.imageUrl) // Only include products with actual images
+			.filter((it: any) => {
+				// Filter out unavailable items
+				const availabilityStatus = it.estimatedAvailabilityStatus;
+
+				// Exclude OUT_OF_STOCK items
+				if (availabilityStatus === "OUT_OF_STOCK") {
+					return false;
+				}
+				return true;
+			})
+			.map(async (it: any) => {
+				// Convert price to target currency
+				const convertedPrice = await convertPrice(
+					{
+						value: Number(it.price?.value ?? 0),
+						currency: it.price?.currency ?? "USD",
+					},
+					targetCurrency,
+				);
+
+				return {
+					id: it.itemId ?? "",
+					title: it.title ?? "",
+					price: convertedPrice,
+					image: it.image?.imageUrl ?? "",
+					additionalImages:
+						it.additionalImages?.map((img: any) => img.imageUrl) || [],
+					category: it.categoryId ? getCategoryName(it.categoryId) : "Unknown",
+					condition: it.condition ?? "Unknown",
+					shipping: "Request Delivery",
+					seller: "payless4tech",
+					itemUrl: it.itemWebUrl ?? "",
+					isPreorder: false,
+					estimatedAvailabilityStatus: it.estimatedAvailabilityStatus,
+					itemEndDate: it.itemEndDate,
+					specifications: it.localizedAspects
+						? it.localizedAspects.map((aspect: any) => ({
+								key: aspect.name || "Unknown",
+								value: aspect.value || "Unknown",
+							}))
+						: [],
+				};
+			}),
+	);
+
+	return {
+		items: processedItems,
+		totalCount: data.total || processedItems.length,
+		pageNumber: 1,
+	};
+}
+
 export async function searchEbayProducts(
 	query: string,
 	pageNumber = 1,
@@ -128,14 +250,20 @@ export async function searchEbayProducts(
 	const url = new URL(`${baseUrl}/buy/browse/v1/item_summary/search`);
 	// Add category filter if provided
 	if (categorySlug) {
-		// Handle multiple categories (comma-separated)
-		const categorySlugs = categorySlug.split(",");
-		const categoryIds = categorySlugs
-			.map((slug) => EBAY_CATEGORY_IDS[slug.trim()])
-			.filter((id) => id && id !== "0");
+		// Check if it's already a numeric category ID or a comma-separated list of IDs
+		if (/^\d+(,\d+)*$/.test(categorySlug)) {
+			// It's already numeric category IDs, use directly
+			url.searchParams.set("category_ids", categorySlug);
+		} else {
+			// Handle multiple category slugs (comma-separated)
+			const categorySlugs = categorySlug.split(",");
+			const categoryIds = categorySlugs
+				.map((slug) => EBAY_CATEGORY_IDS[slug.trim()])
+				.filter((id) => id && id !== "0");
 
-		if (categoryIds.length > 0) {
-			url.searchParams.set("category_ids", categoryIds.join(","));
+			if (categoryIds.length > 0) {
+				url.searchParams.set("category_ids", categoryIds.join(","));
+			}
 		}
 	}
 	// Add query parameter - eBay API requires q OR category_ids, but can have both
@@ -253,6 +381,65 @@ export async function searchEbayProducts(
 	};
 }
 
+// Map eBay category IDs to readable names
+const getCategoryName = (categoryId: string): string => {
+	const categoryMap: Record<string, string> = {
+		// Cell Phones & Accessories
+		"20349": "Cell Phone Cases & Covers",
+		"175672": "Cell Phones & Accessories",
+		"175673": "Cell Phone Accessories",
+		"175674": "Cell Phone Cases & Covers",
+		"9395": "Smartphones",
+		"175676": "Cell Phones",
+		"175677": "Cell Phone Parts",
+		"175678": "Smart Watches",
+
+		// Electronics
+		"293": "Computers & Tablets",
+		"175679": "Computer Components",
+		"175680": "Laptop Accessories",
+		"175681": "Computer Accessories",
+		"175682": "Tablets",
+		"175683": "Desktop Computers",
+		"175684": "Laptops",
+
+		// Audio & Video
+		"329": "Audio & Home Theater",
+		"175685": "Headphones",
+		"175686": "Speakers",
+		"175687": "Audio Accessories",
+		"175688": "TV & Video",
+		"175689": "Home Theater",
+
+		// Gaming
+		"1247": "Video Games & Consoles",
+		"175690": "Video Games",
+		"175691": "Gaming Consoles",
+		"175692": "Gaming Accessories",
+		"175693": "PC Gaming",
+
+		// Cameras & Photo
+		"625": "Cameras & Photo",
+		"175694": "Digital Cameras",
+		"175695": "Camera Accessories",
+		"175696": "Lenses",
+		"175697": "Photography",
+
+		// Wearables
+		"175698": "Smart Watches",
+		"175699": "Fitness Trackers",
+		"175700": "Wearable Technology",
+		"175701": "Smart Bands",
+
+		// General Tech
+		"175702": "Electronics",
+		"175703": "Tech Accessories",
+		"175704": "Gadgets",
+		"175705": "Digital Devices",
+	};
+	return categoryMap[categoryId] || "Accessories";
+};
+
 export async function getEbayProductById(itemId: string) {
 	const baseUrl =
 		process.env.EBAY_ENV === "sandbox"
@@ -283,7 +470,7 @@ export async function getEbayProductById(itemId: string) {
 
 	// ---- Get item details ----
 	const res = await fetch(
-		`${baseUrl}/buy/browse/v1/item/${encodeURIComponent(itemId)}`,
+		`${baseUrl}/buy/browse/v1/item/${encodeURIComponent(itemId)}?fieldgroups=PRODUCT`,
 		{
 			headers: {
 				Authorization: `Bearer ${access_token}`,
@@ -296,6 +483,12 @@ export async function getEbayProductById(itemId: string) {
 	if (!res.ok) throw new Error(await res.text());
 	const data = await res.json();
 
+	// // Debug: Log actual eBay API response structure for product details
+	// console.log(
+	// 	"eBay Product API response structure:",
+	// 	JSON.stringify(data, null, 2),
+	// );
+
 	let imageUrl = data.image?.imageUrl ?? "";
 	if (imageUrl) {
 		imageUrl = imageUrl.replace("http://", "https://");
@@ -305,7 +498,10 @@ export async function getEbayProductById(itemId: string) {
 	}
 
 	// Extract additional images if available
-	const additionalImages = data.image?.additionalImageUrls || [];
+	const additionalImages =
+		data?.primaryItemGroup?.itemGroupAdditionalImages?.map(
+			(img: any) => img.imageUrl,
+		) || [];
 	const allImages = [
 		imageUrl,
 		...additionalImages.map((url: string) =>
@@ -326,65 +522,25 @@ export async function getEbayProductById(itemId: string) {
 				)
 			: { value: 0, currency: "GHS" },
 		image: imageUrl,
-		additionalImages: allImages.slice(0, 4), // Limit to 4 additional images
-		category: data.categories?.[0]?.categoryName ?? "Unknown",
+		categoryId: data.categoryId,
+		additionalImages: allImages, // Limit to 4 additional images
+		category: data.categoryId ? getCategoryName(data.categoryId) : "Unknown",
 		condition: data.condition ?? "Unknown",
 		shipping: "Request Delivery",
 		seller: "payless4tech",
 		itemUrl: data.itemWebUrl ?? "",
-		isPreorder: false,
+		isPreorder: true,
 		// Add availability fields
 		estimatedAvailabilityStatus: data.estimatedAvailabilityStatus,
 		itemEndDate: data.itemEndDate,
-	};
-}
-
-export async function testEbayAPI() {
-	const baseUrl =
-		process.env.EBAY_ENV === "sandbox"
-			? "https://api.sandbox.ebay.com"
-			: "https://api.ebay.com";
-
-	const clientId = process.env.EBAY_CLIENT_ID!;
-	const clientSecret = process.env.EBAY_CLIENT_SECRET!;
-	const marketplaceId = process.env.EBAY_MARKETPLACE_ID || "EBAY_US";
-
-	// ---- Get token (cache later; keeping simple here) ----
-	const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-
-	const tokenRes = await fetch(`${baseUrl}/identity/v1/oauth2/token`, {
-		method: "POST",
-		headers: {
-			Authorization: `Basic ${basic}`,
-			"Content-Type": "application/x-www-form-urlencoded",
-		},
-		body: new URLSearchParams({
-			grant_type: "client_credentials",
-			scope: "https://api.ebay.com/oauth/api_scope",
-		}),
-	});
-
-	if (!tokenRes.ok) throw new Error(await tokenRes.text());
-	const { access_token } = await tokenRes.json();
-
-	// ---- Test category-only search ----
-	const testUrl = `${baseUrl}/buy/browse/v1/item_summary/search?category_ids=175672`;
-	console.log("Testing eBay API with URL:", testUrl);
-
-	const res = await fetch(testUrl, {
-		headers: {
-			Authorization: `Bearer ${access_token}`,
-			"X-EBAY-C-MARKETPLACE-ID": marketplaceId,
-			Accept: "application/json",
-		},
-	});
-
-	if (!res.ok) throw new Error(await res.text());
-	const data = await res.json();
-
-	return {
-		success: res.ok,
-		data: data,
-		url: testUrl,
+		// Add itemGroupId for related products
+		itemGroupId: data.primaryItemGroup?.itemGroupId,
+		// Add specifications from eBay API
+		specifications: data.localizedAspects
+			? data.localizedAspects.map((aspect: any) => ({
+					key: aspect.name || "Unknown",
+					value: aspect.value || "Unknown",
+				}))
+			: [],
 	};
 }

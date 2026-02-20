@@ -135,6 +135,7 @@ export const ProductGrid = ({
 										rating: 0,
 										reviews: 0,
 										shipping: "Standard",
+
 										seller: "Payless4Tech",
 									}}
 								/>

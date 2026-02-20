@@ -22,20 +22,20 @@ const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
 				return "₵";
 			case "USD":
 			default:
-				return "$";
+				return "₵"; // Default to GHS since our API returns GHS prices
 		}
 	};
 
 	// Format price based on currency
 	const formatPrice = (price: number, currency?: string) => {
-		if (currency === "GHS") {
+		if (currency === "GHS" || !currency) {
 			// Ghana Cedis formatting: use commas, no decimal places for whole numbers
 			return price.toLocaleString("en-GH", {
 				minimumFractionDigits: price % 1 === 0 ? 0 : 2,
 				maximumFractionDigits: 2,
 			});
 		}
-		// Default USD formatting
+		// USD formatting
 		return price.toFixed(2);
 	};
 
@@ -81,9 +81,8 @@ const ProductCard = memo(({ product, index = 0 }: ProductCardProps) => {
 	};
 
 	const handleProductClick = () => {
-		// Always navigate to product details page with name parameter
-		const productName = encodeURIComponent(product.title);
-		router.push(`/product/${product.id}?name=${productName}`);
+		// Always navigate to product details page without name parameter
+		router.push(`/product/${product.id}`);
 	};
 
 	return (

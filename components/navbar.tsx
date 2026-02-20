@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { useDebounce } from "use-debounce";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import {
 	Search,
 	Menu,
@@ -70,41 +72,58 @@ const Navbar = memo(() => {
 	const [mobileOpen, setMobileOpen] = useState(false);
 	const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
 	// Search source from environment variable, default to 'local'
-	const searchSource =
-		(process.env.NEXT_PUBLIC_SEARCH_SOURCE as "local" | "ebay") || "local";
 	const router = useRouter();
+	// eBay search with category support
 	const dropdownRef = useRef<HTMLFormElement>(null);
 	const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
-	// eBay search with category support
-	const [searchResults, setSearchResults] = useState<any[]>([]);
-	const [isLoading, setIsLoading] = useState(false);
+	// Intersection observer for infinite scroll
+	const { ref: scrollRef, inView } = useInView({
+		threshold: 0.1,
+		triggerOnce: true,
+	});
 
-	// Search function
+	// Use React Query for infinite scroll search
+	const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+		useInfiniteQuery({
+			queryKey: ["navbar-search", debouncedQuery],
+			queryFn: async ({ pageParam }: { pageParam: number }) => {
+				if (debouncedQuery.trim().length === 0)
+					return { items: [], totalCount: 0, pageNumber: 1 };
+				const response = await searchEbayProducts(
+					debouncedQuery,
+					pageParam,
+					5,
+					"GHS",
+					"bestMatch",
+				);
+				return {
+					...response,
+					items: response.items.map(convertEbayToLocalProduct),
+				};
+			},
+			getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+			initialPageParam: 1,
+			enabled: debouncedQuery.trim().length > 0,
+		});
+
+	// Flatten all pages for display
+	const allResults = data?.pages?.flatMap((page) => page.items) || [];
+
+	// Fetch next page when scroll trigger is visible
 	useEffect(() => {
-		if (debouncedQuery.trim().length > 0) {
-			setIsLoading(true);
-			console.log("Searching for:", debouncedQuery);
-			searchEbayProducts(debouncedQuery, 1, 5, "GHS", "bestMatch")
-				.then((response) => {
-					console.log("Search response:", response);
-					const products = response.items.map(convertEbayToLocalProduct);
-					console.log("Converted products:", products);
-					setSearchResults(products);
-					setIsLoading(false);
-				})
-				.catch((error) => {
-					console.error("Search error:", error);
-					setSearchResults([]);
-					setIsLoading(false);
-				});
-		} else {
-			setSearchResults([]);
+		if (
+			!isFetchingNextPage &&
+			hasNextPage &&
+			inView &&
+			allResults.length < 15
+		) {
+			fetchNextPage();
 		}
-	}, [debouncedQuery]);
+	}, [isFetchingNextPage, hasNextPage, inView]);
 
-	// eBay search results only
-	const allResults = searchResults;
+	// Check if we should show "View all results" button (after 15 results)
+	const showViewAllButton = allResults.length >= 15 && !isFetchingNextPage;
 
 	useEffect(() => {
 		if (debouncedQuery.trim().length > 0) {
@@ -113,29 +132,6 @@ const Navbar = memo(() => {
 			setShowDropdown(false);
 		}
 	}, [debouncedQuery]);
-
-	useEffect(() => {
-		const handleClickOutside = (e: MouseEvent) => {
-			if (
-				dropdownRef.current &&
-				!dropdownRef.current.contains(e.target as Node)
-			) {
-				setShowDropdown(false);
-			}
-			// Only close category dropdown if clicking outside, not on category items
-			if (
-				categoryDropdownRef.current &&
-				!categoryDropdownRef.current.contains(e.target as Node) &&
-				!(e.target as Element).closest(".category-dropdown-item")
-			) {
-				setCategoryDropdownOpen(false);
-			}
-		};
-		document.addEventListener("mousedown", handleClickOutside, {
-			passive: true,
-		});
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, []);
 
 	const handleSelect = useCallback(
 		(product: Product) => {
@@ -171,9 +167,32 @@ const Navbar = memo(() => {
 		[query, router],
 	);
 
+	useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (
+				dropdownRef.current &&
+				!dropdownRef.current.contains(e.target as Node)
+			) {
+				setShowDropdown(false);
+			}
+			// Only close category dropdown if clicking outside, not on category items
+			if (
+				categoryDropdownRef.current &&
+				!categoryDropdownRef.current.contains(e.target as Node) &&
+				!(e.target as Element).closest(".category-dropdown-item")
+			) {
+				setCategoryDropdownOpen(false);
+			}
+		};
+		document.addEventListener("mousedown", handleClickOutside, {
+			passive: true,
+		});
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, []);
+
 	return (
 		<>
-			<nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-2xl">
+			<nav className="sticky p-2 md:p-0 top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-2xl">
 				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 					{/* Top bar with socials */}
 					<div className="hidden md:flex items-center justify-end gap-3 py-1.5 text-muted-foreground border-b border-border/30">
@@ -183,7 +202,11 @@ const Navbar = memo(() => {
 					<div className="flex h-16 items-center justify-between gap-4">
 						{/* Logo */}
 						<Link href="/" className="shrink-0">
-							<Image src={logo} alt="Payless4Tech" className="h-8 w-auto" />
+							<Image
+								src={logo}
+								alt="Payless4Tech"
+								className="h-6 md:h-8 w-auto"
+							/>
 						</Link>
 
 						{/* Category Dropdown and Search Bar - Desktop */}
@@ -276,27 +299,56 @@ const Navbar = memo(() => {
 												</p>
 											</div>
 										) : allResults.length > 0 ? (
-											allResults.map((product) => (
-												<button
-													type="button"
-													key={product.id}
-													onClick={() => handleSelect(product)}
-													className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
-												>
-													{product.image && (
-														<Image
-															width={24}
-															height={24}
-															src={product.image}
-															alt={product.title}
-															className="h-6 w-6 rounded object-cover flex-shrink-0"
-														/>
-													)}
-													<p className="text-sm font-medium text-foreground flex-1 min-w-0">
-														{product.title}
-													</p>
-												</button>
-											))
+											<>
+												{allResults.map((product, index) => (
+													<button
+														type="button"
+														key={`${product.id}-${index}`}
+														onClick={() => handleSelect(product)}
+														className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
+														ref={
+															index === allResults.length - 1
+																? scrollRef
+																: undefined
+														}
+													>
+														{product.image && (
+															<Image
+																width={32}
+																height={32}
+																src={product.image}
+																alt={product.title}
+																className="h-8 w-8 rounded object-cover flex-shrink-0"
+															/>
+														)}
+														<p className="text-sm font-medium text-foreground flex-1 min-w-0">
+															{product.title}
+														</p>
+													</button>
+												))}
+												{isFetchingNextPage && (
+													<div className="px-4 py-3 text-center">
+														<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto"></div>
+														<p className="text-xs text-muted-foreground mt-1">
+															Loading more...
+														</p>
+													</div>
+												)}
+												{showViewAllButton && (
+													<button
+														type="button"
+														onClick={() => {
+															setShowDropdown(false);
+															router.push(
+																`/search?q=${encodeURIComponent(query)}`,
+															);
+														}}
+														className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-accent transition-colors border-t border-border"
+													>
+														View all results →
+													</button>
+												)}
+											</>
 										) : (
 											<div className="px-4 py-6 text-center">
 												<p className="text-sm text-muted-foreground">
@@ -306,18 +358,6 @@ const Navbar = memo(() => {
 													Try "iPhone", "MacBook", or "headphones"
 												</p>
 											</div>
-										)}
-										{allResults.length > 0 && (
-											<button
-												type="button"
-												onClick={() => {
-													setShowDropdown(false);
-													router.push(`/search?q=${encodeURIComponent(query)}`);
-												}}
-												className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-accent transition-colors border-t border-border"
-											>
-												View all results →
-											</button>
 										)}
 									</div>
 								)}
@@ -335,7 +375,10 @@ const Navbar = memo(() => {
 
 						{/* Mobile Toggle */}
 						<div className="flex items-center gap-1 md:hidden">
-							<ThemeToggle />
+							<div className="flex gap-2 items-center">
+								<Cart />
+								<AuthButtons className="hidden md:flex" />
+							</div>
 							<Button
 								variant="ghost"
 								size="icon"
@@ -418,31 +461,16 @@ const Navbar = memo(() => {
 										</div>
 									)}
 								</div>
-
-								<div className="flex gap-2 items-center">
-									<AuthButtons />
-
-									<Cart />
-								</div>
+								<ThemeToggle />
 							</div>
 
 							<form onSubmit={handleSubmit} className="relative flex-1">
-								<div className="relative">
-									<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-									<input
-										type="text"
-										value={query}
-										onChange={(e) => setQuery(e.target.value)}
-										placeholder={`Search ${searchSource === "ebay" ? "eBay" : "local"}...`}
-										className="w-full rounded-lg border border-border bg-secondary/50 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-									/>
-								</div>
 								{showDropdown && !isLoading && allResults.length > 0 && (
 									<div className="mt-2 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
 										{allResults.map((product) => (
 											<Button
 												type="button"
-												key={product.id}
+												key={`mobile-${product.id}`}
 												onClick={() => handleSelect(product)}
 												className="flex items-center gap-3 w-full hover:bg-accent transition-colors text-left"
 											>
@@ -504,6 +532,93 @@ const Navbar = memo(() => {
 						</div>
 					</div>
 				</div>
+				<form
+					onSubmit={handleSubmit}
+					className="flex-1 md:hidden relative"
+					ref={dropdownRef}
+				>
+					<div className="relative w-full">
+						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+						<input
+							type="text"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+							onFocus={() => query.trim() && setShowDropdown(true)}
+							placeholder={`Search for tech deals.. e.g. iPhone 11 Pro`}
+							className="w-full rounded-lg border border-border bg-gray-400/30 dark:bg-secondary py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+						/>
+					</div>
+
+					{/* Dropdown results */}
+					{showDropdown && (
+						<div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-border bg-popover shadow-lg z-50 max-h-80 overflow-y-auto">
+							{isLoading ? (
+								<div className="px-4 py-6 text-center">
+									<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
+									<p className="text-sm text-muted-foreground mt-2">
+										Searching Inventory...
+									</p>
+								</div>
+							) : allResults.length > 0 ? (
+								<>
+									{allResults.map((product, index) => (
+										<button
+											type="button"
+											key={`${product.id}-${index}`}
+											onClick={() => handleSelect(product)}
+											className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
+											ref={
+												index === allResults.length - 1 ? scrollRef : undefined
+											}
+										>
+											{product.image && (
+												<Image
+													width={32}
+													height={32}
+													src={product.image}
+													alt={product.title}
+													className="h-8 w-8 rounded object-cover flex-shrink-0"
+												/>
+											)}
+											<p className="text-sm font-medium text-foreground flex-1 min-w-0">
+												{product.title}
+											</p>
+										</button>
+									))}
+									{isFetchingNextPage && (
+										<div className="px-4 py-3 text-center">
+											<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mx-auto"></div>
+											<p className="text-xs text-muted-foreground mt-1">
+												Loading more...
+											</p>
+										</div>
+									)}
+									{showViewAllButton && (
+										<button
+											type="button"
+											onClick={() => {
+												setShowDropdown(false);
+												router.push(`/search?q=${encodeURIComponent(query)}`);
+											}}
+											className="w-full px-4 py-2.5 text-sm font-medium text-primary hover:bg-accent transition-colors border-t border-border"
+										>
+											View all results →
+										</button>
+									)}
+								</>
+							) : (
+								<div className="px-4 py-6 text-center">
+									<p className="text-sm text-muted-foreground">
+										No results for "{query}" in inventory
+									</p>
+									<p className="text-xs text-muted-foreground mt-1">
+										Try "iPhone", "MacBook", or "headphones"
+									</p>
+								</div>
+							)}
+						</div>
+					)}
+				</form>
 			</nav>
 		</>
 	);

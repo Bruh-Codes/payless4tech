@@ -3,9 +3,9 @@ import { getEbayProductById } from "@/lib/ebay-server";
 
 export async function GET(
 	req: NextRequest,
-	{ params }: { params: { itemId: string } },
+	{ params }: { params: Promise<{ itemId: string }> },
 ) {
-	const { itemId } = params;
+	const { itemId } = await params;
 
 	if (!itemId) {
 		return NextResponse.json({ error: "Item ID is required" }, { status: 400 });

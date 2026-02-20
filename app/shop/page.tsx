@@ -16,7 +16,8 @@ import Navbar from "@/components/navbar";
 import { searchEbayProducts } from "@/lib/ebay";
 import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Slider } from "@/components/ui/slider";
 
@@ -59,10 +60,10 @@ const sortOptions = [
 const Page = () => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const activeCategory =
-		searchParams.get("categories") ||
-		searchParams.get("category") ||
-		"smartphones";
+	const categoryParam = searchParams.get("categories");
+	const activeCategory = categories.some((c) => c.slug === categoryParam)
+		? categoryParam!
+		: (categories[0]?.slug ?? "smartphones");
 	const searchQuery = searchParams.get("q") || "";
 	const [isPending, startTransition] = useTransition();
 	const isMobile = useIsMobile();
@@ -132,27 +133,33 @@ const Page = () => {
 		return filters;
 	}, [activeCategory, selectedBrands, priceRange, selectedConditions, sortBy]);
 
-	// Use React Query for search
-	const { data, isLoading, isError } = useQuery({
-		queryKey: ["shop-search", ebayQuery, activeCategory, searchFilters],
-		queryFn: () =>
-			searchEbayProducts(
-				ebayQuery,
-				1,
-				50,
-				"GHS",
-				searchFilters.sortOrder || "newlyListed",
-				activeCategory,
-				searchFilters.minPrice,
-				searchFilters.maxPrice,
-				searchFilters.conditions,
-				searchFilters.brands,
-			),
-		enabled: true,
-		staleTime: 10 * 60 * 1000, // 10 minutes
-	});
+	// Use React Query for search with infinite scroll
+	const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
+		useInfiniteQuery({
+			queryKey: ["shop-search", ebayQuery, activeCategory, searchFilters],
+			queryFn: async ({ pageParam }: { pageParam: number }) => {
+				return await searchEbayProducts(
+					ebayQuery || "",
+					pageParam,
+					10,
+					"GHS",
+					searchFilters.sortOrder,
+					searchFilters.category,
+					searchFilters.minPrice,
+					searchFilters.maxPrice,
+					searchFilters.conditions,
+					searchFilters.brands,
+				);
+			},
+			getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+			initialPageParam: 1,
+		});
 
-	const ebayProducts = data?.items.map(convertEbayToLocalProduct) || [];
+	const ebayProducts =
+		data?.pages
+			.map((page) => page.items)
+			.flat()
+			.map(convertEbayToLocalProduct) || [];
 
 	// Close mobile filters when switching to desktop
 	useEffect(() => {
@@ -246,6 +253,19 @@ const Page = () => {
 			router.replace(`/shop?${params.toString()}`);
 		});
 	}, [router, searchQuery, activeCategory]);
+
+	// Intersection Observer for infinite scroll
+	const { ref, inView } = useInView({
+		threshold: 0.1,
+		triggerOnce: true,
+	});
+
+	// Fetch next page when last product is visible
+	useEffect(() => {
+		if (!isFetchingNextPage && hasNextPage && inView) {
+			fetchNextPage();
+		}
+	}, [isFetchingNextPage, hasNextPage, inView]);
 
 	// Remove client-side filtering since we're using server-side filtering
 	// The API already returns filtered results
@@ -448,15 +468,6 @@ const Page = () => {
 										<ProductCardSkeleton key={i} />
 									))}
 								</div>
-							) : isError ? (
-								<div className="flex flex-col items-center justify-center py-20 text-center">
-									<p className="text-lg font-medium text-foreground">
-										Unable to load products
-									</p>
-									<p className="mt-1 text-sm text-muted-foreground">
-										Please try again later
-									</p>
-								</div>
 							) : filteredProducts.length === 0 ? (
 								<div className="flex flex-col items-center justify-center py-20 text-center">
 									<p className="text-lg font-medium text-foreground">
@@ -469,12 +480,20 @@ const Page = () => {
 							) : (
 								<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 									{filteredProducts.map((product: any, index: number) => (
-										<ProductCard
+										<div
 											key={product.id}
-											product={product}
-											index={index}
-										/>
+											ref={
+												index === filteredProducts.length - 1 ? ref : undefined
+											}
+										>
+											<ProductCard product={product} index={index} />
+										</div>
 									))}
+								</div>
+							)}
+							{isFetchingNextPage && (
+								<div className="p-4 flex justify-center">
+									<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
 								</div>
 							)}
 						</div>

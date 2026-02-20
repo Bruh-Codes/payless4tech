@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-	Star,
 	Truck,
 	ShieldCheck,
 	ArrowLeft,
@@ -14,72 +13,23 @@ import {
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/navbar";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/contexts/CartContext";
-import { toast } from "sonner";
 import PreorderSection from "@/components/PreorderSection";
 import Image from "next/image";
-import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { useEbayCategorySearch } from "@/hooks/useEbayCategorySearch";
 import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { Product } from "@/lib/products";
-
-const specs: Record<string, { key: string; value: string }[]> = {
-	smartphones: [
-		{ key: "Display", value: '6.7" Super Retina XDR OLED' },
-		{ key: "Processor", value: "Latest Gen Chipset" },
-		{ key: "Storage", value: "256GB" },
-		{ key: "Battery", value: "4500 mAh" },
-		{ key: "Camera", value: "48MP Triple Camera System" },
-		{ key: "OS", value: "Latest OS Version" },
-	],
-	laptops: [
-		{ key: "Display", value: '15.6" Retina / FHD+' },
-		{ key: "Processor", value: "Latest Gen CPU" },
-		{ key: "RAM", value: "16GB / 32GB" },
-		{ key: "Storage", value: "512GB SSD" },
-		{ key: "Battery", value: "Up to 18 hours" },
-		{ key: "OS", value: "macOS / Windows 11" },
-	],
-	audio: [
-		{ key: "Type", value: "Over-ear / In-ear / Speaker" },
-		{ key: "Driver", value: "40mm / Custom" },
-		{ key: "Battery", value: "Up to 30 hours" },
-		{ key: "Connectivity", value: "Bluetooth 5.3" },
-		{ key: "Noise Cancelling", value: "Active (ANC)" },
-		{ key: "Water Resistance", value: "IPX4 / IP67" },
-	],
-	tablets: [
-		{ key: "Display", value: '10.9" - 12.9" Liquid Retina' },
-		{ key: "Processor", value: "Latest Gen Chip" },
-		{ key: "Storage", value: "128GB / 256GB" },
-		{ key: "Battery", value: "Up to 10 hours" },
-		{ key: "Camera", value: "12MP Wide" },
-		{ key: "Connectivity", value: "WiFi 6E" },
-	],
-	gaming: [
-		{ key: "Platform", value: "Console / Handheld" },
-		{ key: "Storage", value: "825GB SSD / 64GB" },
-		{ key: "Resolution", value: "Up to 4K @ 120fps" },
-		{ key: "Audio", value: "3D Audio / Stereo" },
-		{ key: "Connectivity", value: "WiFi 6, Bluetooth 5.1" },
-		{ key: "Controller", value: "Included" },
-	],
-	accessories: [
-		{ key: "Type", value: "Wearable / Peripheral" },
-		{ key: "Battery", value: "Up to 36 hours" },
-		{ key: "Connectivity", value: "Bluetooth 5.3 / USB-C" },
-		{ key: "Compatibility", value: "iOS & Android" },
-		{ key: "Water Resistance", value: "IP68 / WR100" },
-		{ key: "Sensors", value: "Heart Rate, GPS, Accelerometer" },
-	],
-};
+import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from "@tanstack/react-query";
 
 const ProductDetail = () => {
 	const params = useParams();
 	const router = useRouter();
-	const searchParams = useSearchParams();
 	const { addItem, state } = useCart();
 	const id = params.id as string;
 
@@ -87,33 +37,38 @@ const ProductDetail = () => {
 	const [selectedImage, setSelectedImage] = useState(0);
 	const [showAllSpecs, setShowAllSpecs] = useState(false);
 
-	// For related products, use eBay search for popular items
-	// Move this hook to the top to follow Rules of Hooks
-	const { data: relatedData } = useEbaySearch("electronics", 1, true);
-	const related =
-		relatedData?.items.slice(0, 4).map(convertEbayToLocalProduct) || [];
-
-	const productName = searchParams.get("name") || id || "";
-
-	// Use React Query to search eBay products by name
+	// Use React Query to fetch product by ID
 	const {
-		data: searchResponse,
-		isLoading: isLoadingEbay,
-		error: searchError,
-	} = useEbaySearch(productName, 1, true);
-	const ebayProduct = searchResponse?.items?.[0];
-
-	// Use local product if found, otherwise use eBay product
-	const product = ebayProduct
-		? {
-				...ebayProduct,
-				price: ebayProduct.price?.value || 0,
-				rating: 0,
-				reviews: 0,
-				originalPrice: null,
-				isPreorder: false,
+		data: productById,
+		isLoading: isLoadingProduct,
+		error: productError,
+	} = useQuery({
+		queryKey: ["product", id],
+		queryFn: async () => {
+			const response = await fetch(`/api/ebay/product/${id}`);
+			if (!response.ok) {
+				throw new Error("Failed to fetch product");
 			}
-		: null;
+			return response.json();
+		},
+		enabled: !!id,
+	});
+
+	// Use direct API product
+	const product = productById;
+	const isLoading = isLoadingProduct;
+
+	// For related products, use category search instead of item group to get different products in same category
+	const { data: relatedData, isLoading: isLoadingRelated } =
+		useEbayCategorySearch(product?.categoryId, true, 10); // Use category search for related products
+
+	console.log("relatedData", relatedData);
+	console.log("itemGroup", product?.itemGroupId);
+	// Filter out current product from related items
+	const related =
+		relatedData?.items
+			.filter((item: { id: string }) => item.id !== product?.id) // Exclude current product
+			.map(convertEbayToLocalProduct) || [];
 
 	const handleAddToCart = () => {
 		if (product) {
@@ -143,25 +98,35 @@ const ProductDetail = () => {
 
 	const isInCart = state.items.some((item) => item.id === product?.id);
 
-	if (!product) {
+	// Show loading skeleton while fetching product
+	if (isLoading) {
 		return (
 			<div className="min-h-screen bg-background">
 				<Navbar />
-				<div className="flex flex-col items-center justify-center py-32">
-					<p className="text-5xl mb-4">
-						<Package />
-					</p>
-					<h1 className="font-display text-2xl font-bold text-foreground mb-2">
-						Product not found
-					</h1>
-					<div className="space-y-6 text-foreground specifications-text mb-6">
-						<p className="text-muted-foreground">
-							{searchError?.message ||
-								"This product may have been removed or doesn't exist."}
-						</p>
-						<Button onClick={() => router.push("/")} variant="outline">
-							<ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
-						</Button>
+				<div className="container mx-auto px-4 py-8">
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+						{/* Product Image Skeleton */}
+						<div className="space-y-4">
+							<Skeleton className="aspect-square rounded-2xl" />
+							<div className="grid grid-cols-4 gap-2">
+								{[...Array(4)].map((_, i) => (
+									<Skeleton key={i} className="aspect-square rounded-lg" />
+								))}
+							</div>
+						</div>
+						{/* Product Info Skeleton */}
+						<div className="space-y-6">
+							<div className="space-y-2">
+								<Skeleton className="h-8 w-3/4" />
+								<Skeleton className="h-6 w-1/2" />
+							</div>
+							<div className="space-y-4">
+								{[...Array(3)].map((_, i) => (
+									<Skeleton key={i} className="h-4" />
+								))}
+							</div>
+							<Skeleton className="h-12" />
+						</div>
 					</div>
 				</div>
 				<Footer />
@@ -169,19 +134,83 @@ const ProductDetail = () => {
 		);
 	}
 
+	if (!product) {
+		return (
+			<div className="min-h-screen bg-background">
+				<Navbar />
+				<div className="container mx-auto px-4 py-16">
+					<div className="flex flex-col items-center justify-center text-center max-w-md mx-auto">
+						<div className="w-24 h-24 bg-secondary rounded-full flex items-center justify-center mb-6">
+							<Package className="w-12 h-12 text-muted-foreground" />
+						</div>
+						<h1 className="font-display text-3xl font-bold text-foreground mb-3">
+							Product not found
+						</h1>
+						<p className="text-muted-foreground mb-8 leading-relaxed">
+							{productError?.message ||
+								"This product may have been removed or doesn't exist. Try searching for similar items."}
+						</p>
+						<div className="flex flex-col sm:flex-row gap-3">
+							<Button onClick={() => router.push("/")} variant="outline">
+								<ArrowLeft className="h-4 w-4 mr-2" />
+								Back to Home
+							</Button>
+							<Button onClick={() => router.push("/shop")}>
+								<ShoppingCart className="h-4 w-4 mr-2" />
+								Browse Products
+							</Button>
+						</div>
+					</div>
+				</div>
+				<Footer />
+			</div>
+		);
+	}
+
+	// Currency symbol mapping
+	const getCurrencySymbol = (currency?: string) => {
+		switch (currency) {
+			case "GHS":
+				return "₵";
+			case "USD":
+			default:
+				return "₵"; // Default to GHS since our API returns GHS prices
+		}
+	};
+
+	// Format price based on currency
+	const formatPrice = (price: number, currency?: string) => {
+		if (currency === "GHS" || !currency) {
+			// Ghana Cedis formatting: use commas, no decimal places for whole numbers
+			return price.toLocaleString("en-GH", {
+				minimumFractionDigits: price % 1 === 0 ? 0 : 2,
+				maximumFractionDigits: 2,
+			});
+		}
+		// USD formatting
+		return price.toFixed(2);
+	};
+
+	// Price display - handle price object properly
+	const priceValue = (product as any).price?.value || 0;
+	const priceCurrency = (product as any).price?.currency || "GHS";
+
+	const currencySymbol = getCurrencySymbol(priceCurrency);
+
 	const discount = product.originalPrice
 		? Math.round(
-				((product.originalPrice - product.price) / product.originalPrice) * 100,
+				((product.originalPrice - priceValue) / product.originalPrice) * 100,
 			)
 		: 0;
 
-	const productSpecs = specs[product.category] || specs.accessories;
+	// Use real specifications from eBay API
+	const productSpecs = product.specifications || [];
 
-	// Use real additional images for eBay products, otherwise use mock images
+	// Use real additional images from eBay API
 	const productImages = [
 		product.image,
-		// Use real additional images from eBay if available
-		...(ebayProduct?.additionalImages || []).slice(0, 4),
+		// Use additionalImages from eBay API response
+		...((product as any).additionalImages || []),
 	].filter(Boolean);
 
 	return (
@@ -235,7 +264,7 @@ const ProductDetail = () => {
 						</div>
 
 						{/* Thumbnail Gallery */}
-						<div className="flex gap-2 justify-between overflow-x-auto pb-2">
+						<div className="flex gap-2 justify-start overflow-x-auto pb-2">
 							{productImages.map((image, index) => (
 								<div
 									key={index}
@@ -271,37 +300,21 @@ const ProductDetail = () => {
 							{product.title}
 						</h1>
 
-						{/* Rating */}
-						<div className="flex items-center gap-2 mb-4">
-							<div className="flex">
-								{[...Array(5)].map((_, i) => (
-									<Star
-										key={i}
-										className={`h-4 w-4 ${i < Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "fill-muted text-muted"}`}
-									/>
-								))}
-							</div>
-							<span className="text-sm font-medium text-foreground">
-								{product.rating}
-							</span>
-							<span className="text-sm text-muted-foreground">
-								({product.reviews} reviews)
-							</span>
-						</div>
-
 						{/* Price */}
 						<div className="flex items-baseline gap-3 mb-6">
 							<span className="text-3xl font-bold text-foreground">
-								${product.price.toFixed(2)}
+								{currencySymbol}
+								{formatPrice(priceValue, priceCurrency)}
 							</span>
 							{product.originalPrice && (
 								<span className="text-lg text-muted-foreground line-through">
-									${product.originalPrice}
+									{currencySymbol}
+									{formatPrice(product.originalPrice, priceCurrency)}
 								</span>
 							)}
 							{discount > 0 && (
 								<span className="text-sm font-semibold text-primary">
-									Save ${(product.originalPrice! - product.price).toFixed(2)}
+									Save {discount}%
 								</span>
 							)}
 						</div>
@@ -389,7 +402,7 @@ const ProductDetail = () => {
 					<div className="rounded-2xl border border-border bg-secondary dark:bg-card overflow-hidden">
 						{productSpecs
 							?.slice(0, showAllSpecs ? productSpecs.length : 4)
-							.map((spec, i) => (
+							.map((spec: any, i: number) => (
 								<div
 									key={spec.key}
 									className={`flex items-center justify-between px-5 py-3.5 ${i < (showAllSpecs ? productSpecs.length : 4) - 1 ? "border-b border-border" : ""}`}
@@ -416,16 +429,43 @@ const ProductDetail = () => {
 				</motion.section>
 
 				{/* Related */}
-				{related.length > 0 && (
+				{(related.length > 0 || isLoadingRelated) && (
 					<section className="mb-16">
-						<h2 className="font-display text-xl font-bold text-foreground mb-6">
-							You May Also Like
-						</h2>
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-							{related.map((p: Product, i: number) => (
-								<ProductCard key={p.id} product={p} index={i} />
-							))}
+						<div className="flex justify-between flex-wrap mb-6">
+							<h2 className="font-display text-xl font-bold text-foreground">
+								You May Also Like
+							</h2>
+							{/* View More Button */}
+							{product?.categoryId &&
+								!isLoadingRelated &&
+								related.length > 0 && (
+									<div className="text-center">
+										<Link href={`/shop?categories=${product?.category}`}>
+											<Button
+												variant="outline"
+												className="inline-flex items-center gap-2"
+											>
+												<span>View More Products</span>
+												<ChevronRight className="h-4 w-4" />
+											</Button>
+										</Link>
+									</div>
+								)}
 						</div>
+
+						{isLoadingRelated ? (
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+								{[...Array(4)].map((_, i) => (
+									<ProductCardSkeleton key={i} />
+								))}
+							</div>
+						) : (
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+								{related.map((p: Product, i: number) => (
+									<ProductCard key={p.id} product={p} index={i} />
+								))}
+							</div>
+						)}
 					</section>
 				)}
 			</main>

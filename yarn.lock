@@ -7803,6 +7803,7 @@ __metadata:
     react-day-picker: "npm:^9.0.0"
     react-dom: "npm:19.2.4"
     react-hook-form: "npm:^7.56.1"
+    react-intersection-observer: "npm:^10.0.3"
     react-resizable-panels: "npm:^2.1.9"
     recharts: "npm:^2.15.3"
     resend: "npm:^4.5.0"
@@ -8130,6 +8131,19 @@ __metadata:
   peerDependencies:
     react: ^16.8.0 || ^17 || ^18 || ^19
   checksum: 10c0/6c8fc0fa740d299481de3ed32bae98f7c6331240822c602363e5cd221746d875dc3c5e65d0039902b7f7a44dc9ac9a4932e00e9ad9af3051bed1987858ce78c7
+  languageName: node
+  linkType: hard
+
+"react-intersection-observer@npm:^10.0.3":
+  version: 10.0.3
+  resolution: "react-intersection-observer@npm:10.0.3"
+  peerDependencies:
+    react: ^17.0.0 || ^18.0.0 || ^19.0.0
+    react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+  peerDependenciesMeta:
+    react-dom:
+      optional: true
+  checksum: 10c0/64439d19793c49bf9d1701fc74cd854f4ddc646411500a4d1efa058ac0100efdde5d4dd24ce736a48eeba9de3585c164c916be2b91e9c9b2b5db7b756c8cec9d
   languageName: node
   linkType: hard
 

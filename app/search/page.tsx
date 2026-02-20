@@ -25,7 +25,9 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInView } from "react-intersection-observer";
+import { searchEbayProducts } from "@/lib/ebay";
 
 interface EbayProduct {
 	id: string;
@@ -183,17 +185,34 @@ const SearchResults = () => {
 		return filters;
 	}, [selectedCategories, priceRange, selectedConditions, sortBy]);
 
-	// Always call the hook, but let it handle its own enabled state
+	// Use React Query for search with infinite scroll
 	const {
-		data: searchResponse,
-		isLoading: queryLoading,
-		error: queryError,
-	} = useEbaySearch(
-		query,
-		1,
-		!isPreloadValid && (!!query.trim() || selectedCategories.length > 0),
-		searchFilters,
-	);
+		data,
+		isLoading: searchLoading,
+		isFetchingNextPage,
+		fetchNextPage,
+		hasNextPage,
+	} = useInfiniteQuery({
+		queryKey: ["search-results", query, searchFilters],
+		queryFn: async ({ pageParam }: { pageParam: number }) => {
+			return await searchEbayProducts(
+				query || "",
+				pageParam,
+				10,
+				"GHS",
+				searchFilters.sortOrder,
+				searchFilters.category,
+				searchFilters.minPrice,
+				searchFilters.maxPrice,
+				searchFilters.conditions,
+				searchFilters.brands,
+			);
+		},
+		getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+		initialPageParam: 1,
+		enabled:
+			!isPreloadValid && (!!query.trim() || selectedCategories.length > 0),
+	});
 
 	// Update URL when query, categories, price, conditions, or sort changes
 	useEffect(() => {
@@ -226,6 +245,19 @@ const SearchResults = () => {
 		searchFilters,
 	]);
 
+	// Intersection Observer for infinite scroll
+	const { ref, inView } = useInView({
+		threshold: 0.1,
+		triggerOnce: true,
+	});
+
+	// Fetch next page when last product is visible
+	useEffect(() => {
+		if (!isFetchingNextPage && hasNextPage && inView) {
+			fetchNextPage();
+		}
+	}, [isFetchingNextPage, hasNextPage, inView]);
+
 	let searchResults: any[] = [];
 	let totalCount = 0;
 	let isLoading = false;
@@ -237,10 +269,10 @@ const SearchResults = () => {
 		isLoading = false;
 		error = null;
 	} else {
-		searchResults = searchResponse?.items || [];
-		totalCount = searchResponse?.totalCount || 0;
-		isLoading = queryLoading;
-		error = queryError;
+		searchResults = data?.pages?.map((page) => page.items).flat() || [];
+		totalCount = data?.pages?.[0]?.totalCount || 0;
+		isLoading = searchLoading;
+		error = null;
 	}
 
 	// Use a stable max price for the slider
@@ -524,22 +556,26 @@ const SearchResults = () => {
 						) : filteredAndSortedResults.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 								{filteredAndSortedResults.map(
-									(product: EbayProduct, i: number) => {
-										// Convert eBay product to match ProductCard interface
-										const adaptedProduct = {
-											...product,
-											price: product.price.value,
-											rating: 0, // eBay doesn't provide rating in basic search
-											reviews: 0, // eBay doesn't provide reviews in basic search
-										};
-										return (
+									(product: EbayProduct, i: number) => (
+										<div
+											key={product.id}
+											ref={
+												i === filteredAndSortedResults.length - 1
+													? ref
+													: undefined
+											}
+										>
 											<ProductCard
-												key={product.id}
-												product={adaptedProduct}
+												product={{
+													...product,
+													price: product.price.value,
+													rating: 0, // eBay doesn't provide rating in basic search
+													reviews: 0, // eBay doesn't provide reviews in basic search
+												}}
 												index={i}
 											/>
-										);
-									},
+										</div>
+									),
 								)}
 							</div>
 						) : (
@@ -556,6 +592,11 @@ const SearchResults = () => {
 									{!error && " "}
 									{!error && <span>"iPhone", "MacBook", or "headphones"</span>}
 								</p>
+							</div>
+						)}
+						{isFetchingNextPage && (
+							<div className="p-4 flex justify-center">
+								<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
 							</div>
 						)}
 					</div>

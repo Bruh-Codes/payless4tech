@@ -9,7 +9,10 @@ import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 const FeaturedProducts = () => {
 	const { data, isLoading, isError } = useMixedFeaturedProducts(true);
 
-	const featuredProducts = data?.items.map(convertEbayToLocalProduct) || [];
+	// console.log("Featured products data:", data);
+	// console.log("Is loading:", isLoading);
+
+	const featuredProducts = data?.items?.map(convertEbayToLocalProduct) || [];
 
 	if (isLoading) {
 		return (

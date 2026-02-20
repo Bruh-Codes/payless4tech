@@ -29,7 +29,7 @@ export function useEbaySearch(
 			searchEbayProducts(
 				query,
 				pageNumber,
-				40,
+				20,
 				"GHS",
 				filters?.sortOrder || "newlyListed",
 				filters?.category,
@@ -40,7 +40,8 @@ export function useEbaySearch(
 			),
 		enabled: Boolean(
 			enabled &&
-			(query.trim().length > 0 || (filters && Object.keys(filters).length > 0)),
+			(query?.trim().length > 0 ||
+				(filters && Object.keys(filters).length > 0)),
 		),
 		staleTime: 5 * 60 * 1000, // 5 minutes
 		gcTime: 10 * 60 * 1000, // 10 minutes
@@ -59,8 +60,6 @@ export function useEbaySearch(
 
 // Hook for infinite scroll pagination
 export function useEbayInfiniteSearch(query: string, enabled: boolean = true) {
-	const queryClient = useQueryClient();
-
 	return useQuery({
 		queryKey: [...EBAY_QUERY_KEYS.search, query, "infinite"],
 		queryFn: () => searchEbayProducts(query, 1, 40), // Get more items for infinite scroll
