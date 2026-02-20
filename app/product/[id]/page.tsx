@@ -13,15 +13,17 @@ import {
 	ShoppingCart,
 } from "lucide-react";
 import Footer from "@/components/Footer";
-import { getProductById, searchProducts } from "@/lib/products";
 import { Button } from "@/components/ui/button";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/navbar";
 import ProductCard from "@/components/product-card";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import PreorderSection from "@/components/PreorderSection";
 import Image from "next/image";
+import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { convertEbayToLocalProduct } from "@/lib/ebay";
+import { Product } from "@/lib/products";
 
 const specs: Record<string, { key: string; value: string }[]> = {
 	smartphones: [
@@ -75,12 +77,43 @@ const specs: Record<string, { key: string; value: string }[]> = {
 };
 
 const ProductDetail = () => {
-	const { id } = useParams<{ id: string }>();
+	const params = useParams();
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { addItem, state } = useCart();
-	const product = getProductById(id || "");
-	const [showAllSpecs, setShowAllSpecs] = useState(false);
+	const id = params.id as string;
+
+	// State for image gallery and specs
 	const [selectedImage, setSelectedImage] = useState(0);
+	const [showAllSpecs, setShowAllSpecs] = useState(false);
+
+	// For related products, use eBay search for popular items
+	// Move this hook to the top to follow Rules of Hooks
+	const { data: relatedData } = useEbaySearch("electronics", 1, true);
+	const related =
+		relatedData?.items.slice(0, 4).map(convertEbayToLocalProduct) || [];
+
+	const productName = searchParams.get("name") || id || "";
+
+	// Use React Query to search eBay products by name
+	const {
+		data: searchResponse,
+		isLoading: isLoadingEbay,
+		error: searchError,
+	} = useEbaySearch(productName, 1, true);
+	const ebayProduct = searchResponse?.items?.[0];
+
+	// Use local product if found, otherwise use eBay product
+	const product = ebayProduct
+		? {
+				...ebayProduct,
+				price: ebayProduct.price?.value || 0,
+				rating: 0,
+				reviews: 0,
+				originalPrice: null,
+				isPreorder: false,
+			}
+		: null;
 
 	const handleAddToCart = () => {
 		if (product) {
@@ -123,7 +156,8 @@ const ProductDetail = () => {
 					</h1>
 					<div className="space-y-6 text-foreground specifications-text mb-6">
 						<p className="text-muted-foreground">
-							This product may have been removed or doesn't exist.
+							{searchError?.message ||
+								"This product may have been removed or doesn't exist."}
 						</p>
 						<Button onClick={() => router.push("/")} variant="outline">
 							<ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
@@ -142,26 +176,12 @@ const ProductDetail = () => {
 		: 0;
 
 	const productSpecs = specs[product.category] || specs.accessories;
-	const related = searchProducts(product.category)
-		.filter((p) => p.id !== product.id)
-		.slice(0, 4);
 
-	// Mock product images - in real app, these would come from API
+	// Use real additional images for eBay products, otherwise use mock images
 	const productImages = [
 		product.image,
-		// Add some variations of the same product
-		product.image.includes("placeholder")
-			? `https://picsum.photos/seed/${product.id}-1/600/600.jpg`
-			: product.image.replace(/\/[^\/]*$/, "/view1.jpg"),
-		product.image.includes("placeholder")
-			? `https://picsum.photos/seed/${product.id}-2/600/600.jpg`
-			: product.image.replace(/\/[^\/]*$/, "/view2.jpg"),
-		product.image.includes("placeholder")
-			? `https://picsum.photos/seed/${product.id}-3/600/600.jpg`
-			: product.image.replace(/\/[^\/]*$/, "/view3.jpg"),
-		product.image.includes("placeholder")
-			? `https://picsum.photos/seed/${product.id}-4/600/600.jpg`
-			: product.image.replace(/\/[^\/]*$/, "/view4.jpg"),
+		// Use real additional images from eBay if available
+		...(ebayProduct?.additionalImages || []).slice(0, 4),
 	].filter(Boolean);
 
 	return (
@@ -276,7 +296,7 @@ const ProductDetail = () => {
 							</span>
 							{product.originalPrice && (
 								<span className="text-lg text-muted-foreground line-through">
-									${product.originalPrice.toFixed(2)}
+									${product.originalPrice}
 								</span>
 							)}
 							{discount > 0 && (
@@ -402,7 +422,7 @@ const ProductDetail = () => {
 							You May Also Like
 						</h2>
 						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-							{related.map((p, i) => (
+							{related.map((p: Product, i: number) => (
 								<ProductCard key={p.id} product={p} index={i} />
 							))}
 						</div>

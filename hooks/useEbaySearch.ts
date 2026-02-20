@@ -1,11 +1,12 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { searchEbayProducts, EbaySearchResponse } from "@/lib/ebay";
+import { searchEbayProducts } from "@/lib/ebay";
 
 // Query keys for eBay searches
 export const EBAY_QUERY_KEYS = {
 	search: ["ebay", "search"],
 	details: ["ebay", "details"],
+	product: ["ebay", "product"],
 } as const;
 
 // Hook for searching eBay products
@@ -13,13 +14,36 @@ export function useEbaySearch(
 	query: string,
 	pageNumber: number = 1,
 	enabled: boolean = true,
+	filters?: {
+		category?: string;
+		minPrice?: number;
+		maxPrice?: number;
+		conditions?: string[];
+		sortOrder?: "newlyListed" | "bestMatch" | "price" | "-price";
+		brands?: string[];
+	},
 ) {
 	return useQuery({
-		queryKey: [...EBAY_QUERY_KEYS.search, query, pageNumber],
-		queryFn: () => searchEbayProducts(query, pageNumber),
-		enabled: enabled && query.trim().length > 0,
+		queryKey: [...EBAY_QUERY_KEYS.search, query, pageNumber, filters],
+		queryFn: () =>
+			searchEbayProducts(
+				query,
+				pageNumber,
+				40,
+				"GHS",
+				filters?.sortOrder || "newlyListed",
+				filters?.category,
+				filters?.minPrice,
+				filters?.maxPrice,
+				filters?.conditions,
+				filters?.brands,
+			),
+		enabled: Boolean(
+			enabled &&
+			(query.trim().length > 0 || (filters && Object.keys(filters).length > 0)),
+		),
 		staleTime: 5 * 60 * 1000, // 5 minutes
-		gcTime: 10 * 60 * 1000, // 10 minutes (was cacheTime)
+		gcTime: 10 * 60 * 1000, // 10 minutes
 		retry: (failureCount, error) => {
 			// Don't retry on 4xx errors
 			if (error instanceof Error && error.message.includes("4")) {
@@ -40,7 +64,7 @@ export function useEbayInfiniteSearch(query: string, enabled: boolean = true) {
 	return useQuery({
 		queryKey: [...EBAY_QUERY_KEYS.search, query, "infinite"],
 		queryFn: () => searchEbayProducts(query, 1, 40), // Get more items for infinite scroll
-		enabled: enabled && query.trim().length > 0,
+		enabled: Boolean(enabled && query.trim().length > 0),
 		staleTime: 5 * 60 * 1000,
 		gcTime: 10 * 60 * 1000,
 		retry: 2,
@@ -92,7 +116,7 @@ export function useEbaySuggestions(query: string, enabled: boolean = true) {
 			// you'd call eBay's suggestion API
 			return [];
 		},
-		enabled: enabled && query.trim().length >= 2,
+		enabled: Boolean(enabled && query.trim().length >= 2),
 		staleTime: 10 * 60 * 1000, // 10 minutes for suggestions
 		gcTime: 15 * 60 * 1000,
 		retry: 1,
@@ -118,4 +142,34 @@ export function useEbayCacheActions() {
 		clearEbayCache,
 		clearSpecificSearch,
 	};
+}
+
+// Hook for fetching a specific eBay product by ID
+export function useEbayProduct(itemId: string, enabled: boolean = true) {
+	return useQuery({
+		queryKey: [...EBAY_QUERY_KEYS.product, itemId],
+		queryFn: async () => {
+			const response = await fetch(`/api/ebay/product/${itemId}`);
+			if (!response.ok) {
+				if (response.status === 404) {
+					throw new Error("Product not found");
+				}
+				throw new Error("Failed to fetch product");
+			}
+			return response.json();
+		},
+		enabled: Boolean(enabled && !!itemId),
+		staleTime: 5 * 60 * 1000, // 5 minutes
+		gcTime: 10 * 60 * 1000, // 10 minutes
+		retry: (failureCount, error) => {
+			// Don't retry on 404 errors
+			if (error instanceof Error && error.message.includes("not found")) {
+				return false;
+			}
+			return failureCount < 3;
+		},
+		retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
+	});
 }

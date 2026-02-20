@@ -10,6 +10,18 @@ const nextConfig: NextConfig = {
 		remotePatterns: [
 			{
 				protocol: "https",
+				hostname: "i.ebayimg.sandbox.ebay.com",
+			},
+			{
+				protocol: "http",
+				hostname: "i.ebayimg.sandbox.ebay.com",
+			},
+			{
+				protocol: "https",
+				hostname: "i.ebayimg.com",
+			},
+			{
+				protocol: "https",
 				hostname: "images.unsplash.com",
 			},
 			{

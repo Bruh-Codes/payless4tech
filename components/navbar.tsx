@@ -16,8 +16,8 @@ import {
 import { Button } from "@/components/ui/button";
 import logo from "@/public/71f241a6-a4bb-422f-b7e6-29032fee0ed6.png";
 
-import { searchProducts, Product, categories } from "@/lib/products";
-import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { categories, Product } from "@/lib/products";
+import { searchEbayProducts } from "@/lib/ebay";
 import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -76,21 +76,35 @@ const Navbar = memo(() => {
 	const dropdownRef = useRef<HTMLFormElement>(null);
 	const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
-	// eBay search hooks - use debounced query
-	const ebaySearch = useEbaySearch(debouncedQuery);
+	// eBay search with category support
+	const [searchResults, setSearchResults] = useState<any[]>([]);
+	const [isLoading, setIsLoading] = useState(false);
 
-	// Local search results - use debounced query
-	const localResults =
-		debouncedQuery.trim().length > 0 ? searchProducts(debouncedQuery) : [];
+	// Search function
+	useEffect(() => {
+		if (debouncedQuery.trim().length > 0) {
+			setIsLoading(true);
+			console.log("Searching for:", debouncedQuery);
+			searchEbayProducts(debouncedQuery, 1, 5, "GHS", "bestMatch")
+				.then((response) => {
+					console.log("Search response:", response);
+					const products = response.items.map(convertEbayToLocalProduct);
+					console.log("Converted products:", products);
+					setSearchResults(products);
+					setIsLoading(false);
+				})
+				.catch((error) => {
+					console.error("Search error:", error);
+					setSearchResults([]);
+					setIsLoading(false);
+				});
+		} else {
+			setSearchResults([]);
+		}
+	}, [debouncedQuery]);
 
-	// Combined results (local + eBay)
-	const allResults =
-		searchSource === "ebay"
-			? (ebaySearch.data?.items || []).map(convertEbayToLocalProduct)
-			: localResults;
-
-	// Loading states
-	const isLoading = searchSource === "ebay" ? ebaySearch.isLoading : false;
+	// eBay search results only
+	const allResults = searchResults;
 
 	useEffect(() => {
 		if (debouncedQuery.trim().length > 0) {
@@ -127,10 +141,15 @@ const Navbar = memo(() => {
 		(product: Product) => {
 			setShowDropdown(false);
 			setQuery("");
-			// Navigate to search results page for both local and eBay products
-			router.push(`/search?q=${encodeURIComponent(product.title)}`);
+			// Navigate to search results page with pre-loaded data
+			// Pass the existing search results to avoid new API call
+			const searchQuery = encodeURIComponent(product.title);
+			const existingResults = JSON.stringify(allResults);
+			router.push(
+				`/search?q=${searchQuery}&preload=true&data=${encodeURIComponent(existingResults)}`,
+			);
 		},
-		[router],
+		[router, allResults],
 	);
 
 	const handleCategorySelect = useCallback(
@@ -187,18 +206,20 @@ const Navbar = memo(() => {
 										<div className="grid grid-cols-3 gap-4">
 											{categories.map((category) => (
 												<div key={category.slug} className="pb-4">
-													<button
+													<Button
+														type="button"
 														onClick={() => handleCategorySelect(category.slug)}
 														className="flex items-center gap-2 w-full mb-2 text-left category-dropdown-item"
 													>
 														<p className="text-sm font-semibold text-foreground">
 															{category.name}
 														</p>
-													</button>
+													</Button>
 													{category.children && (
 														<div className="border-l border-border/30 pl-3 space-y-1">
 															{category.children.map((child) => (
-																<button
+																<Button
+																	type="button"
 																	key={child.slug}
 																	onClick={() =>
 																		handleCategorySelect(child.slug)
@@ -206,7 +227,7 @@ const Navbar = memo(() => {
 																	className="block w-full text-left text-sm text-muted-foreground/70 hover:text-primary hover:bg-accent/10 transition-colors cursor-pointer p-2 rounded-md category-dropdown-item"
 																>
 																	{child.name}
-																</button>
+																</Button>
 															))}
 														</div>
 													)}
@@ -239,7 +260,7 @@ const Navbar = memo(() => {
 										value={query}
 										onChange={(e) => setQuery(e.target.value)}
 										onFocus={() => query.trim() && setShowDropdown(true)}
-										placeholder={`Search for tech deals on ${searchSource === "ebay" ? "eBay" : "local inventory"}... e.g. iPhone 11 Pro`}
+										placeholder={`Search for tech deals.. e.g. iPhone 11 Pro`}
 										className="w-full rounded-lg border border-border bg-secondary py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
 									/>
 								</div>
@@ -251,9 +272,7 @@ const Navbar = memo(() => {
 											<div className="px-4 py-6 text-center">
 												<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto"></div>
 												<p className="text-sm text-muted-foreground mt-2">
-													Searching{" "}
-													{searchSource === "ebay" ? "eBay" : "local inventory"}
-													...
+													Searching Inventory...
 												</p>
 											</div>
 										) : allResults.length > 0 ? (
@@ -264,33 +283,24 @@ const Navbar = memo(() => {
 													onClick={() => handleSelect(product)}
 													className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
 												>
-													<img
-														src={product.image}
-														alt={product.title}
-														className="h-10 w-10 rounded object-cover flex-shrink-0"
-													/>
-													<div className="min-w-0 flex-1">
-														<p className="text-sm font-medium text-foreground truncate">
-															{product.title}
-														</p>
-														<div className="flex items-center gap-2">
-															<p className="text-xs text-muted-foreground">
-																${product.price.toFixed(2)}
-															</p>
-															{product.id.startsWith("ebay-") && (
-																<span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">
-																	eBay
-																</span>
-															)}
-														</div>
-													</div>
+													{product.image && (
+														<Image
+															width={24}
+															height={24}
+															src={product.image}
+															alt={product.title}
+															className="h-6 w-6 rounded object-cover flex-shrink-0"
+														/>
+													)}
+													<p className="text-sm font-medium text-foreground flex-1 min-w-0">
+														{product.title}
+													</p>
 												</button>
 											))
 										) : (
 											<div className="px-4 py-6 text-center">
 												<p className="text-sm text-muted-foreground">
-													No results for "{query}" on{" "}
-													{searchSource === "ebay" ? "eBay" : "local inventory"}
+													No results for "{query}" in inventory
 												</p>
 												<p className="text-xs text-muted-foreground mt-1">
 													Try "iPhone", "MacBook", or "headphones"
@@ -430,33 +440,25 @@ const Navbar = memo(() => {
 								{showDropdown && !isLoading && allResults.length > 0 && (
 									<div className="mt-2 rounded-lg border border-border bg-popover shadow-lg max-h-60 overflow-y-auto">
 										{allResults.map((product) => (
-											<button
+											<Button
 												type="button"
 												key={product.id}
 												onClick={() => handleSelect(product)}
-												className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
+												className="flex items-center gap-3 w-full hover:bg-accent transition-colors text-left"
 											>
-												<img
-													src={product.image}
-													alt={product.title}
-													className="h-8 w-8 rounded object-cover"
-												/>
-												<div className="flex-1 min-w-0">
-													<p className="text-sm text-foreground truncate">
-														{product.title}
-													</p>
-													<div className="flex items-center gap-2">
-														<p className="text-xs text-muted-foreground">
-															${product.price.toFixed(2)}
-														</p>
-														{product.id.startsWith("ebay-") && (
-															<span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">
-																eBay
-															</span>
-														)}
-													</div>
-												</div>
-											</button>
+												{product.image && (
+													<Image
+														width={32}
+														height={32}
+														src={product.image}
+														alt={product.title}
+														className="h-full w-full rounded object-cover"
+													/>
+												)}
+												<p className="text-sm text-foreground truncate">
+													{product.title}
+												</p>
+											</Button>
 										))}
 									</div>
 								)}

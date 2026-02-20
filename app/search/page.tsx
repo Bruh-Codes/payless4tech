@@ -3,12 +3,7 @@
 import { motion } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import {
-	searchProducts,
-	featuredProducts,
-	newArrivals,
-	categories,
-} from "@/lib/products";
+import { categories } from "@/lib/products";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/navbar";
 import ProductCard from "@/components/product-card";
@@ -20,6 +15,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
@@ -29,11 +25,35 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
+import { useEbaySearch } from "@/hooks/useEbaySearch";
+
+interface EbayProduct {
+	id: string;
+	title: string;
+	price: {
+		value: number;
+		currency: string;
+	};
+	image: string;
+	category: string;
+	condition: string;
+	shipping: string;
+	seller: string;
+	itemUrl: string;
+	isPreorder: boolean;
+}
 
 const SearchResults = () => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const query = searchParams.get("q") || "";
+	const initialQuery = searchParams.get("q") || "";
+	const isPreload = searchParams.get("preload") === "true";
+	const preloadedData = searchParams.get("data");
+
+	// Local query state that can be controlled
+	const [query, setQuery] = useState(initialQuery);
+
+	// Debug logging
 
 	// Filter states with lazy initialization
 	const [selectedCategories, setSelectedCategories] = useState<string[]>(() => {
@@ -43,10 +63,9 @@ const SearchResults = () => {
 	const [priceRange, setPriceRange] = useState<[number, number]>(() => {
 		const minPriceParam = searchParams.get("minPrice");
 		const maxPriceParam = searchParams.get("maxPrice");
-		if (minPriceParam && maxPriceParam) {
-			return [parseInt(minPriceParam), parseInt(maxPriceParam)];
-		}
-		return [0, 2000];
+		const min = minPriceParam ? parseInt(minPriceParam) : 0;
+		const max = maxPriceParam ? parseInt(maxPriceParam) : 10000;
+		return [min, max];
 	});
 	const [selectedConditions, setSelectedConditions] = useState<string[]>(() => {
 		const conditionsParam = searchParams.get("conditions");
@@ -58,128 +77,192 @@ const SearchResults = () => {
 	const [showFilters, setShowFilters] = useState(false);
 	const isMobile = useIsMobile();
 
+	// Handle category changes to clear search query
+	const handleCategoryChange = (category: string) => {
+		setSelectedCategories((prev) => {
+			// Toggle single category selection
+			const newCategories = prev.includes(category)
+				? [] // Deselect if already selected
+				: [category]; // Select only this category, replacing others
+
+			// Clear search query when categories are changed
+			setQuery("");
+			// Update URL without the search query
+			const params = new URLSearchParams();
+			if (newCategories.length > 0) {
+				params.set("categories", newCategories.join(","));
+			}
+			// Preserve other filters but exclude the search query
+			if (priceRange[0] > 0) {
+				params.set("minPrice", priceRange[0].toString());
+			}
+			if (priceRange[1] < 10000) {
+				params.set("maxPrice", priceRange[1].toString());
+			}
+			if (selectedConditions.length > 0) {
+				params.set("conditions", selectedConditions.join(","));
+			}
+			if (sortBy !== "best-match") {
+				params.set("sort", sortBy);
+			}
+			router.replace(`/search?${params.toString()}`);
+			return newCategories;
+		});
+	};
+
 	// Close mobile filters when switching to desktop
 	useEffect(() => {
 		if (!isMobile) {
 			setShowFilters(false);
 		}
 	}, [isMobile]);
-	const [isLoading, setIsLoading] = useState(true);
 
-	const allProducts = [...featuredProducts, ...newArrivals];
-	const baseResults = query === "all" ? allProducts : searchProducts(query);
+	// Use pre-loaded data if available, otherwise use React Query for eBay search
+	let preloadedResults: any[] = [];
+	let isPreloadValid = false;
 
-	// Get unique conditions from products
-	const availableConditions = useMemo(() => {
-		const conditions = new Set(allProducts.map((p) => p.condition));
-		return Array.from(conditions);
-	}, [allProducts]);
+	if (isPreload && preloadedData) {
+		try {
+			const parsedData = JSON.parse(decodeURIComponent(preloadedData));
+			// Normalize data to ensure it matches internal EbayProduct structure
+			// Navbar sends 'Product' type (flat price), but we need 'EbayProduct' type (nested price)
+			preloadedResults = parsedData.map((item: any) => {
+				// Check if price is a number (Local Product format)
+				if (typeof item.price === "number") {
+					return {
+						...item,
+						price: {
+							value: item.price,
+							currency: item.currency || "GHS",
+						},
+					};
+				}
+				// Assume it's already in correct format if price is an object
+				return item;
+			});
 
-	// Derive max price from products (no state needed)
-	const maxPrice = useMemo(() => {
-		return Math.max(...allProducts.map((p) => p.price));
-	}, [allProducts]);
+			isPreloadValid = preloadedResults.length > 0;
+		} catch (err) {
+			console.error("Error parsing preloaded data:", err);
+			// Fall back to normal search
+		}
+	}
 
-	// Apply filters and sorting
-	const filteredAndSortedResults = useMemo(() => {
-		let filtered = baseResults;
+	// Create filter object for the API call (without maxPrice dependency)
+	const searchFilters = useMemo(() => {
+		const filters: any = {};
 
-		// Filter by categories
 		if (selectedCategories.length > 0) {
-			filtered = filtered.filter((product) =>
-				selectedCategories.includes(product.category),
-			);
+			// Use only first category for now to ensure results
+			filters.category = selectedCategories[0];
 		}
-
-		// Filter by price range
-		filtered = filtered.filter(
-			(product) =>
-				product.price >= priceRange[0] && product.price <= priceRange[1],
-		);
-
-		// Filter by condition
+		if (priceRange[0] > 0) {
+			filters.minPrice = priceRange[0];
+		}
+		if (priceRange[1] < 10000) {
+			// Use a reasonable default to avoid dependency on maxPrice
+			filters.maxPrice = priceRange[1];
+		}
 		if (selectedConditions.length > 0) {
-			filtered = filtered.filter((product) =>
-				selectedConditions.includes(product.condition),
-			);
+			filters.conditions = selectedConditions;
+		}
+		if (sortBy !== "best-match") {
+			// Map UI sort values to API sort values
+			const sortMapping: Record<string, string> = {
+				"price-low-high": "price",
+				"price-high-low": "-price",
+				newest: "newlyListed",
+			};
+			filters.sortOrder = sortMapping[sortBy] as
+				| "newlyListed"
+				| "bestMatch"
+				| "price"
+				| "-price";
 		}
 
-		// Sort results
-		const sorted = [...filtered];
-		switch (sortBy) {
-			case "price-low-high":
-				sorted.sort((a, b) => a.price - b.price);
-				break;
-			case "price-high-low":
-				sorted.sort((a, b) => b.price - a.price);
-				break;
-			case "rating":
-				sorted.sort((a, b) => b.rating - a.rating);
-				break;
-			case "reviews":
-				sorted.sort((a, b) => b.reviews - a.reviews);
-				break;
-			default:
-				// Best match - keep original order
-				break;
-		}
+		return filters;
+	}, [selectedCategories, priceRange, selectedConditions, sortBy]);
 
-		return sorted;
-	}, [baseResults, selectedCategories, priceRange, selectedConditions, sortBy]);
+	// Always call the hook, but let it handle its own enabled state
+	const {
+		data: searchResponse,
+		isLoading: queryLoading,
+		error: queryError,
+	} = useEbaySearch(
+		query,
+		1,
+		!isPreloadValid && (!!query.trim() || selectedCategories.length > 0),
+		searchFilters,
+	);
 
-	// Update URL with filter parameters
+	// Update URL when query, categories, price, conditions, or sort changes
 	useEffect(() => {
 		const params = new URLSearchParams();
-
-		// Always set the search query
-		if (query) {
+		if (query.trim()) {
 			params.set("q", query);
 		}
-
 		if (selectedCategories.length > 0) {
 			params.set("categories", selectedCategories.join(","));
 		}
-
-		if (priceRange[0] > 0 || priceRange[1] < maxPrice) {
+		if (priceRange[0] > 0) {
 			params.set("minPrice", priceRange[0].toString());
+		}
+		if (priceRange[1] < 10000) {
 			params.set("maxPrice", priceRange[1].toString());
 		}
-
 		if (selectedConditions.length > 0) {
 			params.set("conditions", selectedConditions.join(","));
 		}
-
 		if (sortBy !== "best-match") {
 			params.set("sort", sortBy);
 		}
-
-		const newUrl = `/search?${params.toString()}`;
-		if (newUrl !== window.location.pathname + window.location.search) {
-			router.replace(newUrl);
-		}
+		router.replace(`/search?${params.toString()}`);
 	}, [
+		query,
 		selectedCategories,
 		priceRange,
 		selectedConditions,
 		sortBy,
-		query,
-		maxPrice,
-		router,
+		searchFilters,
 	]);
+
+	let searchResults: any[] = [];
+	let totalCount = 0;
+	let isLoading = false;
+	let error: any = null;
+
+	if (isPreloadValid) {
+		searchResults = preloadedResults;
+		totalCount = preloadedResults.length;
+		isLoading = false;
+		error = null;
+	} else {
+		searchResults = searchResponse?.items || [];
+		totalCount = searchResponse?.totalCount || 0;
+		isLoading = queryLoading;
+		error = queryError;
+	}
+
+	// Use a stable max price for the slider
+	const maxPrice = 10000; // Fixed max price for consistent UX
+
+	// The API already returns filtered results
+	const filteredAndSortedResults = useMemo(() => {
+		return searchResults;
+	}, [searchResults]);
 
 	const clearAllFilters = () => {
 		setSelectedCategories([]);
-		setPriceRange([0, maxPrice]);
+		setPriceRange([0, 10000]); // Reset to default range
 		setSelectedConditions([]);
 		setSortBy("best-match");
 
-		// If there's a search query, clear filters but keep search
+		// Update URL to reflect cleared filters
+		const params = new URLSearchParams();
 		if (query.trim()) {
-			// Just clear filters, keep the search query
-			const params = new URLSearchParams();
 			params.set("q", query);
-			router.replace(`/search?${params.toString()}`);
 		}
+		router.replace(`/search?${params.toString()}`);
 	};
 
 	const activeFilterCount =
@@ -203,13 +286,15 @@ const SearchResults = () => {
 							Results for "<span className="text-brand-color">{query}</span>"
 						</h1>
 						<p className="text-muted-foreground mt-1">
-							{filteredAndSortedResults.length} items found
+							{error
+								? `Error: ${error.message}`
+								: `${filteredAndSortedResults.length} items found${totalCount > 0 ? ` (${totalCount} total)` : ""}`}
 						</p>
 					</motion.div>
 				)}
 
 				{/* Filters Bar */}
-				<div className="flex justify-start gap-4 items-center mb-6 sticky top-15 md:top-23 z-10 bg-background py-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+				<div className="flex justify-start gap-4 items-center sticky top-15 md:top-23 z-10 bg-background py-4 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
 					{/* Mobile Filter Sheet */}
 					{isMobile ? (
 						<Sheet open={showFilters} onOpenChange={setShowFilters}>
@@ -235,35 +320,19 @@ const SearchResults = () => {
 										<h4 className="font-medium text-foreground mb-3">
 											Categories
 										</h4>
-										<div className="space-y-2">
+										<div className="flex flex-wrap gap-2">
 											{categories.map((category) => (
-												<label
+												<button
 													key={category.slug}
-													className="flex items-center gap-2 cursor-pointer"
+													onClick={() => handleCategoryChange(category.slug)}
+													className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+														selectedCategories.includes(category.slug)
+															? "bg-primary text-primary-foreground border-primary"
+															: "bg-secondary text-foreground border-border hover:border-primary/30"
+													}`}
 												>
-													<input
-														type="checkbox"
-														checked={selectedCategories.includes(category.slug)}
-														onChange={(e) => {
-															if (e.target.checked) {
-																setSelectedCategories([
-																	...selectedCategories,
-																	category.slug,
-																]);
-															} else {
-																setSelectedCategories(
-																	selectedCategories.filter(
-																		(c) => c !== category.slug,
-																	),
-																);
-															}
-														}}
-														className="rounded border-border text-primary focus:ring-primary/20"
-													/>
-													<span className="text-sm text-foreground">
-														{category.name}
-													</span>
-												</label>
+													{category.name}
+												</button>
 											))}
 										</div>
 									</div>
@@ -274,84 +343,21 @@ const SearchResults = () => {
 											Price Range
 										</h4>
 										<div className="space-y-3">
-											<div className="flex items-center gap-2">
-												<input
-													type="number"
-													value={priceRange[0]}
-													onChange={(e) =>
+											<Slider
+												value={priceRange}
+												onValueChange={(value) => {
+													if (value && value.length === 2) {
 														setPriceRange([
-															parseInt(e.target.value) || 0,
-															priceRange[1],
-														])
+															value[0] || 0,
+															value[1] || maxPrice,
+														]);
 													}
-													className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-													placeholder="Min"
-												/>
-												<span className="text-muted-foreground">-</span>
-												<input
-													type="number"
-													value={priceRange[1]}
-													onChange={(e) =>
-														setPriceRange([
-															priceRange[0],
-															parseInt(e.target.value) || maxPrice,
-														])
-													}
-													className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-													placeholder="Max"
-												/>
-											</div>
-											<input
-												type="range"
-												min="0"
+												}}
+												min={0}
 												max={maxPrice}
-												value={priceRange[1]}
-												onChange={(e) =>
-													setPriceRange([
-														priceRange[0],
-														parseInt(e.target.value),
-													])
-												}
+												step={10}
 												className="w-full"
 											/>
-										</div>
-									</div>
-
-									{/* Condition */}
-									<div>
-										<h4 className="font-medium text-foreground mb-3">
-											Condition
-										</h4>
-										<div className="space-y-2">
-											{availableConditions.map((condition) => (
-												<label
-													key={condition}
-													className="flex items-center gap-2 cursor-pointer"
-												>
-													<input
-														type="checkbox"
-														checked={selectedConditions.includes(condition)}
-														onChange={(e) => {
-															if (e.target.checked) {
-																setSelectedConditions([
-																	...selectedConditions,
-																	condition,
-																]);
-															} else {
-																setSelectedConditions(
-																	selectedConditions.filter(
-																		(c) => c !== condition,
-																	),
-																);
-															}
-														}}
-														className="rounded border-border text-primary focus:ring-primary/20"
-													/>
-													<span className="text-sm text-foreground">
-														{condition}
-													</span>
-												</label>
-											))}
 										</div>
 									</div>
 
@@ -423,7 +429,7 @@ const SearchResults = () => {
 							initial={{ opacity: 0, width: 0 }}
 							animate={{ opacity: 1, width: 280 }}
 							exit={{ opacity: 0, width: 0 }}
-							className="flex-shrink-0 bg-card rounded-lg border border-border p-6 h-fit sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto"
+							className="flex-shrink-0 bg-card space-y-4 rounded-lg border border-border p-6 h-fit sticky top-42 max-h-[calc(100vh-6rem)] overflow-y-auto"
 						>
 							<div className="flex items-center justify-between mb-6">
 								<h3 className="font-semibold text-foreground">Filters</h3>
@@ -438,35 +444,19 @@ const SearchResults = () => {
 							{/* Categories */}
 							<div className="mb-6">
 								<h4 className="font-medium text-foreground mb-3">Categories</h4>
-								<div className="space-y-2">
+								<div className="flex flex-wrap gap-2">
 									{categories.map((category) => (
-										<label
+										<button
 											key={category.slug}
-											className="flex items-center gap-2 cursor-pointer"
+											onClick={() => handleCategoryChange(category.slug)}
+											className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+												selectedCategories.includes(category.slug)
+													? "bg-primary text-primary-foreground border-primary"
+													: "bg-secondary text-foreground border-border hover:border-primary/30"
+											}`}
 										>
-											<input
-												type="checkbox"
-												checked={selectedCategories.includes(category.slug)}
-												onChange={(e) => {
-													if (e.target.checked) {
-														setSelectedCategories([
-															...selectedCategories,
-															category.slug,
-														]);
-													} else {
-														setSelectedCategories(
-															selectedCategories.filter(
-																(c) => c !== category.slug,
-															),
-														);
-													}
-												}}
-												className="rounded border-border text-primary focus:ring-primary/20"
-											/>
-											<span className="text-sm text-foreground">
-												{category.name}
-											</span>
-										</label>
+											{category.name}
+										</button>
 									))}
 								</div>
 							</div>
@@ -504,50 +494,20 @@ const SearchResults = () => {
 											placeholder="Max"
 										/>
 									</div>
-									<input
-										type="range"
-										min="0"
-										max={maxPrice}
-										value={priceRange[1]}
-										onChange={(e) =>
-											setPriceRange([priceRange[0], parseInt(e.target.value)])
-										}
-										className="w-full"
-									/>
-								</div>
-							</div>
-
-							{/* Condition */}
-							<div className="mb-6">
-								<h4 className="font-medium text-foreground mb-3">Condition</h4>
-								<div className="space-y-2">
-									{availableConditions.map((condition) => (
-										<label
-											key={condition}
-											className="flex items-center gap-2 cursor-pointer"
-										>
-											<input
-												type="checkbox"
-												checked={selectedConditions.includes(condition)}
-												onChange={(e) => {
-													if (e.target.checked) {
-														setSelectedConditions([
-															...selectedConditions,
-															condition,
-														]);
-													} else {
-														setSelectedConditions(
-															selectedConditions.filter((c) => c !== condition),
-														);
-													}
-												}}
-												className="rounded border-border text-primary focus:ring-primary/20"
-											/>
-											<span className="text-sm text-foreground">
-												{condition}
-											</span>
-										</label>
-									))}
+									<div className="flex items-center gap-4 mt-2">
+										<Slider
+											value={priceRange}
+											onValueChange={(value) => {
+												if (value && value.length === 2) {
+													setPriceRange([value[0] || 0, value[1] || maxPrice]);
+												}
+											}}
+											min={0}
+											max={maxPrice}
+											step={10}
+											className="w-full"
+										/>
+									</div>
 								</div>
 							</div>
 						</motion.div>
@@ -563,9 +523,24 @@ const SearchResults = () => {
 							</div>
 						) : filteredAndSortedResults.length > 0 ? (
 							<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-								{filteredAndSortedResults.map((product: any, i: number) => (
-									<ProductCard key={product.id} product={product} index={i} />
-								))}
+								{filteredAndSortedResults.map(
+									(product: EbayProduct, i: number) => {
+										// Convert eBay product to match ProductCard interface
+										const adaptedProduct = {
+											...product,
+											price: product.price.value,
+											rating: 0, // eBay doesn't provide rating in basic search
+											reviews: 0, // eBay doesn't provide reviews in basic search
+										};
+										return (
+											<ProductCard
+												key={product.id}
+												product={adaptedProduct}
+												index={i}
+											/>
+										);
+									},
+								)}
 							</div>
 						) : (
 							<div className="text-center py-20">
@@ -575,8 +550,11 @@ const SearchResults = () => {
 								</p>
 
 								<p className="text-muted-foreground">
-									Try adjusting your filters or search for something like
-									"iPhone", "MacBook", or "headphones"
+									{error
+										? "There was an error fetching results. Please try again."
+										: "Try adjusting your filters or search for something like"}
+									{!error && " "}
+									{!error && <span>"iPhone", "MacBook", or "headphones"</span>}
 								</p>
 							</div>
 						)}

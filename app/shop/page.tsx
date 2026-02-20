@@ -13,9 +13,12 @@ import { SlidersHorizontal, ChevronDown, X } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Navbar from "@/components/navbar";
-import { featuredProducts } from "@/lib/products";
+import { searchEbayProducts } from "@/lib/ebay";
+import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
+import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Slider } from "@/components/ui/slider";
 
 const ProductCard = dynamic(
 	() => import("@/components/product-card").then((mod) => mod.default),
@@ -26,7 +29,6 @@ const ProductCard = dynamic(
 );
 
 const categories = [
-	{ name: "All Products", slug: "all" },
 	{ name: "Smartphones", slug: "smartphones" },
 	{ name: "Laptops", slug: "laptops" },
 	{ name: "Tablets", slug: "tablets" },
@@ -57,15 +59,100 @@ const sortOptions = [
 const Page = () => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const activeCategory = searchParams.get("category") || "all";
+	const activeCategory =
+		searchParams.get("categories") ||
+		searchParams.get("category") ||
+		"smartphones";
 	const searchQuery = searchParams.get("q") || "";
 	const [isPending, startTransition] = useTransition();
 	const isMobile = useIsMobile();
 
-	const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-	const [priceRange, setPriceRange] = useState<[number, number]>([0, 15000]);
-	const [sortBy, setSortBy] = useState("newest");
+	// Initialize filter states from URL parameters
+	const [selectedBrands, setSelectedBrands] = useState<string[]>(() => {
+		const brandsParam = searchParams.get("brands");
+		return brandsParam ? brandsParam.split(",") : [];
+	});
+	const [priceRange, setPriceRange] = useState<[number, number]>(() => {
+		const minPriceParam = searchParams.get("minPrice");
+		const maxPriceParam = searchParams.get("maxPrice");
+		const min = minPriceParam ? parseInt(minPriceParam) : 0;
+		const max = maxPriceParam ? parseInt(maxPriceParam) : 10000;
+		return [min, max];
+	});
+	const [selectedConditions, setSelectedConditions] = useState<string[]>(() => {
+		const conditionsParam = searchParams.get("conditions");
+		return conditionsParam ? conditionsParam.split(",") : [];
+	});
+	const [sortBy, setSortBy] = useState<string>(() => {
+		return searchParams.get("sort") || "newest";
+	});
 	const [filtersOpen, setFiltersOpen] = useState(false);
+
+	// eBay search query based on filters
+	const ebayQuery = useMemo(() => {
+		let query = searchQuery || activeCategory;
+
+		return query;
+	}, [searchQuery, activeCategory]);
+
+	// Create filter object for the API call
+	const searchFilters = useMemo(() => {
+		const filters: any = {};
+
+		if (activeCategory) {
+			filters.category = activeCategory;
+		}
+		if (selectedBrands.length > 0) {
+			filters.brands = selectedBrands;
+		}
+		if (priceRange[0] > 0) {
+			filters.minPrice = priceRange[0];
+		}
+		if (priceRange[1] < 10000) {
+			filters.maxPrice = priceRange[1];
+		}
+		if (selectedConditions.length > 0) {
+			filters.conditions = selectedConditions;
+		}
+		if (sortBy !== "newest") {
+			// Map UI sort values to API sort values
+			const sortMapping: Record<string, string> = {
+				"price-asc": "price",
+				"price-desc": "-price",
+				newest: "newlyListed",
+				popular: "bestMatch",
+			};
+			filters.sortOrder = sortMapping[sortBy] as
+				| "newlyListed"
+				| "bestMatch"
+				| "price"
+				| "-price";
+		}
+
+		return filters;
+	}, [activeCategory, selectedBrands, priceRange, selectedConditions, sortBy]);
+
+	// Use React Query for search
+	const { data, isLoading, isError } = useQuery({
+		queryKey: ["shop-search", ebayQuery, activeCategory, searchFilters],
+		queryFn: () =>
+			searchEbayProducts(
+				ebayQuery,
+				1,
+				50,
+				"GHS",
+				searchFilters.sortOrder || "newlyListed",
+				activeCategory,
+				searchFilters.minPrice,
+				searchFilters.maxPrice,
+				searchFilters.conditions,
+				searchFilters.brands,
+			),
+		enabled: true,
+		staleTime: 10 * 60 * 1000, // 10 minutes
+	});
+
+	const ebayProducts = data?.items.map(convertEbayToLocalProduct) || [];
 
 	// Close mobile filters when switching to desktop
 	useEffect(() => {
@@ -74,12 +161,45 @@ const Page = () => {
 		}
 	}, [isMobile]);
 
+	// Update URL when filters change
+	useEffect(() => {
+		const params = new URLSearchParams();
+		if (searchQuery.trim()) {
+			params.set("q", searchQuery);
+		}
+		if (activeCategory) {
+			params.set("categories", activeCategory);
+		}
+		if (selectedBrands.length > 0) {
+			params.set("brands", selectedBrands.join(","));
+		}
+		if (priceRange[0] > 0) {
+			params.set("minPrice", priceRange[0].toString());
+		}
+		if (priceRange[1] < 10000) {
+			params.set("maxPrice", priceRange[1].toString());
+		}
+		if (selectedConditions.length > 0) {
+			params.set("conditions", selectedConditions.join(","));
+		}
+		if (sortBy !== "newest") {
+			params.set("sort", sortBy);
+		}
+		router.replace(`/shop?${params.toString()}`);
+	}, [
+		searchQuery,
+		activeCategory,
+		selectedBrands,
+		priceRange,
+		selectedConditions,
+		sortBy,
+	]);
+
 	const setCategory = useCallback(
 		(slug: string) => {
 			startTransition(() => {
 				const params = new URLSearchParams(searchParams);
-				if (slug === "all") params.delete("category");
-				else params.set("category", slug);
+				params.set("categories", slug);
 				router.push(`/shop?${params.toString()}`);
 			});
 		},
@@ -97,63 +217,48 @@ const Page = () => {
 	}, []);
 
 	const handlePriceChange = useCallback(
-		(value: number) => {
+		(type: "min" | "max", value: number) => {
 			startTransition(() => {
-				setPriceRange([priceRange[0], value]);
+				if (type === "min") {
+					setPriceRange([value, priceRange[1]]);
+				} else {
+					setPriceRange([priceRange[0], value]);
+				}
 			});
 		},
-		[priceRange[0]],
+		[priceRange],
 	);
 
 	const clearFilters = useCallback(() => {
 		startTransition(() => {
-			router.push("/shop");
+			setSelectedBrands([]);
+			setPriceRange([0, 10000]);
+			setSelectedConditions([]);
+			setSortBy("newest");
+			// Update URL to reflect cleared filters
+			const params = new URLSearchParams();
+			if (searchQuery.trim()) {
+				params.set("q", searchQuery);
+			}
+			if (activeCategory) {
+				params.set("category", activeCategory);
+			}
+			router.replace(`/shop?${params.toString()}`);
 		});
-	}, [router]);
+	}, [router, searchQuery, activeCategory]);
 
+	// Remove client-side filtering since we're using server-side filtering
+	// The API already returns filtered results
 	const filteredProducts = useMemo(() => {
-		let products = [...featuredProducts];
-
-		if (activeCategory !== "all") {
-			products = products.filter((p) => p.category === activeCategory);
-		}
-
-		if (searchQuery) {
-			const q = searchQuery.toLowerCase();
-			products = products.filter(
-				(p) =>
-					p.title.toLowerCase().includes(q) ||
-					p.category.toLowerCase().includes(q),
-			);
-		}
-
-		if (selectedBrands.length > 0) {
-			products = products.filter((p) => selectedBrands.includes(p.seller));
-		}
-
-		products = products.filter(
-			(p) => p.price >= priceRange[0] && p.price <= priceRange[1],
-		);
-
-		switch (sortBy) {
-			case "price-asc":
-				products.sort((a, b) => a.price - b.price);
-				break;
-			case "price-desc":
-				products.sort((a, b) => b.price - a.price);
-				break;
-			case "popular":
-				products.sort((a, b) => b.reviews - a.reviews);
-				break;
-		}
-
-		return products;
-	}, [activeCategory, searchQuery, selectedBrands, priceRange, sortBy]);
+		return ebayProducts;
+	}, [ebayProducts]);
 
 	const activeFiltersCount =
-		(activeCategory !== "all" ? 1 : 0) +
+		1 + // Always count the category filter since we always have one selected
 		selectedBrands.length +
-		(priceRange[1] < 15000 ? 1 : 0);
+		selectedConditions.length +
+		(priceRange[0] > 0 || priceRange[1] < 10000 ? 1 : 0) +
+		(sortBy !== "newest" ? 1 : 0);
 
 	return (
 		<>
@@ -164,11 +269,11 @@ const Page = () => {
 					<div className="p-3 flex sticky top-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<div>
 							<h1 className="text-2xl font-bold text-foreground">
-								{activeCategory !== "all"
+								{activeCategory
 									? categories.find((c) => c.slug === activeCategory)?.name
 									: searchQuery
 										? `Results for "${searchQuery}"`
-										: "All Products"}
+										: "Smartphones"}
 							</h1>
 						</div>
 						<div className="flex items-center gap-3">
@@ -235,14 +340,13 @@ const Page = () => {
 												setFiltersOpen(false);
 											}}
 											className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors ${
-												activeCategory === cat.slug ||
-												(cat.slug === "all" && activeCategory === "all")
+												activeCategory === cat.slug
 													? "bg-primary/10 font-medium text-primary"
 													: "text-muted-foreground hover:bg-secondary hover:text-foreground"
 											}`}
 										>
 											{cat.name}
-											{activeCategory === cat.slug && cat.slug !== "all" && (
+											{activeCategory === cat.slug && (
 												<span className="text-xs">✓</span>
 											)}
 										</button>
@@ -279,17 +383,43 @@ const Page = () => {
 									Price Range
 								</h3>
 								<div className="space-y-3">
-									<input
-										type="range"
-										min={0}
-										max={15000}
-										step={500}
-										value={priceRange[1]}
-										onChange={(e) => handlePriceChange(Number(e.target.value))}
-									/>
-									<div className="flex items-center justify-between text-xs text-muted-foreground">
-										<span>₵0</span>
-										<span>₵{priceRange[1].toLocaleString()}</span>
+									<div className="flex items-center gap-2">
+										<input
+											type="number"
+											value={priceRange[0]}
+											onChange={(e) =>
+												handlePriceChange("min", parseInt(e.target.value) || 0)
+											}
+											className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+											placeholder="Min"
+										/>
+										<span className="text-muted-foreground">-</span>
+										<input
+											type="number"
+											value={priceRange[1]}
+											onChange={(e) =>
+												handlePriceChange(
+													"max",
+													parseInt(e.target.value) || 10000,
+												)
+											}
+											className="w-full rounded-lg border border-border bg-secondary px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+											placeholder="Max"
+										/>
+									</div>
+									<div className="flex items-center gap-4 mt-2">
+										<Slider
+											value={priceRange}
+											onValueChange={(value) => {
+												if (value && value.length === 2) {
+													setPriceRange([value[0] || 0, value[1] || 10000]);
+												}
+											}}
+											min={0}
+											max={10000}
+											step={10}
+											className="w-full"
+										/>
 									</div>
 								</div>
 							</div>
@@ -312,7 +442,22 @@ const Page = () => {
 									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
 								</div>
 							)}
-							{filteredProducts.length === 0 ? (
+							{isLoading ? (
+								<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+									{[...Array(12)].map((_, i) => (
+										<ProductCardSkeleton key={i} />
+									))}
+								</div>
+							) : isError ? (
+								<div className="flex flex-col items-center justify-center py-20 text-center">
+									<p className="text-lg font-medium text-foreground">
+										Unable to load products
+									</p>
+									<p className="mt-1 text-sm text-muted-foreground">
+										Please try again later
+									</p>
+								</div>
+							) : filteredProducts.length === 0 ? (
 								<div className="flex flex-col items-center justify-center py-20 text-center">
 									<p className="text-lg font-medium text-foreground">
 										No products found
@@ -323,7 +468,7 @@ const Page = () => {
 								</div>
 							) : (
 								<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-									{filteredProducts.map((product, index) => (
+									{filteredProducts.map((product: any, index: number) => (
 										<ProductCard
 											key={product.id}
 											product={product}
