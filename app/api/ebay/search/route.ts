@@ -38,15 +38,6 @@ export async function GET(req: NextRequest) {
 		? searchParams.get("brands")!.split(",")
 		: undefined;
 
-	console.log("API Route - Received params:", {
-		q,
-		categorySlug,
-		minPrice,
-		maxPrice,
-		conditions,
-		brands,
-	});
-
 	const data = await searchEbayProducts(
 		q,
 		page,

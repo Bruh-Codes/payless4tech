@@ -50,7 +50,7 @@ export const Columns: ColumnDef<product>[] = [
 			const amount = parseFloat(row.getValue("price"));
 			const formatted = new Intl.NumberFormat("en-US", {
 				style: "currency",
-				currency: "Ghc",
+				currency: "GHS",
 			}).format(amount);
 
 			return <div className="text-right font-medium">{formatted}</div>;
@@ -176,7 +176,7 @@ export const CustomerColumns: ColumnDef<salesType>[] = [
 			const amount = parseFloat(row.getValue("total_amount"));
 			const formatted = new Intl.NumberFormat("en-US", {
 				style: "currency",
-				currency: "Ghc",
+				currency: "GHS",
 			}).format(amount);
 
 			return <div className="text-right font-medium">{formatted}</div>;

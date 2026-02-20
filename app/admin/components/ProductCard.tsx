@@ -184,7 +184,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
 				return response.data;
 			},
-		}
+		},
 	);
 
 	const onSubmit = async (values: z.infer<typeof formSchema>) => {
@@ -259,7 +259,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
 	// Handle additional images upload
 	const handleAdditionalImagesChange = (
-		e: React.ChangeEvent<HTMLInputElement>
+		e: React.ChangeEvent<HTMLInputElement>,
 	) => {
 		const files = e.target.files;
 		if (!files) return;
@@ -285,7 +285,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 	// Remove new additional image
 	const removeNewAdditionalImage = (indexToRemove: number) => {
 		const updatedFiles = newAdditionalImages.filter(
-			(_, i) => i !== indexToRemove
+			(_, i) => i !== indexToRemove,
 		);
 		setNewAdditionalImages(updatedFiles);
 		form.setValue("additionalImages", updatedFiles);
@@ -374,18 +374,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
 				<div className="mt-auto">
 					{product.original_price && (
 						<span className="text-xs line-through text-red-600 font-bold">
-							Ghc{" "}
-							{Number(product.original_price).toLocaleString(undefined, {
-								minimumFractionDigits: 2,
+							₵
+							{Number(product.original_price).toLocaleString("en-GH", {
+								minimumFractionDigits: 0,
 								maximumFractionDigits: 2,
 							})}
 						</span>
 					)}
 					<div className="flex justify-between items-center">
 						<span className="text-lg font-bold">
-							Ghc
-							{Number(product.price).toLocaleString(undefined, {
-								minimumFractionDigits: 2,
+							₵
+							{Number(product.price).toLocaleString("en-GH", {
+								minimumFractionDigits: 0,
 								maximumFractionDigits: 2,
 							})}
 						</span>
@@ -694,7 +694,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																			type="button"
 																			onClick={() =>
 																				handleDeleteAdditionalImage(
-																					additionalImage?.id
+																					additionalImage?.id,
 																				)
 																			}
 																			className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-600 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"

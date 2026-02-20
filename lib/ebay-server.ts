@@ -1,31 +1,78 @@
 // Server-side eBay API functions
 import { EBAY_CATEGORY_IDS } from "./ebay-categories";
 
-// Currency conversion rates (you can update these periodically or use a real API)
-const CURRENCY_RATES = {
-	USD: 1,
-	GHS: 13.8, // 1 USD = 13.8 GHS (current market rate as of 2024)
-} as const;
+// Exchange rate cache (in memory, expires after 1 hour)
+let exchangeRateCache: { rate: number; timestamp: number } | null = null;
 
-// Convert price from USD to GHS
-function convertPrice(
+// Fetch real-time exchange rate from exchangerate.host
+async function getExchangeRateUSDToGHS(): Promise<number> {
+	const now = Date.now();
+	const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+	// Return cached rate if still valid
+	if (exchangeRateCache && now - exchangeRateCache.timestamp < CACHE_DURATION) {
+		return exchangeRateCache.rate;
+	}
+
+	try {
+		const response = await fetch("https://open.er-api.com/v6/latest/USD");
+
+		if (!response.ok) {
+			throw new Error(`Exchange rate API failed: ${response.status}`);
+		}
+
+		const data = await response.json();
+		const rate = data.rates?.GHS;
+
+		if (!rate || typeof rate !== "number") {
+			throw new Error("Invalid exchange rate response");
+		}
+
+		// Cache the new rate
+		exchangeRateCache = {
+			rate,
+			timestamp: now,
+		};
+
+		return rate;
+	} catch (error) {
+		// Fallback to previous cached rate if available
+		if (exchangeRateCache) {
+			return exchangeRateCache.rate;
+		}
+
+		// Ultimate fallback to fixed rate
+		return 13.8;
+	}
+}
+
+// Convert price from USD to GHS using real-time rate
+async function convertPrice(
 	price: { value: number; currency: string },
 	targetCurrency: "USD" | "GHS" = "USD",
-) {
+): Promise<{ value: number; currency: string }> {
 	if (price.currency === targetCurrency) {
 		return price;
 	}
 
+	// Convert to USD first if needed
 	const usdValue =
 		price.currency === "USD"
 			? price.value
-			: price.value /
-				CURRENCY_RATES[price.currency as keyof typeof CURRENCY_RATES];
-	const convertedValue = usdValue * CURRENCY_RATES[targetCurrency];
+			: price.value / (await getExchangeRateUSDToGHS());
+
+	// Convert to target currency
+	if (targetCurrency === "GHS") {
+		const ghsValue = usdValue * (await getExchangeRateUSDToGHS());
+		return {
+			value: Math.round(ghsValue * 100) / 100, // Round to 2 decimal places
+			currency: "GHS",
+		};
+	}
 
 	return {
-		value: Math.round(convertedValue * 100) / 100, // Round to 2 decimal places
-		currency: targetCurrency,
+		value: usdValue,
+		currency: "USD",
 	};
 }
 
@@ -43,11 +90,8 @@ export async function searchEbayProducts(
 ) {
 	const q = query.trim();
 
-	// Debug logging
-
 	// Allow empty query if category is provided (for category-only browsing)
 	if (!q && !categorySlug) {
-		console.log("Returning empty results: no query and no category");
 		return { items: [], totalCount: 0, pageNumber };
 	}
 
@@ -121,7 +165,6 @@ export async function searchEbayProducts(
 	if (brands && brands.length > 0) {
 		const brandFilters = brands.map((brand) => `brand:${brand}`).join(",");
 		filters.push(brandFilters);
-		console.log("eBay Server - Adding brand filter:", brandFilters);
 	}
 
 	// Add price range filter if specified
@@ -131,7 +174,6 @@ export async function searchEbayProducts(
 
 	// Set the filter parameter
 	const finalFilter = filters.join(",");
-	console.log("eBay Server - Final filter string:", finalFilter);
 	url.searchParams.set("filter", finalFilter);
 
 	const res = await fetch(url.toString(), {
@@ -145,65 +187,67 @@ export async function searchEbayProducts(
 	if (!res.ok) throw new Error(await res.text());
 	const data = await res.json();
 
-	const items = (data.itemSummaries ?? [])
-		.filter((it: any) => it.image?.imageUrl) // Only include products with actual images
-		.filter((it: any) => {
-			// Filter out unavailable items
-			const availabilityStatus = it.estimatedAvailabilityStatus;
+	const processedItems = await Promise.all(
+		(data.itemSummaries ?? [])
+			.filter((it: any) => it.image?.imageUrl) // Only include products with actual images
+			.filter((it: any) => {
+				// Filter out unavailable items
+				const availabilityStatus = it.estimatedAvailabilityStatus;
 
-			// Exclude OUT_OF_STOCK items
-			if (availabilityStatus === "OUT_OF_STOCK") {
-				return false;
-			}
-
-			// Also exclude items with past end dates (ended listings)
-			if (it.itemEndDate) {
-				const endDate = new Date(it.itemEndDate);
-				const now = new Date();
-				if (endDate < now) {
+				// Exclude OUT_OF_STOCK items
+				if (availabilityStatus === "OUT_OF_STOCK") {
 					return false;
 				}
-			}
 
-			// Include items if they're IN_STOCK, LIMITED_STOCK, or status is unknown
-			return true;
-		})
-		.map((it: any) => {
-			let imageUrl = it.image?.imageUrl ?? "";
-			if (imageUrl) {
-				// Convert to HTTPS and get higher quality image
-				imageUrl = imageUrl.replace("http://", "https://");
-				// Get larger image size if available
-				imageUrl = imageUrl.replace("/s-l64.jpg", "/s-l500.jpg");
-				imageUrl = imageUrl.replace("/s-l160.jpg", "/s-l500.jpg");
-				imageUrl = imageUrl.replace("/s-l225.jpg", "/s-l500.jpg");
-			}
+				// Also exclude items with past end dates (ended listings)
+				if (it.itemEndDate) {
+					const endDate = new Date(it.itemEndDate);
+					const now = new Date();
+					if (endDate < now) {
+						return false;
+					}
+				}
 
-			// Note: Additional images come from getItem API, not search
-			// We'll fetch them on product details page
+				// Include items if they're IN_STOCK, LIMITED_STOCK, or status is unknown
+				return true;
+			})
+			.map(async (it: any) => {
+				let imageUrl = it.image?.imageUrl ?? "";
+				if (imageUrl) {
+					// Convert to HTTPS and get higher quality image
+					imageUrl = imageUrl.replace("http://", "https://");
+					// Get larger image size if available
+					imageUrl = imageUrl.replace("/s-l64.jpg", "/s-l500.jpg");
+					imageUrl = imageUrl.replace("/s-l160.jpg", "/s-l500.jpg");
+					imageUrl = imageUrl.replace("/s-l225.jpg", "/s-l500.jpg");
+				}
 
-			return {
-				id: it.itemId ?? "",
-				title: it.title ?? "",
-				price: convertPrice(
-					it.price ?? { value: 0, currency: "USD" },
-					targetCurrency,
-				),
-				image: imageUrl,
-				category: it.categories?.[0]?.categoryName ?? "Unknown",
-				condition: it.condition ?? "Unknown",
-				shipping: "Request Delivery",
-				seller: "Payless4tech",
-				itemUrl: it.itemWebUrl ?? "",
-				isPreorder: true,
-				// Add availability fields
-				estimatedAvailabilityStatus: it.estimatedAvailabilityStatus,
-				itemEndDate: it.itemEndDate,
-			};
-		});
+				// Note: Additional images come from getItem API, not search
+				// We'll fetch them on product details page
+
+				return {
+					id: it.itemId ?? "",
+					title: it.title ?? "",
+					price: await convertPrice(
+						it.price ?? { value: 0, currency: "USD" },
+						targetCurrency,
+					),
+					image: imageUrl,
+					category: it.categories?.[0]?.categoryName ?? "Unknown",
+					condition: it.condition ?? "Unknown",
+					shipping: "Request Delivery",
+					seller: "Payless4tech",
+					itemUrl: it.itemWebUrl ?? "",
+					isPreorder: true,
+					// Add availability fields
+					estimatedAvailabilityStatus: it.estimatedAvailabilityStatus,
+					itemEndDate: it.itemEndDate,
+				};
+			}),
+	);
 
 	return {
-		items,
+		items: processedItems,
 		totalCount: Number(data.total ?? 0),
 		pageNumber,
 	};
@@ -273,11 +317,14 @@ export async function getEbayProductById(itemId: string) {
 		id: data.itemId ?? "",
 		title: data.title ?? "",
 		price: data.price
-			? {
-					value: Number(data.price.value ?? 0),
-					currency: data.price.currency ?? "USD",
-				}
-			: { value: 0, currency: "USD" },
+			? await convertPrice(
+					{
+						value: Number(data.price.value ?? 0),
+						currency: data.price.currency ?? "USD",
+					},
+					"GHS", // Always convert to GHS for product details
+				)
+			: { value: 0, currency: "GHS" },
 		image: imageUrl,
 		additionalImages: allImages.slice(0, 4), // Limit to 4 additional images
 		category: data.categories?.[0]?.categoryName ?? "Unknown",

@@ -150,7 +150,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 							result.status === "fulfilled",
 					)
 					.flatMap((result) => result.value.items || [])
-					.slice(0, 20); // Increased to 20 products for better variety
+					.slice(0, 15); // Increased to 20 products for better variety
 
 				console.log("Final combined products:", allProducts.length);
 

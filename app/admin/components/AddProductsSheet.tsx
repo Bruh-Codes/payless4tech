@@ -123,7 +123,7 @@ export function AddProductsSheet() {
 
 	const removeFile = (indexToRemove: number) => {
 		const updatedFiles = selectedFiles.filter(
-			(_, index) => index !== indexToRemove
+			(_, index) => index !== indexToRemove,
 		);
 		setSelectedFiles(updatedFiles);
 
@@ -255,7 +255,7 @@ export function AddProductsSheet() {
 								name="price"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Price (Ghc)</FormLabel>
+										<FormLabel>Price (₵)</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
@@ -274,7 +274,7 @@ export function AddProductsSheet() {
 								name="original_price"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Market Price (Ghc)</FormLabel>
+										<FormLabel>Market Price (₵)</FormLabel>
 										<FormControl>
 											<Input
 												type="number"
@@ -347,7 +347,7 @@ export function AddProductsSheet() {
 																// Set the first file's URL for validation
 																form.setValue(
 																	"image_url",
-																	URL.createObjectURL(files[0])
+																	URL.createObjectURL(files[0]),
 																);
 															} else {
 																form.setValue("image_url", "");
@@ -382,7 +382,7 @@ export function AddProductsSheet() {
 																		<span
 																			className={cn(
 																				"absolute top-1 left-1 text-xs bg-white text-gray-800 px-2 py-0.5 rounded",
-																				{ "bg-blue-500 text-white": idx === 0 }
+																				{ "bg-blue-500 text-white": idx === 0 },
 																			)}
 																		>
 																			{idx === 0
