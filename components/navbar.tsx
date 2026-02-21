@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react";
 import { useDebounce } from "use-debounce";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useInView } from "react-intersection-observer";
 import {
 	Search,
 	Menu,
@@ -77,13 +76,7 @@ const Navbar = memo(() => {
 	const dropdownRef = useRef<HTMLFormElement>(null);
 	const categoryDropdownRef = useRef<HTMLDivElement>(null);
 
-	// Intersection observer for infinite scroll
-	const { ref: scrollRef, inView } = useInView({
-		threshold: 0.1,
-		triggerOnce: true,
-	});
-
-	// Use React Query for infinite scroll search
+	// Use React Query for search — eagerly fetch up to 20 results for dropdown
 	const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
 		useInfiniteQuery({
 			queryKey: ["navbar-search", debouncedQuery],
@@ -93,7 +86,7 @@ const Navbar = memo(() => {
 				const response = await searchEbayProducts(
 					debouncedQuery,
 					pageParam,
-					5,
+					10, // Fetch 10 per page for faster loading
 					"GHS",
 					"bestMatch",
 				);
@@ -102,7 +95,11 @@ const Navbar = memo(() => {
 					items: response.items.map(convertEbayToLocalProduct),
 				};
 			},
-			getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+			getNextPageParam: (lastPage: any) => {
+				// Stop if fewer items than requested
+				if (!lastPage.items || lastPage.items.length < 10) return undefined;
+				return lastPage.pageNumber + 1;
+			},
 			initialPageParam: 1,
 			enabled: debouncedQuery.trim().length > 0,
 		});
@@ -110,20 +107,20 @@ const Navbar = memo(() => {
 	// Flatten all pages for display
 	const allResults = data?.pages?.flatMap((page) => page.items) || [];
 
-	// Fetch next page when scroll trigger is visible
+	// Auto-fetch more pages until we have 20 results (no scroll detection needed for dropdown)
 	useEffect(() => {
 		if (
 			!isFetchingNextPage &&
 			hasNextPage &&
-			inView &&
-			allResults.length < 15
+			allResults.length > 0 &&
+			allResults.length < 20
 		) {
 			fetchNextPage();
 		}
-	}, [isFetchingNextPage, hasNextPage, inView]);
+	}, [isFetchingNextPage, hasNextPage, allResults.length, fetchNextPage]);
 
-	// Check if we should show "View all results" button (after 15 results)
-	const showViewAllButton = allResults.length >= 15 && !isFetchingNextPage;
+	// Check if we should show "View all results" button (after 20 results)
+	const showViewAllButton = allResults.length >= 20 && !isFetchingNextPage;
 
 	useEffect(() => {
 		if (debouncedQuery.trim().length > 0) {
@@ -306,11 +303,6 @@ const Navbar = memo(() => {
 														key={`${product.id}-${index}`}
 														onClick={() => handleSelect(product)}
 														className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
-														ref={
-															index === allResults.length - 1
-																? scrollRef
-																: undefined
-														}
 													>
 														{product.image && (
 															<Image
@@ -318,7 +310,7 @@ const Navbar = memo(() => {
 																height={32}
 																src={product.image}
 																alt={product.title}
-																className="h-8 w-8 rounded object-cover flex-shrink-0"
+																className="h-8 w-8 rounded object-cover shrink-0"
 															/>
 														)}
 														<p className="text-sm font-medium text-foreground flex-1 min-w-0">
@@ -567,9 +559,6 @@ const Navbar = memo(() => {
 											key={`${product.id}-${index}`}
 											onClick={() => handleSelect(product)}
 											className="flex items-center gap-3 w-full px-4 py-3 hover:bg-accent transition-colors text-left"
-											ref={
-												index === allResults.length - 1 ? scrollRef : undefined
-											}
 										>
 											{product.image && (
 												<Image
@@ -577,7 +566,7 @@ const Navbar = memo(() => {
 													height={32}
 													src={product.image}
 													alt={product.title}
-													className="h-8 w-8 rounded object-cover flex-shrink-0"
+													className="h-8 w-8 rounded object-cover shrink-0"
 												/>
 											)}
 											<p className="text-sm font-medium text-foreground flex-1 min-w-0">

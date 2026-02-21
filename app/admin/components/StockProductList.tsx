@@ -14,55 +14,66 @@ import {
 import { Button } from "@/components/ui/button";
 import { Search, Filter, X } from "lucide-react";
 import { toast } from "sonner";
-import ProductCard, { Product } from "./ProductCard";
+import AdminProductCard, { Product as AdminProductType } from "./ProductCard";
 import { AddProductsSheet } from "./AddProductsSheet";
-import { useDebounce } from "use-debounce";
+import { BulkUploadSheet } from "./BulkUploadSheet";
 import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { AdminProductGridSkeleton } from "@/components/LoadingSkeletons";
 
 interface ProductListProps {
-	products: Product[];
+	products: AdminProductType[];
+	onDelete?: (id: string) => void;
+	onSearch?: (term: string) => void;
+	onCategoryFilter?: (category: string) => void;
+	onStatusFilter?: (status: string) => void;
+	onShowMore?: () => void;
+	hasMore?: boolean;
+	isLoading?: boolean;
+	searchTerm?: string;
+	categoryFilter?: string;
+	statusFilter?: string;
 }
 
-const StockProductList: React.FC<ProductListProps> = ({ products }) => {
-	const [searchTerm, setSearchTerm] = useState("");
-	const [categoryFilter, setCategoryFilter] = useState("");
-	const [statusFilter, setStatusFilter] = useState("");
-	const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-	const [showCount, setShowCount] = useState(20);
+const StockProductList: React.FC<ProductListProps> = ({
+	products,
+	onDelete,
+	onSearch,
+	onCategoryFilter,
+	onStatusFilter,
+	onShowMore,
+	hasMore = true,
+	isLoading = false,
+	searchTerm: externalSearchTerm = "",
+	categoryFilter: externalCategoryFilter = "",
+	statusFilter: externalStatusFilter = "",
+}) => {
+	// Use external state if provided, otherwise use internal state
+	const [internalSearchTerm, setInternalSearchTerm] =
+		useState(externalSearchTerm);
+	const [internalCategoryFilter, setInternalCategoryFilter] = useState(
+		externalCategoryFilter,
+	);
+	const [internalStatusFilter, setInternalStatusFilter] =
+		useState(externalStatusFilter);
+
+	const searchTerm =
+		externalSearchTerm !== undefined ? externalSearchTerm : internalSearchTerm;
+	const categoryFilter =
+		externalCategoryFilter !== undefined
+			? externalCategoryFilter
+			: internalCategoryFilter;
+	const statusFilter =
+		externalStatusFilter !== undefined
+			? externalStatusFilter
+			: internalStatusFilter;
+
 	const queryClient = useQueryClient();
-	const [debouncedSearchTerm] = useDebounce(searchTerm, 300); // 300ms debounce
 
-	const filteredProducts = useMemo(() => {
-		return products.filter((product) => {
-			const matchesSearch =
-				product?.name
-					?.toLowerCase()
-					.includes(debouncedSearchTerm.toLowerCase()) ||
-				product?.description
-					?.toLowerCase()
-					.includes(debouncedSearchTerm.toLowerCase());
-			const matchesCategory =
-				categoryFilter === "" ||
-				categoryFilter === "all" ||
-				product.category === categoryFilter;
-
-			const matchesStatus =
-				statusFilter === "" ||
-				statusFilter === "all" ||
-				product.status === statusFilter;
-
-			return matchesSearch && matchesCategory && matchesStatus;
-		});
-	}, [products, debouncedSearchTerm, categoryFilter, statusFilter]);
-
-	const handleEdit = (product: Product) => {
-		setSelectedProduct(product);
-	};
-
-	const handleDelete = async (id: string) => {
-		try {
-			// First, get the product by id to retrieve its image URL
+	// Delete product mutation
+	const deleteProductMutation = useMutation({
+		mutationFn: async (id: string) => {
+			// First, get product by id to retrieve its image URL
 			const { data: productData, error: fetchError } = await supabase
 				.from("products")
 				.select("*")
@@ -70,22 +81,20 @@ const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 				.single();
 
 			if (fetchError) {
-				toast.error("Failed to fetch product for deletion");
-				return;
+				throw new Error("Failed to fetch product for deletion");
 			}
 
 			const imageUrl = productData?.image_url || "";
 			if (imageUrl) {
 				const path = imageUrl.split(
-					"/storage/v1/object/public/product-images/"
+					"/storage/v1/object/public/product-images/",
 				)[1];
 				if (path) {
 					const { error: imageError } = await supabase.storage
 						.from("product-images")
 						.remove([path.replace("product-images/", "")]);
 					if (imageError) {
-						toast.error("Failed to delete product image");
-						return;
+						throw new Error("Failed to delete product image");
 					}
 				}
 			}
@@ -93,52 +102,106 @@ const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 			const { error } = await supabase.from("products").delete().eq("id", id);
 
 			if (error) {
-				toast.error("Failed to delete product");
-				return;
+				throw new Error("Failed to delete product");
 			}
-			queryClient.invalidateQueries({
-				queryKey: ["products"],
-			});
-			toast.success("Product deleted successfully");
-		} catch (error) {
-			toast.error("Failed to delete product");
-			console.error("Error deleting product:", error);
-		}
-	};
 
-	const handleStatusChange = async (id: string, status: string) => {
-		try {
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+			toast.success("Product deleted successfully");
+		},
+		onError: (error: any) => {
+			toast.error(error.message || "Failed to delete product");
+		},
+	});
+
+	// Update status mutation
+	const updateStatusMutation = useMutation({
+		mutationFn: async ({ id, status }: { id: string; status: string }) => {
 			const { error } = await supabase
 				.from("products")
 				.update({ status })
 				.eq("id", id);
 			if (error) {
-				toast.error("Error updating product status");
-				return;
+				throw new Error("Error updating product status");
 			}
+			return { id, status };
+		},
+		onSuccess: ({ status }) => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
 			toast.success(`Product marked as ${status}`);
-			queryClient.invalidateQueries({
-				queryKey: ["products"],
-			});
-		} catch (error) {
+		},
+		onError: () => {
 			toast.error("Failed to update product status");
-			console.error("Error updating product status:", error);
+		},
+	});
+
+	const dynamicCategories = useMemo(() => {
+		const allCategories = products.map((p) => p.category).filter(Boolean);
+		const unique = Array.from(new Set(allCategories));
+		const standard = [
+			"consumer-electronics",
+			"laptops",
+			"phones",
+			"audio",
+			"others",
+		];
+		return unique.filter((c) => !standard.includes(c));
+	}, [products]);
+
+	const dynamicStatuses = useMemo(() => {
+		const allStatuses = products.map((p) => p.status).filter(Boolean);
+		const unique = Array.from(new Set(allStatuses));
+		const standard = ["available", "unavailable", "new", "low-stock"];
+		return unique.filter((s) => !standard.includes(s));
+	}, [products]);
+
+	const handleEdit = (product: AdminProductType) => {
+		// Used by AddProductsSheet when we implement Edit logic later
+	};
+
+	const handleDelete = (id: string) => {
+		deleteProductMutation.mutate(id);
+	};
+
+	const handleStatusUpdate = (id: string, status: string) => {
+		updateStatusMutation.mutate({ id, status });
+	};
+
+	// Update handlers to use external functions if provided
+	const handleSearchChange = (term: string) => {
+		if (onSearch) {
+			onSearch(term);
+		} else {
+			setInternalSearchTerm(term);
+		}
+	};
+
+	const handleCategoryChange = (category: string) => {
+		if (onCategoryFilter) {
+			onCategoryFilter(category);
+		} else {
+			setInternalCategoryFilter(category);
+		}
+	};
+
+	const handleStatusFilterChange = (status: string) => {
+		if (onStatusFilter) {
+			onStatusFilter(status);
+		} else {
+			setInternalStatusFilter(status);
 		}
 	};
 
 	const clearFilters = () => {
-		setSearchTerm("");
-		setCategoryFilter("");
-		setStatusFilter("");
+		handleSearchChange("");
+		handleCategoryChange("");
+		handleStatusFilterChange("");
 	};
 
-	const uniqueCategories = Array.from(
-		new Set(
-			products.map((p) =>
-				p.category && p.category.trim() !== "" ? p.category : "all"
-			)
-		)
-	);
+	// Since we're now doing server-side filtering, we don't need client-side filtering
+	// The products prop already contains the filtered results
 
 	return (
 		<div className="space-y-6">
@@ -151,35 +214,38 @@ const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 							placeholder="Search products..."
 							className="pl-8"
 							value={searchTerm}
-							onChange={(e) => setSearchTerm(e.target.value)}
+							onChange={(e) => handleSearchChange(e.target.value)}
 						/>
 					</div>
 
 					<div className="flex items-center gap-4">
-						<Select value={categoryFilter} onValueChange={setCategoryFilter}>
+						<Select value={categoryFilter} onValueChange={handleCategoryChange}>
 							<SelectTrigger className="w-[180px]">
 								<SelectValue placeholder="Category" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectGroup>
-									{uniqueCategories.map((category) => {
-										if (category === "all")
-											return (
-												<SelectItem key={category} value="all">
-													All Categories
-												</SelectItem>
-											);
-										return (
-											<SelectItem key={category} value={category}>
-												{category}
-											</SelectItem>
-										);
-									})}
+									<SelectItem value="all">All Categories</SelectItem>
+									<SelectItem value="consumer-electronics">
+										Electronics
+									</SelectItem>
+									<SelectItem value="laptops">Laptops</SelectItem>
+									<SelectItem value="phones">Phones</SelectItem>
+									<SelectItem value="audio">Audio</SelectItem>
+									<SelectItem value="others">Others</SelectItem>
+									{dynamicCategories.map((cat) => (
+										<SelectItem key={cat} value={cat}>
+											{cat}
+										</SelectItem>
+									))}
 								</SelectGroup>
 							</SelectContent>
 						</Select>
 
-						<Select value={statusFilter} onValueChange={setStatusFilter}>
+						<Select
+							value={statusFilter}
+							onValueChange={handleStatusFilterChange}
+						>
 							<SelectTrigger className="w-[180px]">
 								<SelectValue placeholder="Status" />
 							</SelectTrigger>
@@ -190,6 +256,11 @@ const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 									<SelectItem value="unavailable">Unavailable</SelectItem>
 									<SelectItem value="new">New</SelectItem>
 									<SelectItem value="low-stock">Low Stock</SelectItem>
+									{dynamicStatuses.map((stat) => (
+										<SelectItem key={stat} value={stat}>
+											{stat}
+										</SelectItem>
+									))}
 								</SelectGroup>
 							</SelectContent>
 						</Select>
@@ -208,45 +279,49 @@ const StockProductList: React.FC<ProductListProps> = ({ products }) => {
 					</div>
 				</div>
 
-				<AddProductsSheet />
+				<div className="flex gap-2">
+					<BulkUploadSheet />
+					<AddProductsSheet />
+				</div>
 			</div>
 
-			{filteredProducts.length === 0 ? (
+			{isLoading && products.length === 0 ? (
+				<AdminProductGridSkeleton count={8} />
+			) : products.length === 0 ? (
 				<div className="text-center py-10">
 					<Filter className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
-					<h3 className="text-lg font-medium">No products found</h3>
-					<p className="text-muted-foreground">
-						Try adjusting your search or filter to find what you're looking for.
-					</p>
+					<p className="text-muted-foreground">No products found</p>
 				</div>
 			) : (
 				<>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-						{filteredProducts.slice(0, showCount).map((product) => (
-							<ProductCard
+					{isLoading && (
+						<div className="mb-6">
+							<AdminProductGridSkeleton count={4} />
+						</div>
+					)}
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+						{products.map((product) => (
+							<AdminProductCard
 								key={product.id}
 								product={product}
 								onEdit={handleEdit}
-								onDelete={handleDelete}
-								onStatusChange={handleStatusChange}
+								onDelete={onDelete || handleDelete}
+								onStatusChange={handleStatusUpdate}
 							/>
 						))}
 					</div>
-					{showCount < filteredProducts.length ? (
+
+					{hasMore && (
 						<div className="flex justify-center mt-6">
 							<Button
 								variant="outline"
-								onClick={() => setShowCount((prev) => prev + 20)}
+								size="sm"
+								onClick={onShowMore}
+								disabled={isLoading}
 							>
-								Show More
+								{isLoading ? "Loading..." : "Show More"}
 							</Button>
 						</div>
-					) : (
-						filteredProducts.length > 20 && (
-							<div className="text-center py-4 text-muted-foreground">
-								No more products to show.
-							</div>
-						)
 					)}
 				</>
 			)}

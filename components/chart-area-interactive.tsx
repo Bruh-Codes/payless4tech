@@ -31,7 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 // Types
@@ -59,19 +59,28 @@ const chartConfig = {
 	},
 } satisfies ChartConfig;
 
-function processData(rawData: RawSalesRow[]): SalesData[] {
-	// Filter only completed sales
-	const completedSales = rawData.filter(
-		(sale) => sale.fulfillment_status === "delivered",
-	);
-	// Group by date
-	const groupedByDate = _.groupBy(completedSales, (sale) => {
+function processData(
+	rawData: RawSalesRow[],
+	fromDate: Date,
+	toDate: Date,
+): SalesData[] {
+	// Group by date (data already filtered by query)
+	const groupedByDate = _.groupBy(rawData, (sale) => {
 		return format(new Date(sale.created_at), "yyyy-MM-dd");
 	});
 
-	// Convert to chart data format
-	const chartData = Object.entries(groupedByDate).map(([date, sales]) => {
-		const total_sales = _.sumBy(sales, "total_amount");
+	// Generate all dates in range
+	const allDates: string[] = [];
+	let currentDate = new Date(fromDate);
+	while (currentDate <= toDate) {
+		allDates.push(format(currentDate, "yyyy-MM-dd"));
+		currentDate.setDate(currentDate.getDate() + 1);
+	}
+
+	// Convert to chart data format ensuring all dates are present
+	const chartData = allDates.map((date) => {
+		const sales = groupedByDate[date] || [];
+		const total_sales = _.sumBy(sales, "total_amount") || 0;
 		const order_count = sales.length;
 		const avg_order_value = order_count > 0 ? total_sales / order_count : 0;
 
@@ -83,8 +92,7 @@ function processData(rawData: RawSalesRow[]): SalesData[] {
 		};
 	});
 
-	// Sort by date
-	return _.sortBy(chartData, "date");
+	return chartData;
 }
 
 export function ChartAreaInteractive() {
@@ -92,41 +100,38 @@ export function ChartAreaInteractive() {
 		from: subDays(new Date(), 7),
 		to: new Date(),
 	});
-	const [salesData, setSalesData] = React.useState<SalesData[]>([]);
 	const isMobile = useIsMobile();
+	const fromStr = dateRange?.from
+		? startOfDay(dateRange.from).toISOString()
+		: null;
+	const toStr = dateRange?.to ? endOfDay(dateRange.to).toISOString() : null;
 
-	const { isPending, mutate } = useMutation({
-		mutationKey: ["salesData"],
-		mutationFn: async ({ from, to }: { from: string; to: string }) => {
+	const { data: salesData = [], isLoading: isPending } = useQuery({
+		queryKey: ["admin", "salesData", fromStr, toStr],
+		queryFn: async () => {
+			if (!fromStr || !toStr) return [];
 			const response = await supabase
 				.from("sales")
 				.select("created_at,total_amount, fulfillment_status")
-				.eq("fulfillment_status", "delivered")
-				.gte("created_at", from)
-				.lte("created_at", to)
+				.in("fulfillment_status", ["delivered", "completed", "shipped"])
+				.gte("created_at", fromStr)
+				.lte("created_at", toStr)
 				.order("created_at");
-			return response.data;
-		},
 
-		onSuccess: (data) => {
-			const processedData = processData(data as RawSalesRow[]);
-			setSalesData(processedData);
+			if (response.error) {
+				console.error("Error fetching sales data:", response.error);
+				toast.error("Error fetching sales data.");
+				return [];
+			}
+			return processData(
+				response.data as RawSalesRow[],
+				new Date(fromStr),
+				new Date(toStr),
+			);
 		},
-		onError: (error) => {
-			console.error("Error fetching sales data:", error);
-			toast.error("Error fetching sales data.");
-		},
+		enabled: !!fromStr && !!toStr,
+		staleTime: 1000 * 60 * 5, // 5 minutes
 	});
-
-	// Fetch data when date range changes
-	React.useEffect(() => {
-		if (dateRange?.from && dateRange?.to) {
-			mutate({
-				from: startOfDay(dateRange?.from as Date).toISOString(),
-				to: endOfDay(dateRange?.to as Date).toISOString(),
-			});
-		}
-	}, [dateRange]);
 
 	// Quick date range presets
 	const setPresetRange = (days: number) => {
@@ -136,6 +141,7 @@ export function ChartAreaInteractive() {
 		});
 	};
 
+	// Calculate totals from processed data
 	const totalRevenue = salesData.reduce(
 		(acc, item) => acc + item.total_sales,
 		0,
@@ -144,6 +150,8 @@ export function ChartAreaInteractive() {
 		(acc, item) => acc + item.order_count,
 		0,
 	);
+
+	// Calculate accurate average order value from raw sales data
 	const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
 	const formatCurrency = (value: number) =>
@@ -196,9 +204,9 @@ export function ChartAreaInteractive() {
 
 						<PopoverContent className="w-auto p-0" align="start">
 							<Calendar
-								initialFocus
 								mode="range"
-								defaultMonth={dateRange?.from}
+								autoFocus
+								defaultMonth={dateRange?.from || new Date()}
 								selected={dateRange}
 								onSelect={setDateRange}
 								numberOfMonths={2}
@@ -240,7 +248,7 @@ export function ChartAreaInteractive() {
 				) : salesData.length >= 1 ? (
 					<ChartContainer
 						config={chartConfig}
-						className="aspect-auto h-[250px] w-full"
+						className="h-[300px] w-full overflow-hidden"
 					>
 						<AreaChart data={salesData}>
 							<defs>

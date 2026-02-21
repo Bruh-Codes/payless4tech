@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { authClient } from "@/lib/auth-client";
 
 export interface ProductFormData {
 	id: string;
@@ -25,6 +25,7 @@ interface UseProductFormProps {
 	isEditing?: boolean;
 	onProductAdded?: () => void;
 	refetchAdditionalImages?: () => void;
+	shouldLoad?: boolean;
 }
 
 export const useProductForm = ({
@@ -32,10 +33,10 @@ export const useProductForm = ({
 	isEditing = false,
 	onProductAdded,
 	refetchAdditionalImages,
+	shouldLoad = true,
 }: UseProductFormProps) => {
-	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
-	const [session, setSession] = useState<any>(null);
+	const { data: session } = authClient.useSession();
 	const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
 	const [existingAdditionalImages, setExistingAdditionalImages] = useState<
 		{ id: string; image_url: string }[]
@@ -56,10 +57,10 @@ export const useProductForm = ({
 	});
 
 	useEffect(() => {
-		if (isEditing && productId) {
+		if (isEditing && productId && shouldLoad) {
 			loadExistingProduct();
 		}
-	}, [productId, isEditing]);
+	}, [productId, isEditing, shouldLoad]);
 
 	const loadExistingProduct = async () => {
 		if (!productId) return;
@@ -103,7 +104,9 @@ export const useProductForm = ({
 		} catch (error: any) {
 			console.error("Error loading product:", error);
 			toast.error("Error", {
-				description: "Failed to load product details",
+				description:
+					"Failed to load product details: " +
+					(error.message || "Unknown error"),
 			});
 		}
 	};
@@ -196,7 +199,7 @@ export const useProductForm = ({
 		const fileExt = file.name.split(".").pop();
 		const fileName = `${Math.random()}.${fileExt}`;
 
-		const { error: uploadError, data } = await supabase.storage
+		const { error: uploadError } = await supabase.storage
 			.from("product-images")
 			.upload(fileName, file);
 

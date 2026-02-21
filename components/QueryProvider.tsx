@@ -10,7 +10,21 @@ const queryClient = new QueryClient({
 			refetchOnWindowFocus: false,
 			refetchOnMount: true,
 			refetchOnReconnect: true,
-			refetchInterval: 1000 * 60 * 5,
+			// Remove global refetchInterval to let individual queries control their own caching
+			retry: (failureCount, error) => {
+				// Don't retry on 401/403 errors (auth issues)
+				if (
+					error?.message?.includes("401") ||
+					error?.message?.includes("403") ||
+					error?.message?.includes("Unauthorized")
+				) {
+					return false;
+				}
+				return failureCount < 3;
+			},
+		},
+		mutations: {
+			retry: 1,
 		},
 	},
 });

@@ -6,6 +6,7 @@ import {
 	IconFolder,
 	IconInnerShadowTop,
 	IconListDetails,
+	IconClipboardList,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -21,7 +22,6 @@ import {
 } from "@/components/ui/sidebar";
 
 const data = {
-	
 	navMain: [
 		{
 			title: "Dashboard",
@@ -29,20 +29,22 @@ const data = {
 			icon: IconDashboard,
 		},
 		{
-			title: "Products",
+			title: "Inventory",
 			url: "/admin/products",
 			icon: IconListDetails,
 		},
-
 		{
-			title: "Archive",
+			title: "Preorders",
+			url: "/admin/preorders",
+			icon: IconClipboardList,
+		},
+		{
+			title: "Archives",
 			url: "/admin/archive",
 			icon: IconFolder,
 		},
 	],
 };
-
-
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 	return (
@@ -52,10 +54,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					<SidebarMenuItem>
 						<SidebarMenuButton
 							asChild
-							className="data-[slot=sidebar-menu-button]:!p-1.5"
+							className="data-[slot=sidebar-menu-button]:p-1.5!"
 						>
 							<a href="/">
-								<IconInnerShadowTop className="!size-5" />
+								<IconInnerShadowTop className="size-5!" />
 								<div className="flex items-center space-x-2">
 									<h1 className="text-2xl font-bold text-sidebar-foreground">
 										Payless<span className="text-orange-500">4Tech</span>

@@ -52,21 +52,23 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 
 export const schema = z.object({
-	id: z.number(),
+	id: z.union([z.number(), z.string()]),
 	email: z.string(),
 	full_name: z.string(),
 	phone_number: z.string(),
 	item_type: z.string(),
-	specifications: z.string(),
+	specifications: z.any(),
 	fulfillment_status: z.enum(["pending", "delivered", "cancelled"]),
 });
 
 const columns = (
 	handleDelete: (id: number) => void,
-	handleMarkAsDelivered: (id: number) => void
+	handleMarkAsDelivered: (id: number) => void,
+	handleViewDetails: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
 		accessorKey: "full_name",
@@ -109,6 +111,39 @@ const columns = (
 			</div>
 		),
 	},
+	{
+		accessorKey: "specifications",
+		header: "Specifications",
+		cell: ({ row }) => {
+			let specs = row.original.specifications;
+
+			// Parse JSON if needed
+			if (typeof specs === "string" && specs.startsWith("{")) {
+				try {
+					specs = JSON.parse(specs);
+				} catch (e) {
+					// Fallback
+				}
+			}
+
+			// Render object as strings
+			const content =
+				typeof specs === "object" && specs !== null
+					? Object.entries(specs)
+							.map(([k, v]) => `${k}: ${v}`)
+							.join(", ")
+					: String(specs || "N/A");
+
+			return (
+				<div
+					className="max-w-[250px] truncate text-sm text-muted-foreground"
+					title={content}
+				>
+					{content}
+				</div>
+			);
+		},
+	},
 
 	{
 		id: "action",
@@ -125,8 +160,12 @@ const columns = (
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
+					<DropdownMenuItem onClick={() => handleViewDetails(row.original.id)}>
+						View Details
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						onClick={() => handleMarkAsDelivered(row.original.id)}
+						onClick={() => handleMarkAsDelivered(Number(row.original.id))}
 						disabled={
 							row?.original.fulfillment_status?.toLowerCase() !== "pending"
 						}
@@ -138,7 +177,7 @@ const columns = (
 						disabled={
 							row?.original.fulfillment_status?.toLowerCase() === "pending"
 						}
-						onClick={() => handleDelete(row.original.id)}
+						onClick={() => handleDelete(Number(row.original.id))}
 						variant="destructive"
 					>
 						Delete
@@ -154,7 +193,7 @@ const PreorderTable = () => {
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-		[]
+		[],
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [pagination, setPagination] = React.useState({
@@ -163,14 +202,22 @@ const PreorderTable = () => {
 	});
 
 	const queryClient = useQueryClient();
+	const router = useRouter();
 
 	const { data, error } = useQuery({
-		queryKey: ["preorders"],
+		queryKey: ["admin", "preorders"],
 		queryFn: async () => {
 			let { data: preorder, error } = await supabase
 				.from("preorders")
-				.select("*");
-			const sortedPreorders = preorder?.sort((a, b) => {
+				.select("*")
+				.order("created_at", { ascending: false });
+
+			if (error) {
+				console.error("Error fetching preorders:", error);
+				return [];
+			}
+
+			const sortedPreorders = (preorder || []).sort((a, b) => {
 				if (
 					a.fulfillment_status === "pending" &&
 					b.fulfillment_status !== "pending"
@@ -185,6 +232,7 @@ const PreorderTable = () => {
 			});
 			return sortedPreorders;
 		},
+		staleTime: 1000 * 60 * 3, // 3 minutes
 	});
 
 	React.useEffect(() => {
@@ -193,63 +241,85 @@ const PreorderTable = () => {
 		}
 	}, [error]);
 
-	const handleDelete = async (productId: number) => {
-		// Fetch the preorder to archive
-		const { data: preorder, error: fetchError } = await supabase
-			.from("preorders")
-			.select("*")
-			.eq("id", productId.toString())
-			.single();
+	// Delete mutation
+	const deleteMutation = useMutation({
+		mutationFn: async (productId: number | string) => {
+			// Fetch the preorder to archive
+			const { data: preorder, error: fetchError } = await supabase
+				.from("preorders")
+				.select("*")
+				.eq("id", productId.toString())
+				.single();
 
-		if (fetchError) {
-			toast.error("Failed to fetch preorder for archiving.");
-			return;
-		}
+			if (fetchError) {
+				throw new Error("Failed to fetch preorder for archiving.");
+			}
 
-		// Insert into archived_preorders
-		const { error: archiveError } = await supabase
-			.from("archived_preorders")
-			.insert([preorder]);
+			// Insert into archived_preorders
+			const { error: archiveError } = await supabase
+				.from("archived_preorders")
+				.insert([preorder]);
 
-		if (archiveError) {
-			toast.error("Failed to archive preorder.");
-			return;
-		}
+			if (archiveError) {
+				throw new Error("Failed to archive preorder.");
+			}
 
-		// Delete from preorders
-		const { error: deleteError } = await supabase
-			.from("preorders")
-			.delete()
-			.eq("id", productId.toString());
+			// Delete from preorders
+			const { error: deleteError } = await supabase
+				.from("preorders")
+				.delete()
+				.eq("id", productId.toString());
 
-		if (deleteError) {
-			toast.error("Failed to delete preorder.");
-			return;
-		}
+			if (deleteError) {
+				throw new Error("Failed to delete preorder.");
+			}
 
-		queryClient.invalidateQueries({ queryKey: ["preorders"] });
-		toast.success("Preorder archived successfully.");
+			return productId;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "preorders"] });
+			toast.success("Preorder archived successfully.");
+		},
+		onError: (error: any) => {
+			toast.error(error.message);
+		},
+	});
+
+	// Mark as delivered mutation
+	const markAsDeliveredMutation = useMutation({
+		mutationFn: async (id: number | string) => {
+			const { error } = await supabase
+				.from("preorders")
+				.update({ fulfillment_status: "delivered" })
+				.eq("id", id.toString());
+
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "preorders"] });
+			toast.success("Marked as delivered.");
+		},
+		onError: () => {
+			toast.error("Failed to mark as delivered.");
+		},
+	});
+
+	const handleViewDetails = (id: string | number) => {
+		router.push(`/admin/preorders/${id}`);
 	};
 
-	const handleMarkAsDelivered = async (id: number) => {
-		const { error: updateError } = await supabase
-			.from("preorders")
-			.update({ fulfillment_status: "delivered" })
-			.eq("id", id.toString());
+	const handleDelete = (productId: number | string) => {
+		deleteMutation.mutate(productId);
+	};
 
-		if (updateError) {
-			toast.error("Failed to mark as delivered.");
-			return;
-		}
-
-		queryClient.invalidateQueries({ queryKey: ["preorders"] });
-
-		toast.success("Marked as delivered.");
+	const handleMarkAsDelivered = (id: number | string) => {
+		markAsDeliveredMutation.mutate(id);
 	};
 
 	const table = useReactTable({
 		data: data ?? [],
-		columns: columns(handleDelete, handleMarkAsDelivered),
+		columns: columns(handleDelete, handleMarkAsDelivered, handleViewDetails),
 		state: {
 			sorting,
 			columnVisibility,
@@ -295,8 +365,8 @@ const PreorderTable = () => {
 													? null
 													: flexRender(
 															header.column.columnDef.header,
-															header.getContext()
-													  )}
+															header.getContext(),
+														)}
 											</TableHead>
 										);
 									})}
@@ -312,10 +382,11 @@ const PreorderTable = () => {
 										<TableRow
 											key={row.id}
 											data-state={row.getIsSelected() && "selected"}
+											onDoubleClick={() => handleViewDetails(row.original.id)}
 											className={
 												isPending
-													? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30"
-													: ""
+													? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30 cursor-pointer"
+													: "cursor-pointer"
 											}
 										>
 											{row.getVisibleCells().map((cell) => {
@@ -323,7 +394,7 @@ const PreorderTable = () => {
 													<TableCell key={cell.id}>
 														{flexRender(
 															cell.column.columnDef.cell,
-															cell.getContext()
+															cell.getContext(),
 														)}
 													</TableCell>
 												);

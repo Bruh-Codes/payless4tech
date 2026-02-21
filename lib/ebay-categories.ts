@@ -14,7 +14,8 @@ export const EBAY_CATEGORY_IDS: Record<string, string> = {
 	audio: "32981", // Sound & Vision
 	gaming: "1249", // Video Games & Consoles
 	accessories: "6030", // Mobile Phone Accessories
-	consumer_electronics: "293", // Consumer Electronics
+	"consumer-electronics": "293", // Consumer Electronics
+	consumer_electronics: "293", // Consumer Electronics (alias)
 	all: "0", // Will be populated dynamically
 };
 

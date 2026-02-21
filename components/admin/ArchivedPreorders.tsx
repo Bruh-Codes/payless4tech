@@ -52,7 +52,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 export const preorderSchema = z.object({
 	id: z.number(),
@@ -66,7 +66,7 @@ export const preorderSchema = z.object({
 
 const columns = (
 	handleDeletePermanent: (id: number) => void,
-	handleRestoreArchived: (id: number) => void
+	handleRestoreArchived: (id: number) => void,
 ): ColumnDef<z.infer<typeof preorderSchema>>[] => [
 	{
 		accessorKey: "full_name",
@@ -153,11 +153,11 @@ const ArchivedPreorders = ({
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-		[]
+		[],
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [data, setData] = React.useState<z.infer<typeof preorderSchema>[]>(
-		preorders || []
+		preorders || [],
 	);
 	const [pagination, setPagination] = React.useState({
 		pageIndex: 0,
@@ -181,56 +181,80 @@ const ArchivedPreorders = ({
 		setData((sortedPreorders ?? []) as z.infer<typeof preorderSchema>[]);
 	}, [preorders]);
 
-	const handleDeletePermanent = async (id: number) => {
-		const { error } = await supabase
-			.from("archived_preorders")
-			.delete()
-			.eq("id", id.toString());
-		if (error) {
+	// Delete permanent mutation
+	const deletePermanentMutation = useMutation({
+		mutationFn: async (id: number) => {
+			const { error } = await supabase
+				.from("archived_preorders")
+				.delete()
+				.eq("id", id.toString());
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: () => {
+			toast.success("Record deleted successfully.");
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "archived_preorders"],
+			});
+		},
+		onError: (error: any) => {
 			toast.error(error.message);
-			return;
-		}
-		toast.success("Record deleted successfully.");
-		queryClient.invalidateQueries({ queryKey: ["archived_preorders"] });
+		},
+	});
+
+	// Restore archived mutation
+	const restoreArchivedMutation = useMutation({
+		mutationFn: async (id: number) => {
+			// Get the archived preorder by id
+			const { data, error: fetchError } = await supabase
+				.from("archived_preorders")
+				.select("*")
+				.eq("id", id)
+				.single();
+
+			if (fetchError) {
+				throw new Error(fetchError.message);
+			}
+
+			// Insert into preorders
+			const { error: insertError } = await supabase
+				.from("preorders")
+				.insert([data]);
+
+			if (insertError) {
+				throw new Error(insertError.message);
+			}
+
+			// Delete from archived_preorders
+			const { error: deleteError } = await supabase
+				.from("archived_preorders")
+				.delete()
+				.eq("id", id);
+
+			if (deleteError) {
+				throw new Error(deleteError.message);
+			}
+
+			return id;
+		},
+		onSuccess: () => {
+			toast.success("Preorder restored successfully.");
+			queryClient.invalidateQueries({
+				queryKey: ["admin", "archived_preorders"],
+			});
+			queryClient.invalidateQueries({ queryKey: ["admin", "preorders"] });
+		},
+		onError: (error: any) => {
+			toast.error(error.message);
+		},
+	});
+
+	const handleDeletePermanent = (id: number) => {
+		deletePermanentMutation.mutate(id);
 	};
 
-	const handleRestoreArchived = async (id: number) => {
-		// Get the archived preorder by id
-		const { data, error: fetchError } = await supabase
-			.from("archived_preorders")
-			.select("*")
-			.eq("id", id)
-			.single();
-
-		if (fetchError) {
-			toast.error(fetchError.message);
-			return;
-		}
-
-		// Insert into preorders
-		const { error: insertError } = await supabase
-			.from("preorders")
-			.insert([data]);
-
-		if (insertError) {
-			toast.error(insertError.message);
-			return;
-		}
-
-		// Delete from archived_preorders
-		const { error: deleteError } = await supabase
-			.from("archived_preorders")
-			.delete()
-			.eq("id", id);
-
-		if (deleteError) {
-			toast.error(deleteError.message);
-			return;
-		}
-
-		toast.success("Preorder restored successfully.");
-		queryClient.invalidateQueries({ queryKey: ["archived_preorders"] });
-		queryClient.invalidateQueries({ queryKey: ["preorders"] });
+	const handleRestoreArchived = (id: number) => {
+		restoreArchivedMutation.mutate(id);
 	};
 
 	const table = useReactTable({
@@ -281,8 +305,8 @@ const ArchivedPreorders = ({
 													? null
 													: flexRender(
 															header.column.columnDef.header,
-															header.getContext()
-													  )}
+															header.getContext(),
+														)}
 											</TableHead>
 										);
 									})}
@@ -309,7 +333,7 @@ const ArchivedPreorders = ({
 													<TableCell key={cell.id}>
 														{flexRender(
 															cell.column.columnDef.cell,
-															cell.getContext()
+															cell.getContext(),
 														)}
 													</TableCell>
 												);

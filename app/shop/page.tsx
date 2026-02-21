@@ -115,20 +115,18 @@ const Page = () => {
 		if (selectedConditions.length > 0) {
 			filters.conditions = selectedConditions;
 		}
-		if (sortBy !== "newest") {
-			// Map UI sort values to API sort values
-			const sortMapping: Record<string, string> = {
-				"price-asc": "price",
-				"price-desc": "-price",
-				newest: "newlyListed",
-				popular: "bestMatch",
-			};
-			filters.sortOrder = sortMapping[sortBy] as
-				| "newlyListed"
-				| "bestMatch"
-				| "price"
-				| "-price";
-		}
+		// Map UI sort values to API sort values
+		const sortMapping: Record<string, string> = {
+			"price-asc": "price",
+			"price-desc": "-price",
+			newest: "newlyListed",
+			popular: "bestMatch",
+		};
+		filters.sortOrder = (sortMapping[sortBy] || "bestMatch") as
+			| "newlyListed"
+			| "bestMatch"
+			| "price"
+			| "-price";
 
 		return filters;
 	}, [activeCategory, selectedBrands, priceRange, selectedConditions, sortBy]);
@@ -151,15 +149,18 @@ const Page = () => {
 					searchFilters.brands,
 				);
 			},
-			getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+			getNextPageParam: (lastPage: any) => {
+				// Stop pagination if we received fewer items than requested
+				if (!lastPage.items || lastPage.items.length < 10) return undefined;
+				return lastPage.pageNumber + 1;
+			},
 			initialPageParam: 1,
 		});
 
+	// js-combine-iterations: single flatMap instead of map().flat().map()
 	const ebayProducts =
-		data?.pages
-			.map((page) => page.items)
-			.flat()
-			.map(convertEbayToLocalProduct) || [];
+		data?.pages?.flatMap((page) => page.items.map(convertEbayToLocalProduct)) ||
+		[];
 
 	// Close mobile filters when switching to desktop
 	useEffect(() => {
@@ -223,17 +224,16 @@ const Page = () => {
 		});
 	}, []);
 
+	// rerender-functional-setstate: use functional update for stable callback
 	const handlePriceChange = useCallback(
 		(type: "min" | "max", value: number) => {
 			startTransition(() => {
-				if (type === "min") {
-					setPriceRange([value, priceRange[1]]);
-				} else {
-					setPriceRange([priceRange[0], value]);
-				}
+				setPriceRange((prev) =>
+					type === "min" ? [value, prev[1]] : [prev[0], value],
+				);
 			});
 		},
-		[priceRange],
+		[], // No dependencies needed with functional setState
 	);
 
 	const clearFilters = useCallback(() => {
@@ -256,22 +256,19 @@ const Page = () => {
 
 	// Intersection Observer for infinite scroll
 	const { ref, inView } = useInView({
-		threshold: 0.1,
-		triggerOnce: true,
+		threshold: 0,
+		rootMargin: "200px",
 	});
 
 	// Fetch next page when last product is visible
 	useEffect(() => {
-		if (!isFetchingNextPage && hasNextPage && inView) {
+		if (inView && hasNextPage && !isFetchingNextPage) {
 			fetchNextPage();
 		}
-	}, [isFetchingNextPage, hasNextPage, inView]);
+	}, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-	// Remove client-side filtering since we're using server-side filtering
-	// The API already returns filtered results
-	const filteredProducts = useMemo(() => {
-		return ebayProducts;
-	}, [ebayProducts]);
+	// rerender-simple-expression-in-memo: no memo needed, just use directly
+	const filteredProducts = ebayProducts;
 
 	const activeFiltersCount =
 		1 + // Always count the category filter since we always have one selected
@@ -330,7 +327,7 @@ const Page = () => {
 						{/* Sidebar filters */}
 						<aside
 							className={cn(
-								"w-full flex-shrink-0 px-2 overflow-y-auto max-h-[calc(100vh-10rem)]",
+								"w-full shrink-0 px-2 overflow-y-auto max-h-[calc(100vh-10rem)]",
 								filtersOpen
 									? "fixed inset-0 z-50 overflow-y-auto bg-background p-4 md:static md:z-auto md:p-0"
 									: "hidden md:block md:w-56",
@@ -481,10 +478,14 @@ const Page = () => {
 								<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 									{filteredProducts.map((product: any, index: number) => (
 										<div
-											key={product.id}
+											key={`${product.id}-${index}`}
 											ref={
 												index === filteredProducts.length - 1 ? ref : undefined
 											}
+											style={{
+												contentVisibility: "auto",
+												containIntrinsicSize: "0 400px",
+											}}
 										>
 											<ProductCard product={product} index={index} />
 										</div>

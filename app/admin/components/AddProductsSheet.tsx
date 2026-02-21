@@ -45,10 +45,13 @@ export const formSchema = z.object({
 	original_price: z.string(),
 	stock: z.string(),
 	category: z.string().min(1, "category is required"),
+	custom_category: z.string().optional(),
 	condition: z.string().min(1, "Condition is required"),
+	custom_condition: z.string().optional(),
 	detailed_specs: z.string().min(1, "Detailed specifications are required"),
 	image_url: z.string().url("Must be a valid URL"),
-	status: z.enum(["available", "unavailable", "new", "low-stock"]),
+	status: z.string().min(1, "status is required"),
+	custom_status: z.string().optional(),
 	image: z.union([z.instanceof(File), z.null(), z.undefined()]),
 	additionalImages: z.union([z.array(z.instanceof(File)), z.undefined()]),
 });
@@ -63,15 +66,22 @@ export function AddProductsSheet() {
 			price: "1", // string
 			image_url: "",
 			category: "consumer-electronics",
+			custom_category: "",
 			status: "available",
+			custom_status: "",
 			stock: "0", // string
 			additionalImages: [],
 			condition: "",
+			custom_condition: "",
 			detailed_specs: "",
 			image: undefined,
 			original_price: "1", // string
 		},
 	});
+
+	const [isCustomCategory, setIsCustomCategory] = useState(false);
+	const [isCustomStatus, setIsCustomStatus] = useState(false);
+	const [isCustomCondition, setIsCustomCondition] = useState(false);
 
 	// Use the hook for product creation
 	const {
@@ -86,9 +96,7 @@ export function AddProductsSheet() {
 			setToggleSheet(false);
 			setSelectedFiles([]);
 			form.reset();
-			// if (onProductAdded) {
-			// 	onProductAdded();
-			// }
+			toast.success("Product added successfully!");
 		},
 	});
 
@@ -144,7 +152,6 @@ export function AddProductsSheet() {
 		const result = formSchema.safeParse(values);
 		if (!result.success) {
 			toast.error("Validation errors. Please check all fields");
-			console.log("Validation errors:", result.error.flatten());
 			return;
 		}
 
@@ -160,17 +167,30 @@ export function AddProductsSheet() {
 			}
 		}
 
+		const finalCategory =
+			values.category === "custom" && values.custom_category
+				? values.custom_category
+				: values.category;
+		const finalStatus =
+			values.status === "custom" && values.custom_status
+				? values.custom_status
+				: values.status;
+		const finalCondition =
+			values.condition === "custom" && values.custom_condition
+				? values.custom_condition
+				: values.condition;
+
 		const formDataForHook: ProductFormData = {
 			id: generatedId,
 			name: values.name,
 			description: values.description,
 			price: values.price,
 			original_price: values.original_price || "",
-			category: values.category,
-			condition: values.condition,
+			category: finalCategory,
+			condition: finalCondition,
 			detailed_specs: values.detailed_specs || "",
 			stock: values.stock || "",
-			status: values.status || "",
+			status: finalStatus || "",
 			image: selectedFiles[0] ?? null, // First file as main image (File | null)
 			additionalImages: selectedFiles.length > 1 ? selectedFiles.slice(1) : [], // File[]
 		};
@@ -244,6 +264,7 @@ export function AddProductsSheet() {
 												placeholder="Stock"
 												{...field}
 												onChange={(e) => field.onChange(e.target.value)}
+												onWheel={(e) => e.currentTarget.blur()}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -262,7 +283,10 @@ export function AddProductsSheet() {
 												min={1}
 												placeholder="Price"
 												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
+												onChange={(e) =>
+													field.onChange(e.target.value.toString())
+												}
+												onWheel={(e) => e.currentTarget.blur()}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -278,10 +302,11 @@ export function AddProductsSheet() {
 										<FormControl>
 											<Input
 												type="number"
-												min={1}
+												min={0}
 												placeholder="Market Price"
 												{...field}
 												onChange={(e) => field.onChange(e.target.value)}
+												onWheel={(e) => e.currentTarget.blur()}
 											/>
 										</FormControl>
 										<FormMessage />
@@ -419,8 +444,15 @@ export function AddProductsSheet() {
 										<FormItem>
 											<FormLabel>Category</FormLabel>
 											<Select
-												onValueChange={field.onChange}
-												value={field.value}
+												onValueChange={(value) => {
+													if (value === "custom") {
+														setIsCustomCategory(true);
+													} else {
+														setIsCustomCategory(false);
+														field.onChange(value);
+													}
+												}}
+												value={isCustomCategory ? "custom" : field.value}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -434,6 +466,11 @@ export function AddProductsSheet() {
 														</SelectItem>
 														<SelectItem value="laptops">Laptops</SelectItem>
 														<SelectItem value="phones">Phones</SelectItem>
+														<SelectItem value="audio">Audio</SelectItem>
+														<SelectItem value="others">Others</SelectItem>
+														<SelectItem value="custom">
+															+ Add Custom...
+														</SelectItem>
 													</SelectGroup>
 												</SelectContent>
 											</Select>
@@ -442,6 +479,22 @@ export function AddProductsSheet() {
 									)}
 								/>
 
+								{isCustomCategory && (
+									<FormField
+										control={form.control}
+										name="custom_category"
+										render={({ field }) => (
+											<FormItem className="col-span-2">
+												<FormLabel>Custom Category Name</FormLabel>
+												<FormControl>
+													<Input placeholder="Enter category..." {...field} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
+
 								<FormField
 									control={form.control}
 									name="status"
@@ -449,8 +502,15 @@ export function AddProductsSheet() {
 										<FormItem>
 											<FormLabel>Status</FormLabel>
 											<Select
-												onValueChange={field.onChange}
-												value={field.value}
+												onValueChange={(value) => {
+													if (value === "custom") {
+														setIsCustomStatus(true);
+													} else {
+														setIsCustomStatus(false);
+														field.onChange(value);
+													}
+												}}
+												value={isCustomStatus ? "custom" : field.value}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -465,6 +525,9 @@ export function AddProductsSheet() {
 														</SelectItem>
 														<SelectItem value="new">New</SelectItem>
 														<SelectItem value="low-stock">Low Stock</SelectItem>
+														<SelectItem value="custom">
+															+ Add Custom...
+														</SelectItem>
 													</SelectGroup>
 												</SelectContent>
 											</Select>
@@ -473,6 +536,22 @@ export function AddProductsSheet() {
 									)}
 								/>
 
+								{isCustomStatus && (
+									<FormField
+										control={form.control}
+										name="custom_status"
+										render={({ field }) => (
+											<FormItem className="col-span-2">
+												<FormLabel>Custom Status</FormLabel>
+												<FormControl>
+													<Input placeholder="Enter status..." {...field} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
+
 								<FormField
 									control={form.control}
 									name="condition"
@@ -480,8 +559,15 @@ export function AddProductsSheet() {
 										<FormItem>
 											<FormLabel>Condition</FormLabel>
 											<Select
-												onValueChange={field.onChange}
-												value={field.value}
+												onValueChange={(value) => {
+													if (value === "custom") {
+														setIsCustomCondition(true);
+													} else {
+														setIsCustomCondition(false);
+														field.onChange(value);
+													}
+												}}
+												value={isCustomCondition ? "custom" : field.value}
 											>
 												<FormControl>
 													<SelectTrigger>
@@ -493,12 +579,31 @@ export function AddProductsSheet() {
 													<SelectItem value="Open Box">Open Box</SelectItem>
 													<SelectItem value="Renewed">Renewed</SelectItem>
 													<SelectItem value="Used">Used</SelectItem>
+													<SelectItem value="custom">
+														+ Add Custom...
+													</SelectItem>
 												</SelectContent>
 											</Select>
 											<FormMessage />
 										</FormItem>
 									)}
 								/>
+
+								{isCustomCondition && (
+									<FormField
+										control={form.control}
+										name="custom_condition"
+										render={({ field }) => (
+											<FormItem className="col-span-2">
+												<FormLabel>Custom Condition</FormLabel>
+												<FormControl>
+													<Input placeholder="Enter condition..." {...field} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								)}
 							</div>
 						</div>
 						<SheetFooter>

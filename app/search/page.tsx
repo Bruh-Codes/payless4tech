@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { categories } from "@/lib/products";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -36,6 +36,10 @@ interface EbayProduct {
 		value: number;
 		currency: string;
 	};
+	originalPrice?: {
+		value: number;
+		currency: string;
+	};
 	image: string;
 	category: string;
 	condition: string;
@@ -43,6 +47,7 @@ interface EbayProduct {
 	seller: string;
 	itemUrl: string;
 	isPreorder: boolean;
+	qualityScore?: number;
 }
 
 const SearchResults = () => {
@@ -168,19 +173,18 @@ const SearchResults = () => {
 		if (selectedConditions.length > 0) {
 			filters.conditions = selectedConditions;
 		}
-		if (sortBy !== "best-match") {
-			// Map UI sort values to API sort values
-			const sortMapping: Record<string, string> = {
-				"price-low-high": "price",
-				"price-high-low": "-price",
-				newest: "newlyListed",
-			};
-			filters.sortOrder = sortMapping[sortBy] as
-				| "newlyListed"
-				| "bestMatch"
-				| "price"
-				| "-price";
-		}
+		// Map UI sort values to API sort values
+		const sortMapping: Record<string, string> = {
+			"best-match": "bestMatch",
+			"price-low-high": "price",
+			"price-high-low": "-price",
+			newest: "newlyListed",
+		};
+		filters.sortOrder = (sortMapping[sortBy] || "bestMatch") as
+			| "newlyListed"
+			| "bestMatch"
+			| "price"
+			| "-price";
 
 		return filters;
 	}, [selectedCategories, priceRange, selectedConditions, sortBy]);
@@ -208,7 +212,10 @@ const SearchResults = () => {
 				searchFilters.brands,
 			);
 		},
-		getNextPageParam: (lastPage: any) => lastPage.pageNumber + 1,
+		getNextPageParam: (lastPage: any) => {
+			if (!lastPage.items || lastPage.items.length < 10) return undefined;
+			return lastPage.pageNumber + 1;
+		},
 		initialPageParam: 1,
 		enabled:
 			!isPreloadValid && (!!query.trim() || selectedCategories.length > 0),
@@ -247,16 +254,16 @@ const SearchResults = () => {
 
 	// Intersection Observer for infinite scroll
 	const { ref, inView } = useInView({
-		threshold: 0.1,
-		triggerOnce: true,
+		threshold: 0,
+		rootMargin: "200px",
 	});
 
 	// Fetch next page when last product is visible
 	useEffect(() => {
-		if (!isFetchingNextPage && hasNextPage && inView) {
+		if (inView && hasNextPage && !isFetchingNextPage) {
 			fetchNextPage();
 		}
-	}, [isFetchingNextPage, hasNextPage, inView]);
+	}, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
 	let searchResults: any[] = [];
 	let totalCount = 0;
@@ -269,7 +276,8 @@ const SearchResults = () => {
 		isLoading = false;
 		error = null;
 	} else {
-		searchResults = data?.pages?.map((page) => page.items).flat() || [];
+		// js-combine-iterations: flatMap instead of .map().flat()
+		searchResults = data?.pages?.flatMap((page) => page.items) || [];
 		totalCount = data?.pages?.[0]?.totalCount || 0;
 		isLoading = searchLoading;
 		error = null;
@@ -278,12 +286,11 @@ const SearchResults = () => {
 	// Use a stable max price for the slider
 	const maxPrice = 10000; // Fixed max price for consistent UX
 
-	// The API already returns filtered results
-	const filteredAndSortedResults = useMemo(() => {
-		return searchResults;
-	}, [searchResults]);
+	// rerender-simple-expression-in-memo: no memo needed, just use directly
+	const filteredAndSortedResults = searchResults;
 
-	const clearAllFilters = () => {
+	// rerender-functional-setstate: useCallback for stable reference
+	const clearAllFilters = useCallback(() => {
 		setSelectedCategories([]);
 		setPriceRange([0, 10000]); // Reset to default range
 		setSelectedConditions([]);
@@ -295,7 +302,7 @@ const SearchResults = () => {
 			params.set("q", query);
 		}
 		router.replace(`/search?${params.toString()}`);
-	};
+	}, [query, router]);
 
 	const activeFilterCount =
 		selectedCategories.length +
@@ -564,14 +571,29 @@ const SearchResults = () => {
 													? ref
 													: undefined
 											}
+											style={{
+												contentVisibility: "auto",
+												containIntrinsicSize: "0 400px",
+											}}
 										>
 											<ProductCard
-												product={{
-													...product,
-													price: product.price.value,
-													rating: 0, // eBay doesn't provide rating in basic search
-													reviews: 0, // eBay doesn't provide reviews in basic search
-												}}
+												product={(() => {
+													const {
+														price,
+														originalPrice,
+														qualityScore,
+														...rest
+													} = product;
+													return {
+														...rest,
+														price: price.value,
+														...(originalPrice?.value != null
+															? { originalPrice: originalPrice.value }
+															: {}),
+														rating: 0,
+														reviews: 0,
+													};
+												})()}
 												index={i}
 											/>
 										</div>

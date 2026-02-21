@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 		reviews: "bestMatch", // Map to bestMatch for now
 	};
 
-	const sortOrder = sortMapping[sortParam] || "newlyListed";
+	const sortOrder = sortMapping[sortParam] || "bestMatch";
 	const categorySlug =
 		searchParams.get("categories") || searchParams.get("category") || undefined;
 	const minPrice = searchParams.get("minPrice")

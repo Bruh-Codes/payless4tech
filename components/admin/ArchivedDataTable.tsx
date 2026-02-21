@@ -55,7 +55,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import PreorderTable from "./PreorderTable";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -68,7 +67,7 @@ import {
 	DialogClose,
 } from "@/components/ui/dialog";
 import ArchivedPreorders, { preorderSchema } from "./ArchivedPreorders";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 export const schema = z.object({
 	id: z.number(),
@@ -88,7 +87,7 @@ export const schema = z.object({
 			quantity: z.number(),
 			price: z.number(),
 			id: z.string(),
-		})
+		}),
 	),
 });
 
@@ -96,7 +95,7 @@ const columns = (
 	// data: z.infer<typeof schema>[],
 	// setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
 	handleDeletePermanent: (id: number) => void,
-	handleRestoreArchived: (id: number) => void
+	handleRestoreArchived: (id: number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
 		accessorKey: "status",
@@ -303,16 +302,15 @@ export function ArchivedDataTable({
 	const queryClient = useQueryClient();
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-	const [isDeleting, setIsDeleting] = React.useState(false);
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-		[]
+		[],
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [activeTab, setActiveTab] = React.useState("outline");
 	const [salesData, setSalesData] = React.useState<z.infer<typeof schema>[]>(
-		data || []
+		data || [],
 	);
 
 	React.useEffect(() => {
@@ -320,11 +318,12 @@ export function ArchivedDataTable({
 	}, [data]);
 
 	const { data: preorders, error } = useQuery({
-		queryKey: ["archived_preorders"],
+		queryKey: ["admin", "archived_preorders"],
 		queryFn: async () => {
 			const response = await supabase.from("archived_preorders").select("*");
 			return response;
 		},
+		staleTime: 1000 * 60 * 10, // 10 minutes
 	});
 
 	if (error) {
@@ -336,55 +335,78 @@ export function ArchivedDataTable({
 		pageSize: 10,
 	});
 
-	const handleDeletePermanent = async (id: number) => {
-		const { error } = await supabase
-			.from("archived_sales")
-			.delete()
-			.eq("id", id.toString());
-		if (error) {
+	// Delete permanent mutation
+	const deletePermanentMutation = useMutation({
+		mutationFn: async (id: number) => {
+			const { error } = await supabase
+				.from("archived_sales")
+				.delete()
+				.eq("id", id.toString());
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: (id) => {
+			toast.success("Record deleted successfully.");
+			setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
+		},
+		onError: (error: any) => {
 			toast.error(error.message);
-			return;
-		}
-		toast.success("Record deleted successfully.");
-		setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
+		},
+	});
+
+	// Restore archived mutation
+	const restoreArchivedMutation = useMutation({
+		mutationFn: async (id: number) => {
+			// Fetch the record from archived_sales
+			const { data: archivedRecord, error: fetchError } = await supabase
+				.from("archived_sales")
+				.select("*")
+				.eq("id", id)
+				.single();
+
+			if (fetchError || !archivedRecord) {
+				throw new Error(
+					fetchError?.message || "Failed to fetch archived record.",
+				);
+			}
+
+			// Insert the record into sales
+			const { error: insertError } = await supabase
+				.from("sales")
+				.insert([{ ...archivedRecord }]);
+
+			if (insertError) {
+				throw new Error(insertError.message);
+			}
+
+			// Delete the record from archived_sales
+			const { error: deleteError } = await supabase
+				.from("archived_sales")
+				.delete()
+				.eq("id", id);
+
+			if (deleteError) {
+				throw new Error(deleteError.message);
+			}
+
+			return id;
+		},
+		onSuccess: (id) => {
+			setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
+			toast.success("Record successfully restored.");
+			queryClient.invalidateQueries({ queryKey: ["admin", "sales"] });
+		},
+		onError: (error: any) => {
+			toast.error(error.message);
+		},
+	});
+
+	const handleDeletePermanent = (id: number) => {
+		deletePermanentMutation.mutate(id);
 	};
 
-	const handleRestoreArchived = async (id: number) => {
-		// Fetch the record from archived_sales
-		const { data: archivedRecord, error: fetchError } = await supabase
-			.from("archived_sales")
-			.select("*")
-			.eq("id", id)
-			.single();
-
-		if (fetchError || !archivedRecord) {
-			toast.error(fetchError?.message || "Failed to fetch archived record.");
-			return;
-		}
-
-		// Insert the record into sales
-		const { error: insertError } = await supabase
-			.from("sales")
-			.insert([{ ...archivedRecord }]);
-
-		if (insertError) {
-			toast.error(insertError.message);
-			return;
-		}
-
-		// Delete the record from archived_sales
-		const { error: deleteError } = await supabase
-			.from("archived_sales")
-			.delete()
-			.eq("id", id);
-
-		if (deleteError) {
-			toast.error(deleteError.message);
-			return;
-		}
-
-		setSalesData((prevSales) => prevSales.filter((sale) => sale.id !== id));
-		toast.success("Record successfully restored.");
+	const handleRestoreArchived = (id: number) => {
+		restoreArchivedMutation.mutate(id);
 	};
 
 	const table = useReactTable({
@@ -393,7 +415,7 @@ export function ArchivedDataTable({
 			// salesData,
 			// setSalesData,
 			handleDeletePermanent,
-			handleRestoreArchived
+			handleRestoreArchived,
 		),
 		state: {
 			sorting,
@@ -417,23 +439,42 @@ export function ArchivedDataTable({
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	});
 
-	const handleDeleteAll = async () => {
-		setIsDeleting(true);
-		try {
+	// Delete all mutation
+	const deleteAllMutation = useMutation({
+		mutationFn: async (activeTab: string) => {
 			if (activeTab === "outline") {
 				// Delete all archived orders
-				await supabase.from("archived_sales").delete().neq("id", 0);
+				const { error } = await supabase
+					.from("archived_sales")
+					.delete()
+					.neq("id", 0);
+				if (error) throw error;
+			} else if (activeTab === "preorders") {
+				const { error } = await supabase
+					.from("archived_preorders")
+					.delete()
+					.neq("id", 0);
+				if (error) throw error;
+			}
+			return activeTab;
+		},
+		onSuccess: (activeTab) => {
+			if (activeTab === "outline") {
 				setSalesData([]);
 			} else if (activeTab === "preorders") {
-				await supabase.from("archived_preorders").delete().neq("id", 0);
-				queryClient.invalidateQueries({ queryKey: ["archived_preorders"] });
+				queryClient.invalidateQueries({
+					queryKey: ["admin", "archived_preorders"],
+				});
 			}
 			toast.success("All records deleted.");
-		} catch (err) {
+		},
+		onError: () => {
 			toast.error("Failed to delete all records.");
-		}
-		setIsDeleting(false);
-		setShowDeleteDialog(false);
+		},
+	});
+
+	const handleDeleteAll = () => {
+		deleteAllMutation.mutate(activeTab);
 	};
 
 	return (
@@ -481,7 +522,7 @@ export function ArchivedDataTable({
 									.filter(
 										(column) =>
 											typeof column.accessorFn !== "undefined" &&
-											column.getCanHide()
+											column.getCanHide(),
 									)
 									?.map((column) => {
 										return (
@@ -545,8 +586,8 @@ export function ArchivedDataTable({
 																? null
 																: flexRender(
 																		header.column.columnDef.header,
-																		header.getContext()
-																  )}
+																		header.getContext(),
+																	)}
 														</TableHead>
 													);
 												})}
@@ -573,7 +614,7 @@ export function ArchivedDataTable({
 																<TableCell key={cell.id}>
 																	{flexRender(
 																		cell.column.columnDef.cell,
-																		cell.getContext()
+																		cell.getContext(),
 																	)}
 																</TableCell>
 															);
@@ -709,16 +750,19 @@ export function ArchivedDataTable({
 					</DialogHeader>
 					<DialogFooter>
 						<DialogClose asChild>
-							<Button variant="outline" disabled={isDeleting}>
+							<Button variant="outline" disabled={deleteAllMutation.isPending}>
 								Cancel
 							</Button>
 						</DialogClose>
 						<Button
 							variant="destructive"
-							onClick={handleDeleteAll}
-							disabled={isDeleting}
+							onClick={() => {
+								handleDeleteAll();
+								setShowDeleteDialog(false);
+							}}
+							disabled={deleteAllMutation.isPending}
 						>
-							{isDeleting ? "Deleting..." : "Delete All"}
+							{deleteAllMutation.isPending ? "Deleting..." : "Delete All"}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

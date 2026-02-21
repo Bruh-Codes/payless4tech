@@ -52,15 +52,20 @@ export const TableSkeleton = () => (
 
 // Admin overview cards skeleton
 export const AdminCardsSkeleton = () => (
-	<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+	<div className="*:data-[slot=card]:from-orange-50/30 *:data-[slot=card]:to-orange-100/20 dark:*:data-[slot=card]:from-primary/5 dark:*:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @md/main:grid-cols-2 @3xl/main:grid-cols-4">
 		{Array.from({ length: 4 }).map((_, i) => (
-			<div key={i} className="rounded-lg border p-6 space-y-4">
-				<div className="flex items-center justify-between">
-					<Skeleton className="h-8 w-8" />
-					<Skeleton className="h-4 w-16" />
-				</div>
-				<Skeleton className="h-8 w-24" />
-				<Skeleton className="h-3 w-32" />
+			<div
+				key={i}
+				className="@container/card rounded-lg border bg-gradient-to-t from-orange-50/30 to-orange-100/20 dark:from-primary/5 dark:to-card dark:bg-card shadow-xs p-6"
+			>
+				{/* Card Description skeleton */}
+				<div className="h-4 w-24 bg-muted/50 animate-pulse rounded-md mb-4" />
+
+				{/* Card Title skeleton (large number) */}
+				<div className="h-10 w-16 bg-muted/70 animate-pulse rounded-md mb-2" />
+
+				{/* Additional content skeleton if needed */}
+				<div className="h-3 w-32 bg-muted/30 animate-pulse rounded-md" />
 			</div>
 		))}
 	</div>
@@ -115,11 +120,45 @@ export const ProductCardSkeleton = () => (
 	</div>
 );
 
-// Grid of product card skeletons
-export const ProductGridSkeleton = ({ count = 6 }: { count?: number }) => (
-	<div className="p-2 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+// Admin product card skeleton for admin dashboard
+export const AdminProductGridSkeleton = ({ count = 8 }: { count?: number }) => (
+	<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 		{Array.from({ length: count }).map((_, i) => (
-			<ProductCardSkeleton key={i} />
+			<div key={i} className="relative group w-full h-full">
+				{/* Product card skeleton */}
+				<div className="rounded-xl border border-border bg-card overflow-hidden">
+					{/* Image skeleton */}
+					<div className="relative aspect-square bg-muted/50">
+						<div className="absolute inset-0 bg-muted animate-pulse" />
+						{/* Condition badge skeleton */}
+						<div className="absolute top-3 right-3 h-6 w-16 rounded-lg bg-muted animate-pulse" />
+					</div>
+
+					{/* Content skeleton */}
+					<div className="p-4 space-y-3">
+						{/* Title skeleton */}
+						<div className="h-4 w-full bg-muted animate-pulse rounded-md" />
+						<div className="h-4 w-3/4 bg-muted animate-pulse rounded-md" />
+
+						{/* Price skeleton */}
+						<div className="flex items-baseline gap-2">
+							<div className="h-6 w-20 bg-muted animate-pulse rounded-md" />
+							<div className="h-4 w-16 bg-muted animate-pulse rounded-md" />
+						</div>
+
+						{/* Status and stock skeleton */}
+						<div className="flex items-center justify-between">
+							<div className="h-3 w-16 bg-muted animate-pulse rounded-md" />
+							<div className="h-3 w-12 bg-muted animate-pulse rounded-md" />
+						</div>
+					</div>
+				</div>
+
+				{/* Admin actions skeleton */}
+				<div className="absolute top-2 right-2 z-10 bg-white/80 backdrop-blur-sm rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity">
+					<div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+				</div>
+			</div>
 		))}
 	</div>
 );

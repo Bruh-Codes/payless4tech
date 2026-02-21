@@ -6,6 +6,10 @@ export interface EbayItem {
 		value: number;
 		currency: string;
 	};
+	originalPrice?: {
+		value: number;
+		currency: string;
+	};
 	image: string;
 	additionalImages?: string[];
 	category: string;
@@ -16,6 +20,12 @@ export interface EbayItem {
 	isPreorder: boolean;
 	estimatedAvailabilityStatus?: string;
 	itemEndDate?: string;
+	// Quality metadata
+	qualityScore?: number;
+	epid?: string;
+	itemGroupHref?: string;
+	sellerFeedbackScore?: number;
+	sellerFeedbackPercentage?: number;
 }
 
 export interface EbaySearchResponse {
@@ -46,6 +56,7 @@ export function convertEbayToLocalProduct(ebayItem: EbayItem): Product {
 		id: ebayItem.id,
 		title: ebayItem.title,
 		price: ebayItem.price.value,
+		originalPrice: ebayItem.originalPrice?.value,
 		currency: ebayItem.price.currency, // Add currency field
 		image: ebayItem.image,
 		category: ebayItem.category,
@@ -64,7 +75,7 @@ export async function searchEbayProducts(
 	pageNumber = 1,
 	limit = 5,
 	currency: "USD" | "GHS" = "GHS",
-	sortOrder: "newlyListed" | "bestMatch" | "price" | "-price" = "newlyListed",
+	sortOrder: "newlyListed" | "bestMatch" | "price" | "-price" = "bestMatch",
 	categorySlug?: string,
 	minPrice?: number,
 	maxPrice?: number,

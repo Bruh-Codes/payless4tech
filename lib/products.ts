@@ -12,6 +12,8 @@ export interface Product {
 	shipping: string;
 	seller: string;
 	isPreorder?: boolean;
+	stock?: number;
+	status?: string;
 }
 
 export const categories = [

@@ -57,8 +57,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import PreorderTable from "./PreorderTable";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/integrations/supabase/client";
 
 export const schema = z.object({
 	id: z.number(),
@@ -78,19 +79,19 @@ export const schema = z.object({
 			quantity: z.number(),
 			price: z.number(),
 			id: z.string(),
-		})
+		}),
 	),
 });
 
 const handleMarkAsDelivered = async (
 	id: number,
 	data: any[],
-	setData: Function
+	setData: Function,
 ) => {
 	const { error } = await supabase
 		.from("sales")
 		.update({ fulfillment_status: "delivered" })
-		.eq("id", id.toString());
+		.eq("id", id);
 
 	if (error) {
 		console.error("Error updating order status:", error);
@@ -98,7 +99,7 @@ const handleMarkAsDelivered = async (
 	} else {
 		// Update local state
 		const updated = data.map((row) =>
-			row.id === id ? { ...row, fulfillment_status: "delivered" } : row
+			row.id === id ? { ...row, fulfillment_status: "delivered" } : row,
 		);
 		setData(updated);
 
@@ -111,7 +112,8 @@ const handleMarkAsDelivered = async (
 const columns = (
 	data: z.infer<typeof schema>[],
 	setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
-	handleDelete: (id: number) => void
+	handleDelete: (id: number) => void,
+	handleViewDetails: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
 		accessorKey: "status",
@@ -290,6 +292,10 @@ const columns = (
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
+					<DropdownMenuItem onClick={() => handleViewDetails(row.original.id)}>
+						View Details
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						disabled={row?.original.fulfillment_status !== "pending"}
 						onClick={() =>
@@ -318,13 +324,19 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
 	const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-		[]
+		[],
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [activeTab, setActiveTab] = React.useState("outline");
 	const [salesData, setSalesData] = React.useState<z.infer<typeof schema>[]>(
-		data || []
+		data || [],
 	);
+
+	const router = useRouter();
+
+	const handleViewDetails = (id: string | number) => {
+		router.push(`/admin/orders/${id}`);
+	};
 
 	const [pagination, setPagination] = React.useState({
 		pageIndex: 0,
@@ -336,7 +348,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 		const { data: saleData, error: fetchError } = await supabase
 			.from("sales")
 			.select("*")
-			.eq("id", id.toString())
+			.eq("id", id)
 			.single();
 
 		if (fetchError || !saleData) {
@@ -362,7 +374,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 		const { error: deleteError } = await supabase
 			.from("sales")
 			.delete()
-			.eq("id", id.toString());
+			.eq("id", id);
 
 		if (deleteError) {
 			console.error("Error deleting sale:", deleteError);
@@ -377,7 +389,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 
 	const table = useReactTable({
 		data: salesData,
-		columns: columns(salesData, setSalesData, handleDelete),
+		columns: columns(salesData, setSalesData, handleDelete, handleViewDetails),
 		state: {
 			sorting,
 			columnVisibility,
@@ -445,7 +457,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 									.filter(
 										(column) =>
 											typeof column.accessorFn !== "undefined" &&
-											column.getCanHide()
+											column.getCanHide(),
 									)
 									.map((column) => {
 										return (
@@ -493,8 +505,8 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 																? null
 																: flexRender(
 																		header.column.columnDef.header,
-																		header.getContext()
-																  )}
+																		header.getContext(),
+																	)}
 														</TableHead>
 													);
 												})}
@@ -510,10 +522,13 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 													<TableRow
 														key={row.id}
 														data-state={row.getIsSelected() && "selected"}
+														onDoubleClick={() =>
+															handleViewDetails(row.original.id)
+														}
 														className={
 															isPending
-																? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30"
-																: ""
+																? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30 cursor-pointer"
+																: "cursor-pointer"
 														}
 													>
 														{row.getVisibleCells().map((cell) => {
@@ -521,7 +536,7 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 																<TableCell key={cell.id}>
 																	{flexRender(
 																		cell.column.columnDef.cell,
-																		cell.getContext()
+																		cell.getContext(),
 																	)}
 																</TableCell>
 															);

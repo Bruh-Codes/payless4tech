@@ -2,8 +2,12 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import dynamicImport from "next/dynamic";
 import { Suspense } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { ChartSkeleton, TableSkeleton } from "@/components/LoadingSkeletons";
+import {
+	ChartSkeleton,
+	TableSkeleton,
+	AdminCardsSkeleton,
+} from "@/components/LoadingSkeletons";
+import SalesTableWrapper from "@/components/admin/SalesTableWrapper";
 
 // Dynamically import heavy components for better performance
 const ChartAreaInteractive = dynamicImport(
@@ -16,82 +20,32 @@ const ChartAreaInteractive = dynamicImport(
 	},
 );
 
-const DataTable = dynamicImport(
-	() =>
-		import("@/components/admin/data-table").then((mod) => ({
-			default: mod.DataTable,
-		})),
-	{
-		loading: () => <TableSkeleton />,
-	},
-);
-
-export interface salesType {
-	id: number;
-	email: string;
-	user_id: string;
-	total_amount: string;
-	phone_number: string;
-	alternative_phone: string;
-	delivery_address: string;
-	extended_warranty: boolean;
-	fulfillment_status: "pending" | "delivered" | "cancelled";
-	gps_location: string;
-	product_id: string;
-	total_price: number;
-	status: string;
-	product: {
-		name: string;
-		quantity: number;
-		price: number;
-		id: string;
-	}[];
-}
-
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
-	let { data: sales, error } = await supabase.from("sales").select("*");
-
-	const sortedSales = sales?.sort((a, b) => {
-		if (
-			a.fulfillment_status === "pending" &&
-			b.fulfillment_status !== "pending"
-		)
-			return -1;
-		if (
-			a.fulfillment_status !== "pending" &&
-			b.fulfillment_status === "pending"
-		)
-			return 1;
-		return 0;
-	});
-	if (error) {
-		console.log("Error fetching sales data", error);
-	}
-
+export default function Page() {
 	return (
 		<div className="container space-y-5 mx-auto">
-			<div className="flex gap-5 items-center mb-6">
-				<SidebarTrigger />
-				<h1 className="text-3xl font-bold">Dashboard</h1>
+			<div className="flex flex-col mb-6">
+				<div className="flex gap-5 items-center">
+					<SidebarTrigger />
+					<h1 className="text-3xl font-bold">Dashboard</h1>
+				</div>
+				<p className="text-muted-foreground mt-2 pl-12">
+					Overview of your store's performance, sales, and inventory metrics.
+				</p>
 			</div>
-			<AdminOverview />
+
+			<Suspense fallback={<AdminCardsSkeleton />}>
+				<AdminOverview />
+			</Suspense>
+
 			<Suspense fallback={<ChartSkeleton />}>
 				<ChartAreaInteractive />
 			</Suspense>
-			<Suspense fallback={<TableSkeleton />}>
-				<DataTable data={sortedSales as salesType[]} />
-			</Suspense>
-			{/* <SlideshowImageList /> */}
 
-			{/* <div className="grid gap-8">
-				<div className="space-y-6">
-					<SlideshowImageForm onImageAdded={handleSlideshowImageAdded} />
-					{/*  */}
-			{/*
-				</div>
-					 <ProductList /> */}
+			<Suspense fallback={<TableSkeleton />}>
+				<SalesTableWrapper />
+			</Suspense>
 		</div>
 	);
 }
