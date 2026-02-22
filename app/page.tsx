@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useCart } from "@/contexts/CartContext";
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
-import { ProductGridSkeleton } from "@/components/LoadingSkeletons";
+import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 
 // Dynamic imports for better bundle splitting
 const Footer = dynamic(() => import("@/components/Footer"));
@@ -22,7 +22,11 @@ const FeaturedProducts = dynamic(
 						<div className="h-8 w-48 bg-muted animate-pulse rounded-md mb-2" />
 						<div className="h-4 w-64 bg-muted animate-pulse rounded-md" />
 					</div>
-					<ProductGridSkeleton count={4} />
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+						{Array.from({ length: 4 }).map((_, i) => (
+							<ProductCardSkeleton key={i} />
+						))}
+					</div>
 				</div>
 			</section>
 		),
@@ -36,7 +40,11 @@ const NewArrivals = dynamic(() => import("@/components/ui/new-arrivals"), {
 					<div className="h-8 w-32 bg-muted animate-pulse rounded-md mx-auto mb-2" />
 					<div className="h-4 w-48 bg-muted animate-pulse rounded-md mx-auto" />
 				</div>
-				<ProductGridSkeleton count={4} />
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+					{Array.from({ length: 4 }).map((_, i) => (
+						<ProductCardSkeleton key={i} />
+					))}
+				</div>
 			</div>
 		</section>
 	),

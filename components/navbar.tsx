@@ -73,8 +73,10 @@ const Navbar = memo(() => {
 	// Search source from environment variable, default to 'local'
 	const router = useRouter();
 	// eBay search with category support
-	const dropdownRef = useRef<HTMLFormElement>(null);
-	const categoryDropdownRef = useRef<HTMLDivElement>(null);
+	const desktopDropdownRef = useRef<HTMLFormElement>(null);
+	const mobileDropdownRef = useRef<HTMLFormElement>(null);
+	const desktopCategoryDropdownRef = useRef<HTMLDivElement>(null);
+	const mobileCategoryDropdownRef = useRef<HTMLDivElement>(null);
 
 	// Use React Query for search — eagerly fetch up to 20 results for dropdown
 	const { data, isLoading, isFetchingNextPage, fetchNextPage, hasNextPage } =
@@ -166,18 +168,25 @@ const Navbar = memo(() => {
 
 	useEffect(() => {
 		const handleClickOutside = (e: MouseEvent) => {
-			if (
-				dropdownRef.current &&
-				!dropdownRef.current.contains(e.target as Node)
-			) {
+			const target = e.target as Node;
+			const isInsideSearch =
+				(desktopDropdownRef.current &&
+					desktopDropdownRef.current.contains(target)) ||
+				(mobileDropdownRef.current &&
+					mobileDropdownRef.current.contains(target));
+
+			if (!isInsideSearch) {
 				setShowDropdown(false);
 			}
 			// Only close category dropdown if clicking outside, not on category items
-			if (
-				categoryDropdownRef.current &&
-				!categoryDropdownRef.current.contains(e.target as Node) &&
-				!(e.target as Element).closest(".category-dropdown-item")
-			) {
+			const isInsideCategory =
+				(desktopCategoryDropdownRef.current &&
+					desktopCategoryDropdownRef.current.contains(target)) ||
+				(mobileCategoryDropdownRef.current &&
+					mobileCategoryDropdownRef.current.contains(target)) ||
+				(e.target as Element).closest(".category-dropdown-item");
+
+			if (!isInsideCategory) {
 				setCategoryDropdownOpen(false);
 			}
 		};
@@ -209,7 +218,7 @@ const Navbar = memo(() => {
 						{/* Category Dropdown and Search Bar - Desktop */}
 						<div className="hidden flex-1 max-w-2xl md:flex items-center gap-2">
 							{/* Category Dropdown */}
-							<div className="relative" ref={categoryDropdownRef}>
+							<div className="relative" ref={desktopCategoryDropdownRef}>
 								<Button
 									variant={"ghost"}
 									onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
@@ -271,7 +280,7 @@ const Navbar = memo(() => {
 							<form
 								onSubmit={handleSubmit}
 								className="flex-1 relative"
-								ref={dropdownRef}
+								ref={desktopDropdownRef}
 							>
 								<div className="relative w-full">
 									<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -396,7 +405,10 @@ const Navbar = memo(() => {
 						<div className="space-y-3 w-full">
 							{/* Mobile Category Dropdown */}
 							<div className="flex items-center justify-between">
-								<div className="relative w-full" ref={categoryDropdownRef}>
+								<div
+									className="relative w-full"
+									ref={mobileCategoryDropdownRef}
+								>
 									<Button
 										variant={"ghost"}
 										onClick={() =>
@@ -527,7 +539,7 @@ const Navbar = memo(() => {
 				<form
 					onSubmit={handleSubmit}
 					className="flex-1 md:hidden relative"
-					ref={dropdownRef}
+					ref={mobileDropdownRef}
 				>
 					<div className="relative w-full">
 						<Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
