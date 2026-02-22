@@ -83,7 +83,7 @@ export async function searchEbayProducts(
 	brands?: string[],
 ): Promise<EbaySearchResponse> {
 	const params = new URLSearchParams({
-		q: encodeURIComponent(query),
+		q: query,
 		page: pageNumber.toString(),
 		limit: limit.toString(),
 		currency,
