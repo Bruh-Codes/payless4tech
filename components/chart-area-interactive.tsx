@@ -321,14 +321,14 @@ export function ChartAreaInteractive() {
 							/>
 							<Area
 								dataKey="total_sales"
-								type="natural"
+								type="linear"
 								fill="url(#fillTotal_sales)"
 								stroke={chartConfig.total_sales.color}
 								stackId="a"
 							/>
 							<Area
 								dataKey="order_count"
-								type="natural"
+								type="linear"
 								fill="url(#fillTotal_sales)"
 								stroke={chartConfig.order_count.color}
 								stackId="a"

@@ -461,13 +461,13 @@ export function ArchivedDataTable({
 				const { error } = await supabase
 					.from("archived_sales")
 					.delete()
-					.neq("id", 0);
+					.neq("id", "00000000-0000-0000-0000-000000000000"); // Safe null-like UUID to act as "delete all" catch
 				if (error) throw error;
 			} else if (activeTab === "preorders") {
 				const { error } = await supabase
 					.from("archived_preorders")
 					.delete()
-					.neq("id", 0);
+					.neq("id", "00000000-0000-0000-0000-000000000000");
 				if (error) throw error;
 			}
 			return activeTab;
@@ -482,7 +482,8 @@ export function ArchivedDataTable({
 			}
 			toast.success("All records deleted.");
 		},
-		onError: () => {
+		onError: (error) => {
+			console.log(error);
 			toast.error("Failed to delete all records.");
 		},
 	});
@@ -554,6 +555,20 @@ export function ArchivedDataTable({
 									})}
 							</DropdownMenuContent>
 						</DropdownMenu>
+						{salesData?.length > 0 && (
+							<Button
+								variant="destructive"
+								size="sm"
+								onClick={() => setShowDeleteDialog(true)}
+							>
+								Delete All
+							</Button>
+						)}
+					</div>
+				)}
+				{activeTab === "preorders" &&
+					preorders?.data &&
+					preorders.data.length > 0 && (
 						<Button
 							variant="destructive"
 							size="sm"
@@ -561,17 +576,7 @@ export function ArchivedDataTable({
 						>
 							Delete All
 						</Button>
-					</div>
-				)}
-				{activeTab === "preorders" && (
-					<Button
-						variant="destructive"
-						size="sm"
-						onClick={() => setShowDeleteDialog(true)}
-					>
-						Delete All
-					</Button>
-				)}
+					)}
 			</div>
 			<TabsContent
 				value="outline"

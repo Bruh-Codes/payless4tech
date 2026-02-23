@@ -49,6 +49,16 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -269,6 +279,13 @@ const PreorderTable = () => {
 	const data = queryResult?.data ?? [];
 	const totalCount = queryResult?.count ?? 0;
 
+	// Modal State
+	const [alertState, setAlertState] = React.useState<{
+		open: boolean;
+		action: "delete" | "undelivered" | null;
+		id: string | number | null;
+	}>({ open: false, action: null, id: null });
+
 	React.useEffect(() => {
 		if (error) {
 			toast.error(error.message);
@@ -364,7 +381,7 @@ const PreorderTable = () => {
 	};
 
 	const handleDelete = (productId: number | string) => {
-		deleteMutation.mutate(productId);
+		setAlertState({ open: true, action: "delete", id: productId });
 	};
 
 	const handleMarkAsDelivered = (id: number | string) => {
@@ -372,7 +389,16 @@ const PreorderTable = () => {
 	};
 
 	const handleMarkAsUndelivered = (id: number | string) => {
-		markAsUndeliveredMutation.mutate(id);
+		setAlertState({ open: true, action: "undelivered", id });
+	};
+
+	const confirmAction = () => {
+		if (alertState.action === "delete" && alertState.id) {
+			deleteMutation.mutate(alertState.id);
+		} else if (alertState.action === "undelivered" && alertState.id) {
+			markAsUndeliveredMutation.mutate(alertState.id);
+		}
+		setAlertState({ open: false, action: null, id: null });
 	};
 
 	const table = useReactTable({
@@ -409,6 +435,32 @@ const PreorderTable = () => {
 
 	return (
 		<div className="space-y-4">
+			<AlertDialog
+				open={alertState.open}
+				onOpenChange={(open) => {
+					if (!open) setAlertState({ open: false, action: null, id: null });
+				}}
+			>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{alertState.action === "delete"
+								? "This action cannot be undone. This will permanently delete the preorder and archive it."
+								: "This will revert the preorder status back to pending."}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmAction}
+							className="bg-primary hover:bg-primary/90 text-primary-foreground"
+						>
+							Confirm
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 			<div className="flex items-center">
 				<Input
 					placeholder="Search by name, email, phone, or item type..."

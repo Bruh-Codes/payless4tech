@@ -54,6 +54,16 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
 	Table,
 	TableBody,
 	TableCell,
@@ -369,6 +379,13 @@ export function DataTable() {
 	const rawData = queryResult?.data ?? [];
 	const totalCount = queryResult?.count ?? 0;
 
+	// Modal State
+	const [alertState, setAlertState] = React.useState<{
+		open: boolean;
+		action: "delete" | "undelivered" | null;
+		id: string | number | null;
+	}>({ open: false, action: null, id: null });
+
 	// Sort active items logic
 	const salesData = [...rawData].sort((a, b) => {
 		const aIsActive =
@@ -451,11 +468,23 @@ export function DataTable() {
 		onError: () => toast.error("Failed to mark as undelivered."),
 	});
 
-	const handleDelete = (id: string | number) => deleteMutation.mutate(id);
+	const handleDelete = (id: string | number) => {
+		setAlertState({ open: true, action: "delete", id });
+	};
 	const handleMarkAsDelivered = (id: string | number) =>
 		markAsDeliveredMutation.mutate(id);
-	const handleMarkAsUndelivered = (id: string | number) =>
-		markAsUndeliveredMutation.mutate(id);
+	const handleMarkAsUndelivered = (id: string | number) => {
+		setAlertState({ open: true, action: "undelivered", id });
+	};
+
+	const confirmAction = () => {
+		if (alertState.action === "delete" && alertState.id) {
+			deleteMutation.mutate(alertState.id);
+		} else if (alertState.action === "undelivered" && alertState.id) {
+			markAsUndeliveredMutation.mutate(alertState.id);
+		}
+		setAlertState({ open: false, action: null, id: null });
+	};
 
 	const table = useReactTable({
 		data: salesData as z.infer<typeof schema>[],
@@ -490,310 +519,338 @@ export function DataTable() {
 	});
 
 	return (
-		<Tabs
-			value={activeTab}
-			onValueChange={(value) => setActiveTab(value)}
-			defaultValue="outline"
-			className="w-full flex-col justify-start gap-6"
-		>
-			<div className="flex items-center justify-between px-4 lg:px-6">
-				<Label htmlFor="view-selector" className="sr-only">
-					View
-				</Label>
-				<Select defaultValue="outline">
-					<SelectTrigger
-						className="flex w-fit @4xl/main:hidden"
-						size="sm"
-						id="view-selector"
-					>
-						<SelectValue placeholder="Select a view" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="outline">Active Orders</SelectItem>
-						<SelectItem value="preorders">Preorders</SelectItem>
-					</SelectContent>
-				</Select>
-				<TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
-					<TabsTrigger value="outline">Active Orders</TabsTrigger>
-					<TabsTrigger value="preorders">Preorders</TabsTrigger>
-				</TabsList>
-				{activeTab === "outline" && (
-					<div className="flex items-center gap-2">
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button variant="outline" size="sm">
-									<IconLayoutColumns />
-									<span className="hidden lg:inline">Customize Columns</span>
-									<span className="lg:hidden">Columns</span>
-									<IconChevronDown />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" className="w-56">
-								{table
-									?.getAllColumns()
-									.filter(
-										(column) =>
-											typeof column.accessorFn !== "undefined" &&
-											column.getCanHide(),
-									)
-									.map((column) => {
-										return (
-											<DropdownMenuCheckboxItem
-												key={column.id}
-												className="capitalize"
-												checked={column.getIsVisible()}
-												onCheckedChange={(value) =>
-													column.toggleVisibility(!!value)
-												}
-											>
-												{column.id}
-											</DropdownMenuCheckboxItem>
-										);
-									})}
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</div>
-				)}
-			</div>
-			<TabsContent
-				value="outline"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+		<>
+			<AlertDialog
+				open={alertState.open}
+				onOpenChange={(open) => {
+					if (!open) setAlertState({ open: false, action: null, id: null });
+				}}
 			>
-				<div className="flex items-center">
-					<Input
-						placeholder="Search by email, phone, or address..."
-						value={searchQuery}
-						onChange={(e) => setSearchQuery(e.target.value)}
-						className="max-w-sm"
-					/>
-				</div>
-				<div className="overflow-hidden rounded-lg border">
-					{!table || !table?.getRowModel() ? (
-						isLoading ? (
-							<Table>
-								<TableHeader className="bg-muted sticky top-0 z-10">
-									<TableRow>
-										<TableHead>
-											<Skeleton className="h-4 w-24" />
-										</TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{Array.from({ length: 5 }).map((_, i) => (
-										<TableRow key={i}>
-											<TableCell>
-												<Skeleton className="h-6 w-full" />
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
-						) : (
-							<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
-								{Array.isArray(salesData) && salesData.length === 0
-									? "No data available."
-									: "Unable to load data. Please check your internet connection."}
-							</div>
-						)
-					) : (
-						<Table>
-							<TableHeader className="bg-muted sticky top-0 z-10">
-								{table?.getHeaderGroups()?.map((headerGroup) => (
-									<TableRow key={headerGroup.id}>
-										{headerGroup?.headers.map((header) => {
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+						<AlertDialogDescription>
+							{alertState.action === "delete"
+								? "This action cannot be undone. This will permanently delete the order and archive it."
+								: "This will revert the order status back to pending."}
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={confirmAction}
+							className="bg-primary hover:bg-primary/90 text-primary-foreground"
+						>
+							Confirm
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
+			<Tabs
+				value={activeTab}
+				onValueChange={(value) => setActiveTab(value)}
+				defaultValue="outline"
+				className="w-full flex-col justify-start gap-6"
+			>
+				<div className="flex items-center justify-between px-4 lg:px-6">
+					<Label htmlFor="view-selector" className="sr-only">
+						View
+					</Label>
+					<Select defaultValue="outline">
+						<SelectTrigger
+							className="flex w-fit @4xl/main:hidden"
+							size="sm"
+							id="view-selector"
+						>
+							<SelectValue placeholder="Select a view" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="outline">Active Orders</SelectItem>
+							<SelectItem value="preorders">Preorders</SelectItem>
+						</SelectContent>
+					</Select>
+					<TabsList className="**:data-[slot=badge]:bg-muted-foreground/30 hidden **:data-[slot=badge]:size-5 **:data-[slot=badge]:rounded-full **:data-[slot=badge]:px-1 @4xl/main:flex">
+						<TabsTrigger value="outline">Active Orders</TabsTrigger>
+						<TabsTrigger value="preorders">Preorders</TabsTrigger>
+					</TabsList>
+					{activeTab === "outline" && (
+						<div className="flex items-center gap-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm">
+										<IconLayoutColumns />
+										<span className="hidden lg:inline">Customize Columns</span>
+										<span className="lg:hidden">Columns</span>
+										<IconChevronDown />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end" className="w-56">
+									{table
+										?.getAllColumns()
+										.filter(
+											(column) =>
+												typeof column.accessorFn !== "undefined" &&
+												column.getCanHide(),
+										)
+										.map((column) => {
 											return (
-												<TableHead key={header.id} colSpan={header.colSpan}>
-													{header.isPlaceholder
-														? null
-														: flexRender(
-																header.column.columnDef.header,
-																header.getContext(),
-															)}
-												</TableHead>
+												<DropdownMenuCheckboxItem
+													key={column.id}
+													className="capitalize"
+													checked={column.getIsVisible()}
+													onCheckedChange={(value) =>
+														column.toggleVisibility(!!value)
+													}
+												>
+													{column.id}
+												</DropdownMenuCheckboxItem>
 											);
 										})}
-									</TableRow>
-								))}
-							</TableHeader>
-							<TableBody>
-								{table?.getRowModel().rows?.length ? (
-									table?.getRowModel().rows.map((row) => {
-										const isActiveRow =
-											row.original.status === "paid" &&
-											row.original.fulfillment_status !== "delivered";
-										return (
-											<ContextMenu key={row.id}>
-												<ContextMenuTrigger asChild>
-													<TableRow
-														data-state={row.getIsSelected() && "selected"}
-														onDoubleClick={() =>
-															handleViewDetails(row.original.id)
-														}
-														className={
-															isActiveRow
-																? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 cursor-pointer"
-																: "cursor-pointer"
-														}
-													>
-														{row.getVisibleCells().map((cell) => {
-															return (
-																<TableCell key={cell.id}>
-																	{flexRender(
-																		cell.column.columnDef.cell,
-																		cell.getContext(),
-																	)}
-																</TableCell>
-															);
-														})}
-													</TableRow>
-												</ContextMenuTrigger>
-												<ContextMenuContent className="w-48">
-													<ContextMenuItem
-														onClick={() => handleViewDetails(row.original.id)}
-													>
-														View Details
-													</ContextMenuItem>
-													<ContextMenuSeparator />
-													<ContextMenuItem
-														disabled={
-															row?.original.fulfillment_status !== "pending"
-														}
-														onClick={() =>
-															handleMarkAsDelivered(row.original.id)
-														}
-													>
-														Mark Delivered
-													</ContextMenuItem>
-													<ContextMenuSeparator />
-													<ContextMenuItem
-														disabled={
-															row?.original.fulfillment_status !== "delivered"
-														}
-														onClick={() =>
-															handleMarkAsUndelivered(row.original.id)
-														}
-													>
-														Mark Undelivered
-													</ContextMenuItem>
-													<ContextMenuSeparator />
-													<ContextMenuItem
-														disabled={
-															row?.original.fulfillment_status === "pending"
-														}
-														onClick={() => handleDelete(row.original.id)}
-														className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
-													>
-														Delete
-													</ContextMenuItem>
-												</ContextMenuContent>
-											</ContextMenu>
-										);
-									})
-								) : isLoading ? (
-									Array.from({ length: 5 }).map((_, i) => (
-										<TableRow key={i}>
-											{table.getVisibleLeafColumns().map((column) => (
-												<TableCell key={column.id}>
-													<Skeleton className="h-6 w-full" />
-												</TableCell>
-											))}
-										</TableRow>
-									))
-								) : (
-									<TableRow>
-										<TableCell colSpan={20} className="h-24 text-center">
-											No results.
-										</TableCell>
-									</TableRow>
-								)}
-							</TableBody>
-						</Table>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 					)}
 				</div>
-				<div className="flex items-center justify-between px-4">
-					<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-						{table?.getFilteredSelectedRowModel()?.rows.length} of{" "}
-						{table?.getFilteredRowModel()?.rows.length} row(s) selected.
+				<TabsContent
+					value="outline"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<div className="flex items-center">
+						<Input
+							placeholder="Search by email, phone, or address..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="max-w-sm"
+						/>
 					</div>
-					<div className="flex w-full items-center gap-8 lg:w-fit">
-						<div className="hidden items-center gap-2 lg:flex">
-							<Label htmlFor="rows-per-page" className="text-sm font-medium">
-								Rows per page
-							</Label>
-							<Select
-								value={`${table?.getState().pagination.pageSize}`}
-								onValueChange={(value) => {
-									table?.setPageSize(Number(value));
-								}}
-							>
-								<SelectTrigger size="sm" className="w-20" id="rows-per-page">
-									<SelectValue
-										placeholder={table?.getState().pagination.pageSize}
-									/>
-								</SelectTrigger>
-								<SelectContent side="top">
-									{[10, 20, 30, 40, 50].map((pageSize) => (
-										<SelectItem key={pageSize} value={`${pageSize}`}>
-											{pageSize}
-										</SelectItem>
+					<div className="overflow-hidden rounded-lg border">
+						{!table || !table?.getRowModel() ? (
+							isLoading ? (
+								<Table>
+									<TableHeader className="bg-muted sticky top-0 z-10">
+										<TableRow>
+											<TableHead>
+												<Skeleton className="h-4 w-24" />
+											</TableHead>
+										</TableRow>
+									</TableHeader>
+									<TableBody>
+										{Array.from({ length: 5 }).map((_, i) => (
+											<TableRow key={i}>
+												<TableCell>
+													<Skeleton className="h-6 w-full" />
+												</TableCell>
+											</TableRow>
+										))}
+									</TableBody>
+								</Table>
+							) : (
+								<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
+									{Array.isArray(salesData) && salesData.length === 0
+										? "No data available."
+										: "Unable to load data. Please check your internet connection."}
+								</div>
+							)
+						) : (
+							<Table>
+								<TableHeader className="bg-muted sticky top-0 z-10">
+									{table?.getHeaderGroups()?.map((headerGroup) => (
+										<TableRow key={headerGroup.id}>
+											{headerGroup?.headers.map((header) => {
+												return (
+													<TableHead key={header.id} colSpan={header.colSpan}>
+														{header.isPlaceholder
+															? null
+															: flexRender(
+																	header.column.columnDef.header,
+																	header.getContext(),
+																)}
+													</TableHead>
+												);
+											})}
+										</TableRow>
 									))}
-								</SelectContent>
-							</Select>
+								</TableHeader>
+								<TableBody>
+									{table?.getRowModel().rows?.length ? (
+										table?.getRowModel().rows.map((row) => {
+											const isActiveRow =
+												row.original.status === "paid" &&
+												row.original.fulfillment_status !== "delivered";
+											return (
+												<ContextMenu key={row.id}>
+													<ContextMenuTrigger asChild>
+														<TableRow
+															data-state={row.getIsSelected() && "selected"}
+															onDoubleClick={() =>
+																handleViewDetails(row.original.id)
+															}
+															className={
+																isActiveRow
+																	? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 cursor-pointer"
+																	: "cursor-pointer"
+															}
+														>
+															{row.getVisibleCells().map((cell) => {
+																return (
+																	<TableCell key={cell.id}>
+																		{flexRender(
+																			cell.column.columnDef.cell,
+																			cell.getContext(),
+																		)}
+																	</TableCell>
+																);
+															})}
+														</TableRow>
+													</ContextMenuTrigger>
+													<ContextMenuContent className="w-48">
+														<ContextMenuItem
+															onClick={() => handleViewDetails(row.original.id)}
+														>
+															View Details
+														</ContextMenuItem>
+														<ContextMenuSeparator />
+														<ContextMenuItem
+															disabled={
+																row?.original.fulfillment_status !== "pending"
+															}
+															onClick={() =>
+																handleMarkAsDelivered(row.original.id)
+															}
+														>
+															Mark Delivered
+														</ContextMenuItem>
+														<ContextMenuSeparator />
+														<ContextMenuItem
+															disabled={
+																row?.original.fulfillment_status !== "delivered"
+															}
+															onClick={() =>
+																handleMarkAsUndelivered(row.original.id)
+															}
+														>
+															Mark Undelivered
+														</ContextMenuItem>
+														<ContextMenuSeparator />
+														<ContextMenuItem
+															disabled={
+																row?.original.fulfillment_status === "pending"
+															}
+															onClick={() => handleDelete(row.original.id)}
+															className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
+														>
+															Delete
+														</ContextMenuItem>
+													</ContextMenuContent>
+												</ContextMenu>
+											);
+										})
+									) : isLoading ? (
+										Array.from({ length: 5 }).map((_, i) => (
+											<TableRow key={i}>
+												{table.getVisibleLeafColumns().map((column) => (
+													<TableCell key={column.id}>
+														<Skeleton className="h-6 w-full" />
+													</TableCell>
+												))}
+											</TableRow>
+										))
+									) : (
+										<TableRow>
+											<TableCell colSpan={20} className="h-24 text-center">
+												No results.
+											</TableCell>
+										</TableRow>
+									)}
+								</TableBody>
+							</Table>
+						)}
+					</div>
+					<div className="flex items-center justify-between px-4">
+						<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+							{table?.getFilteredSelectedRowModel()?.rows.length} of{" "}
+							{table?.getFilteredRowModel()?.rows.length} row(s) selected.
 						</div>
-						<div className="flex w-fit items-center justify-center text-sm font-medium">
-							Page {table?.getState().pagination.pageIndex + 1} of{" "}
-							{table?.getPageCount()}
-						</div>
-						<div className="ml-auto flex items-center gap-2 lg:ml-0">
-							<Button
-								variant="outline"
-								className="hidden h-8 w-8 p-0 lg:flex"
-								onClick={() => table?.setPageIndex(0)}
-								disabled={!table?.getCanPreviousPage()}
-							>
-								<span className="sr-only">Go to first page</span>
-								<IconChevronsLeft />
-							</Button>
-							<Button
-								variant="outline"
-								className="size-8"
-								size="icon"
-								onClick={() => table?.previousPage()}
-								disabled={!table?.getCanPreviousPage()}
-							>
-								<span className="sr-only">Go to previous page</span>
-								<IconChevronLeft />
-							</Button>
-							<Button
-								variant="outline"
-								className="size-8"
-								size="icon"
-								onClick={() => table?.nextPage()}
-								disabled={!table?.getCanNextPage()}
-							>
-								<span className="sr-only">Go to next page</span>
-								<IconChevronRight />
-							</Button>
-							<Button
-								variant="outline"
-								className="hidden size-8 lg:flex"
-								size="icon"
-								onClick={() => table?.setPageIndex(table?.getPageCount() - 1)}
-								disabled={!table?.getCanNextPage()}
-							>
-								<span className="sr-only">Go to last page</span>
-								<IconChevronsRight />
-							</Button>
+						<div className="flex w-full items-center gap-8 lg:w-fit">
+							<div className="hidden items-center gap-2 lg:flex">
+								<Label htmlFor="rows-per-page" className="text-sm font-medium">
+									Rows per page
+								</Label>
+								<Select
+									value={`${table?.getState().pagination.pageSize}`}
+									onValueChange={(value) => {
+										table?.setPageSize(Number(value));
+									}}
+								>
+									<SelectTrigger size="sm" className="w-20" id="rows-per-page">
+										<SelectValue
+											placeholder={table?.getState().pagination.pageSize}
+										/>
+									</SelectTrigger>
+									<SelectContent side="top">
+										{[10, 20, 30, 40, 50].map((pageSize) => (
+											<SelectItem key={pageSize} value={`${pageSize}`}>
+												{pageSize}
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>
+							<div className="flex w-fit items-center justify-center text-sm font-medium">
+								Page {table?.getState().pagination.pageIndex + 1} of{" "}
+								{table?.getPageCount()}
+							</div>
+							<div className="ml-auto flex items-center gap-2 lg:ml-0">
+								<Button
+									variant="outline"
+									className="hidden h-8 w-8 p-0 lg:flex"
+									onClick={() => table?.setPageIndex(0)}
+									disabled={!table?.getCanPreviousPage()}
+								>
+									<span className="sr-only">Go to first page</span>
+									<IconChevronsLeft />
+								</Button>
+								<Button
+									variant="outline"
+									className="size-8"
+									size="icon"
+									onClick={() => table?.previousPage()}
+									disabled={!table?.getCanPreviousPage()}
+								>
+									<span className="sr-only">Go to previous page</span>
+									<IconChevronLeft />
+								</Button>
+								<Button
+									variant="outline"
+									className="size-8"
+									size="icon"
+									onClick={() => table?.nextPage()}
+									disabled={!table?.getCanNextPage()}
+								>
+									<span className="sr-only">Go to next page</span>
+									<IconChevronRight />
+								</Button>
+								<Button
+									variant="outline"
+									className="hidden size-8 lg:flex"
+									size="icon"
+									onClick={() => table?.setPageIndex(table?.getPageCount() - 1)}
+									disabled={!table?.getCanNextPage()}
+								>
+									<span className="sr-only">Go to last page</span>
+									<IconChevronsRight />
+								</Button>
+							</div>
 						</div>
 					</div>
-				</div>
-			</TabsContent>
-			<TabsContent
-				value="preorders"
-				className="relative flex flex-col gap-4 overflow-auto"
-			>
-				<PreorderTable />
-			</TabsContent>
-		</Tabs>
+				</TabsContent>
+				<TabsContent
+					value="preorders"
+					className="relative flex flex-col gap-4 overflow-auto"
+				>
+					<PreorderTable />
+				</TabsContent>
+			</Tabs>
+		</>
 	);
 }
