@@ -31,6 +31,7 @@ interface ParsedProduct {
 	status: string;
 	stock: number;
 	image_url: string;
+	additional_images: string[];
 	detailed_specs: string;
 }
 
@@ -62,6 +63,7 @@ function parseCSVLine(line: string): string[] {
 function validateProduct(
 	row: string[],
 	rowIndex: number,
+	imageMapping: Record<string, string> = {},
 ): { valid: true; product: ParsedProduct } | { valid: false; error: string } {
 	if (row.length < 3) {
 		return {
@@ -78,8 +80,46 @@ function validateProduct(
 	const condition = row[5]?.trim() || "New";
 	const status = row[6]?.trim() || "available";
 	const stockStr = row[7]?.trim() || "0";
-	const imageUrl = row[8]?.trim() || "";
-	const detailedSpecs = row[9]?.trim() || "";
+
+	let imageUrl = (row[8] || "")?.trim() || "";
+	// Helper to resolve an image name to a URL
+	const resolveImageUrl = (imgName: string) => {
+		if (!imgName) return "";
+		if (
+			imgName.startsWith("http://") ||
+			imgName.startsWith("https://") ||
+			imgName.startsWith("/")
+		) {
+			return imgName;
+		}
+		const baseName = imgName.replace(/\.[a-z0-9]+$/i, "");
+		if (imageMapping[baseName]) {
+			return imageMapping[baseName];
+		}
+		// Fallback: Assume it's in the Supabase bucket with the same name
+		const baseUrl =
+			process.env.NEXT_PUBLIC_SUPABASE_URL ||
+			"https://ntudizdvtyhhrxpafuyj.supabase.co";
+		return `${baseUrl}/storage/v1/object/public/product-images/${baseName}`;
+	};
+
+	imageUrl = resolveImageUrl(imageUrl);
+
+	// Extract additional images from row 9, split by commas, and map them if available
+	const rawAdditionalImages = (row[9] || "")?.trim();
+	let additionalImages: string[] = [];
+	if (rawAdditionalImages) {
+		const parts = rawAdditionalImages
+			.split(",")
+			.map((img) => img.trim())
+			.filter((img) => img.length > 0);
+		for (const imgName of parts) {
+			const resolvedUrl = resolveImageUrl(imgName);
+			if (resolvedUrl) additionalImages.push(resolvedUrl);
+		}
+	}
+
+	const detailedSpecs = (row[10] || "")?.trim() || "";
 
 	if (!name) {
 		return { valid: false, error: `Row ${rowIndex}: Product name is required` };
@@ -127,6 +167,7 @@ function validateProduct(
 			status: normalizedStatus,
 			stock: isNaN(stock) ? 0 : stock,
 			image_url: imageUrl,
+			additional_images: additionalImages,
 			detailed_specs: detailedSpecs,
 		},
 	};
@@ -136,9 +177,19 @@ export async function POST(request: NextRequest) {
 	try {
 		const formData = await request.formData();
 		const file = formData.get("file") as File | null;
+		const imageMappingStr = formData.get("imageMapping") as string | null;
 
 		if (!file) {
 			return NextResponse.json({ error: "No file provided" }, { status: 400 });
+		}
+
+		let imageMapping: Record<string, string> = {};
+		if (imageMappingStr) {
+			try {
+				imageMapping = JSON.parse(imageMappingStr);
+			} catch (e) {
+				console.warn("Failed to parse imageMapping JSON:", e);
+			}
 		}
 
 		// Validate file type
@@ -190,7 +241,7 @@ export async function POST(request: NextRequest) {
 			for (let i = 0; i < batch.length; i++) {
 				const rowIndex = batchStart + i + 2; // 1-indexed, skip header
 				const parsedRow = parseCSVLine(batch[i] as string);
-				const result = validateProduct(parsedRow, rowIndex);
+				const result = validateProduct(parsedRow, rowIndex, imageMapping);
 
 				if (result.valid) {
 					validProducts.push(result.product);
@@ -201,51 +252,60 @@ export async function POST(request: NextRequest) {
 			}
 
 			if (validProducts.length > 0) {
-				// Insert batch into Supabase
-				const { error: insertError } = await supabase.from("products").insert(
-					validProducts.map((p) => ({
-						name: p.name,
-						description: p.description,
-						price: p.price,
-						original_price: p.original_price,
-						category: p.category,
-						condition: p.condition,
-						status: p.status,
-						stock: p.stock,
-						image_url: p.image_url || null,
-						detailed_specs: p.detailed_specs,
-					})),
-				);
+				// Insert products individually to retrieve their generated IDs for linking additional images
+				for (const product of validProducts) {
+					const { data: insertedProduct, error: singleError } = await supabase
+						.from("products")
+						.insert({
+							name: product.name,
+							description: product.description,
+							price: product.price,
+							original_price: product.original_price,
+							category: product.category,
+							condition: product.condition,
+							status: product.status,
+							stock: product.stock,
+							image_url: product.image_url || null,
+							detailed_specs: product.detailed_specs,
+						})
+						.select("id")
+						.single();
 
-				if (insertError) {
-					// If batch insert fails, try individual inserts
-					for (const product of validProducts) {
-						const { error: singleError } = await supabase
-							.from("products")
-							.insert({
-								name: product.name,
-								description: product.description,
-								price: product.price,
-								original_price: product.original_price,
-								category: product.category,
-								condition: product.condition,
-								status: product.status,
-								stock: product.stock,
-								image_url: product.image_url || null,
-								detailed_specs: product.detailed_specs,
-							});
+					if (singleError) {
+						results.failed++;
+						results.errors.push(
+							`Failed to insert "${product.name}": ${singleError.message}`,
+						);
+						continue;
+					}
 
-						if (singleError) {
-							results.failed++;
+					// Insert additional images if they exist
+					if (
+						product.additional_images &&
+						product.additional_images.length > 0
+					) {
+						const additionalImagesData = product.additional_images.map(
+							(url, idx) => ({
+								product_id: insertedProduct.id,
+								image_url: url,
+								display_order: idx + 1,
+							}),
+						);
+
+						const { error: imagesError } = await supabase
+							.from("product_images")
+							.insert(additionalImagesData);
+
+						if (imagesError) {
 							results.errors.push(
-								`Failed to insert "${product.name}": ${singleError.message}`,
+								`Failed to link additional images for "${product.name}": ${imagesError.message}`,
 							);
-						} else {
-							results.successful++;
+							// We still count the product as successful since the main record was created,
+							// but we log the image error.
 						}
 					}
-				} else {
-					results.successful += validProducts.length;
+
+					results.successful++;
 				}
 			}
 		}

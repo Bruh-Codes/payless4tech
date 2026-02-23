@@ -4598,6 +4598,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/papaparse@npm:^5.5.2":
+  version: 5.5.2
+  resolution: "@types/papaparse@npm:5.5.2"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10c0/27b097b6f8f204b20ade1f2cbf4798eb38caa5fbfa3180fd0faa5e3f9aea371c1786ae180d56f3287556463eefe3100c953e316ea6ee99d7ae1d04111cfc9e50
+  languageName: node
+  linkType: hard
+
 "@types/pg@npm:^8.16.0":
   version: 8.16.0
   resolution: "@types/pg@npm:8.16.0"
@@ -7933,6 +7942,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"papaparse@npm:^5.5.3":
+  version: 5.5.3
+  resolution: "papaparse@npm:5.5.3"
+  checksum: 10c0/623aae6a35703308fd5a39d616fb3837231ebc70697346355ea508154d3f24df75b6554b736afc1924192205518a5db14e75f5e1cf35d154326050a37cdd9447
+  languageName: node
+  linkType: hard
+
 "parseley@npm:^0.12.0":
   version: 0.12.1
   resolution: "parseley@npm:0.12.1"
@@ -8031,6 +8047,7 @@ __metadata:
     "@types/minimatch": "npm:^6.0.0"
     "@types/next-pwa": "npm:^5.6.9"
     "@types/node": "npm:^20"
+    "@types/papaparse": "npm:^5.5.2"
     "@types/pg": "npm:^8.16.0"
     "@types/react": "npm:19.2.14"
     "@types/react-dom": "npm:19.2.3"
@@ -8052,6 +8069,7 @@ __metadata:
     next-pwa: "npm:^5.6.0"
     next-themes: "npm:^0.4.6"
     nextjs-toploader: "npm:^3.8.16"
+    papaparse: "npm:^5.5.3"
     pg: "npm:^8.18.0"
     radix-ui: "npm:^1.4.3"
     react: "npm:19.2.4"

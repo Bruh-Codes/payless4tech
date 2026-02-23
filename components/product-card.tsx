@@ -115,7 +115,10 @@ const ProductCard = memo(
 			>
 				{/* Image */}
 				<div className="relative aspect-square overflow-hidden bg-secondary/30 group-hover:bg-secondary/40">
-					{product.image && (
+					{product.image &&
+					(product.image.startsWith("http://") ||
+						product.image.startsWith("https://") ||
+						product.image.startsWith("/")) ? (
 						<Image
 							src={product.image}
 							alt={product.title}
@@ -125,6 +128,10 @@ const ProductCard = memo(
 							width={300}
 							height={300}
 						/>
+					) : (
+						<div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+							No Valid Image
+						</div>
 					)}
 					{/* Admin Status Badge (Left) */}
 					{isAdmin && product.status && (

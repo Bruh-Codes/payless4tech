@@ -285,7 +285,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
 					title: product.name,
 					price: Number(product.price),
 					category: product.category || "",
-					image: product.image_url || "/placeholder-product.jpg",
+					image:
+						product.image_url &&
+						(product.image_url.startsWith("http://") ||
+							product.image_url.startsWith("https://") ||
+							product.image_url.startsWith("/"))
+							? product.image_url
+							: "",
 					...(product.original_price && {
 						originalPrice: parseFloat(product.original_price),
 					}),
@@ -501,15 +507,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
 											<div className="grid grid-cols-2 gap-4 mt-4">
 												{/* Current main image */}
 												{!newMainImage && !mainImageRemoved && (
-													<div className="relative border rounded-lg overflow-hidden shadow-sm group">
-														<Image
-															priority
-															alt={product.name}
-															src={product.image_url}
-															width={200}
-															height={200}
-															className="object-cover w-full h-[150px]"
-														/>
+													<div className="relative border rounded-lg overflow-hidden shadow-sm group bg-gray-50 flex items-center justify-center">
+														{product.image_url &&
+														(product.image_url.startsWith("http://") ||
+															product.image_url.startsWith("https://") ||
+															product.image_url.startsWith("/")) ? (
+															<Image
+																priority
+																alt={product.name}
+																src={product.image_url}
+																width={200}
+																height={200}
+																className="object-cover w-full h-[150px]"
+															/>
+														) : (
+															<div className="text-gray-400 text-sm h-[150px] flex items-center">
+																No Valid Image
+															</div>
+														)}
 														<span className="absolute bg-blue-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
 															Current Main Image
 														</span>
@@ -606,7 +621,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																	<div className="w-full h-[150px] flex items-center justify-center bg-black">
 																		<span className="animate-spin rounded-full border-4 border-gray-300 border-t-blue-500 h-8 w-8"></span>
 																	</div>
-																) : imageUrl ? (
+																) : imageUrl &&
+																  (imageUrl.startsWith("http://") ||
+																		imageUrl.startsWith("https://") ||
+																		imageUrl.startsWith("/")) ? (
 																	<Image
 																		alt={additionalImage.id}
 																		src={imageUrl}
@@ -615,8 +633,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																		className="object-cover w-full h-[150px]"
 																	/>
 																) : (
-																	<div className="w-full h-[150px] flex items-center justify-center text-gray-400 text-sm italic">
-																		No Image
+																	<div className="w-full h-[150px] flex items-center justify-center bg-gray-50 text-gray-400 text-sm italic">
+																		No Valid Image
 																	</div>
 																)}
 
