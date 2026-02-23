@@ -119,7 +119,23 @@ function validateProduct(
 		}
 	}
 
-	const detailedSpecs = (row[10] || "")?.trim() || "";
+	let detailedSpecs = (row[10] || "")?.trim() || "";
+
+	// Parse 'Key:Value|Key:Value' into a JSON string
+	if (detailedSpecs && detailedSpecs.includes(":")) {
+		try {
+			const specsArray = detailedSpecs.split("|").map((pair) => {
+				const [key, ...valueParts] = pair.split(":");
+				return {
+					key: key?.trim() || "Details",
+					value: valueParts.join(":").trim(),
+				};
+			});
+			detailedSpecs = JSON.stringify(specsArray);
+		} catch (error) {
+			console.warn("Could not parse detailed_specs, storing as string.", error);
+		}
+	}
 
 	if (!name) {
 		return { valid: false, error: `Row ${rowIndex}: Product name is required` };

@@ -355,7 +355,7 @@ export function BulkUploadSheet() {
 			"10",
 			"iphone15", // Changed to show base filename instead of URL or full filename
 			"iphone15-side, iphone15-back", // Additional images
-			"A17 Pro chip, 6.7-inch display, 48MP camera",
+			"Processor:A17 Pro|Display:6.7-inch|Camera:48MP",
 		];
 		const csv = [headers.join(","), sampleRow.join(",")].join("\n");
 		const blob = new Blob([csv], { type: "text/csv" });
@@ -719,7 +719,10 @@ export function BulkUploadSheet() {
 										"additional_images",
 										"Comma-separated filenames from Step 1 (e.g. img1.jpg, img2.png).",
 									],
-									["detailed_specs", "Detailed specifications"],
+									[
+										"detailed_specs",
+										"Format as Key:Value|Key:Value (e.g. Storage:256GB|Color:Black).",
+									],
 								].map(([col, desc]) => (
 									<div key={col} className="flex items-start gap-2">
 										<code className="bg-muted rounded px-1.5 py-0.5 text-[11px] font-mono shrink-0">

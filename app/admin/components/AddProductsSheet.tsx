@@ -10,7 +10,7 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { Plus, UploadCloud, X } from "lucide-react";
+import { Plus, UploadCloud, X, Trash2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
@@ -83,11 +83,32 @@ export function AddProductsSheet() {
 	const [isCustomStatus, setIsCustomStatus] = useState(false);
 	const [isCustomCondition, setIsCustomCondition] = useState(false);
 
+	const [specs, setSpecs] = useState([{ key: "", value: "" }]);
+
+	useEffect(() => {
+		const validSpecs = specs.filter((s) => s.key.trim() && s.value.trim());
+		form.setValue(
+			"detailed_specs",
+			validSpecs.length ? JSON.stringify(validSpecs) : "",
+		);
+	}, [specs, form]);
+
+	const addSpec = () => setSpecs([...specs, { key: "", value: "" }]);
+	const removeSpec = (index: number) => {
+		const newSpecs = specs.filter((_, i) => i !== index);
+		setSpecs(newSpecs.length ? newSpecs : [{ key: "", value: "" }]);
+	};
+	const updateSpec = (index: number, field: "key" | "value", val: string) => {
+		const newSpecs = [...specs];
+		if (newSpecs[index]) {
+			newSpecs[index][field] = val;
+			setSpecs(newSpecs);
+		}
+	};
+
 	// Use the hook for product creation
 	const {
-		newProduct,
 		isLoading,
-		session,
 		handleFormChange,
 		handleSubmit: hookHandleSubmit,
 	} = useProductForm({
@@ -233,384 +254,428 @@ export function AddProductsSheet() {
 						onSubmit={form.handleSubmit(onSubmit)}
 						className="p-5 overflow-y-auto"
 					>
-						<div className="grid gap-4">
-							<FormField
-								control={form.control}
-								name="name"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Product Name</FormLabel>
-										<FormControl>
-											<Input
-												placeholder="Product name"
-												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="stock"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Stock</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												min={1}
-												placeholder="Stock"
-												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
-												onWheel={(e) => e.currentTarget.blur()}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="price"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Price (₵)</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												min={1}
-												placeholder="Price"
-												{...field}
-												onChange={(e) =>
-													field.onChange(e.target.value.toString())
-												}
-												onWheel={(e) => e.currentTarget.blur()}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="original_price"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Market Price (₵)</FormLabel>
-										<FormControl>
-											<Input
-												type="number"
-												min={0}
-												placeholder="Market Price"
-												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
-												onWheel={(e) => e.currentTarget.blur()}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Description</FormLabel>
-										<FormControl>
-											<Textarea
-												rows={3}
-												placeholder="Product description"
-												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="detailed_specs"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Detailed Specifications</FormLabel>
-										<FormControl>
-											<Textarea
-												rows={3}
-												placeholder="Detailed Specifications"
-												{...field}
-												onChange={(e) => field.onChange(e.target.value)}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-
-							<FormField
-								control={form.control}
-								name="image_url"
-								render={() => {
-									return (
+						<fieldset disabled={isLoading}>
+							<div className="grid gap-4">
+								<FormField
+									control={form.control}
+									name="name"
+									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Upload Product Images</FormLabel>
+											<FormLabel>Product Name</FormLabel>
 											<FormControl>
-												<div className="flex flex-col items-start gap-2">
-													<Input
-														type="file"
-														accept="image/*"
-														multiple={false}
-														className="hidden"
-														ref={fileInputRef}
-														onChange={(e) => {
-															handleChange(e);
-															const files = e.target.files;
-															if (files && files.length > 0) {
-																// Set the first file's URL for validation
-																form.setValue(
-																	"image_url",
-																	URL.createObjectURL(files[0]),
-																);
-															} else {
-																form.setValue("image_url", "");
-															}
-														}}
-													/>
-													<Button
-														variant="outline"
-														type="button"
-														onClick={handleClick}
-														className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
-													>
-														<UploadCloud className="w-4 h-4" />
-														Upload Product Images
-													</Button>
-
-													{selectedFiles.length > 0 && (
-														<>
-															<ul className="grid grid-cols-2 gap-4 mt-4">
-																{selectedFiles.map((file, idx) => (
-																	<li
-																		key={idx}
-																		className="relative border rounded-lg overflow-hidden shadow-sm group"
-																	>
-																		<Image
-																			alt={file.name}
-																			src={URL.createObjectURL(file)}
-																			width={200}
-																			height={200}
-																			className="object-cover w-full h-[150px]"
-																		/>
-																		<span
-																			className={cn(
-																				"absolute top-1 left-1 text-xs bg-white text-gray-800 px-2 py-0.5 rounded",
-																				{ "bg-blue-500 text-white": idx === 0 },
-																			)}
-																		>
-																			{idx === 0
-																				? "Product image"
-																				: "Additional"}
-																		</span>
-																		<Button
-																			type="button"
-																			onClick={() => removeFile(idx)}
-																			className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-500 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
-																		>
-																			<X />
-																		</Button>
-																		<p className="text-sm text-center py-2 px-1 bg-gray-50 text-gray-700 truncate">
-																			{file.name}
-																		</p>
-																	</li>
-																))}
-															</ul>
-														</>
-													)}
-												</div>
+												<Input
+													placeholder="Product name"
+													{...field}
+													onChange={(e) => field.onChange(e.target.value)}
+												/>
 											</FormControl>
 											<FormMessage />
 										</FormItem>
-									);
-								}}
-							/>
-							<div className="grid grid-cols-2 gap-4">
+									)}
+								/>
 								<FormField
 									control={form.control}
-									name="category"
+									name="stock"
 									render={({ field }) => (
 										<FormItem>
-											<FormLabel>Category</FormLabel>
-											<Select
-												onValueChange={(value) => {
-													if (value === "custom") {
-														setIsCustomCategory(true);
-													} else {
-														setIsCustomCategory(false);
-														field.onChange(value);
+											<FormLabel>Stock</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													min={1}
+													placeholder="Stock"
+													{...field}
+													onChange={(e) => field.onChange(e.target.value)}
+													onWheel={(e) => e.currentTarget.blur()}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="price"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Price (₵)</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													min={1}
+													placeholder="Price"
+													{...field}
+													onChange={(e) =>
+														field.onChange(e.target.value.toString())
 													}
-												}}
-												value={isCustomCategory ? "custom" : field.value}
-											>
+													onWheel={(e) => e.currentTarget.blur()}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="original_price"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Market Price (₵)</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													min={0}
+													placeholder="Market Price"
+													{...field}
+													onChange={(e) => field.onChange(e.target.value)}
+													onWheel={(e) => e.currentTarget.blur()}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="description"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Description</FormLabel>
+											<FormControl>
+												<Textarea
+													rows={3}
+													placeholder="Product description"
+													{...field}
+													onChange={(e) => field.onChange(e.target.value)}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="detailed_specs"
+									render={() => (
+										<FormItem>
+											<FormLabel>Detailed Specifications</FormLabel>
+											<div className="space-y-2">
+												{specs.map((spec, index) => (
+													<div key={index} className="flex items-center gap-2">
+														<Input
+															placeholder="Key (e.g. Brand)"
+															value={spec.key}
+															onChange={(e) =>
+																updateSpec(index, "key", e.target.value)
+															}
+															className="flex-1"
+														/>
+														<Input
+															placeholder="Value (e.g. Apple)"
+															value={spec.value}
+															onChange={(e) =>
+																updateSpec(index, "value", e.target.value)
+															}
+															className="flex-1"
+														/>
+														<Button
+															type="button"
+															variant="outline"
+															size="icon"
+															className="shrink-0"
+															onClick={() => removeSpec(index)}
+														>
+															<Trash2 className="h-4 w-4 text-destructive" />
+														</Button>
+													</div>
+												))}
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													onClick={addSpec}
+													className="mt-2 text-xs h-8"
+												>
+													<Plus className="h-3 w-3 mr-1" /> Add Spec
+												</Button>
+											</div>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="image_url"
+									render={() => {
+										return (
+											<FormItem>
+												<FormLabel>Upload Product Images</FormLabel>
 												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select category" />
-													</SelectTrigger>
+													<div className="flex flex-col items-start gap-2">
+														<Input
+															type="file"
+															accept="image/*"
+															multiple={true}
+															className="hidden"
+															ref={fileInputRef}
+															onChange={(e) => {
+																handleChange(e);
+																const files = e.target.files;
+																const firstFile = files?.[0];
+																if (firstFile) {
+																	// Set the first file's URL for validation
+																	form.setValue(
+																		"image_url",
+																		URL.createObjectURL(firstFile),
+																	);
+																} else {
+																	form.setValue("image_url", "");
+																}
+															}}
+														/>
+														<Button
+															variant="outline"
+															type="button"
+															onClick={handleClick}
+															className="flex items-center gap-2 cursor-pointer hover:bg-green-300 bg-green-200 text-green-900"
+														>
+															<UploadCloud className="w-4 h-4" />
+															Upload Product Images
+														</Button>
+
+														{selectedFiles.length > 0 && (
+															<>
+																<ul className="grid grid-cols-2 gap-4 mt-4">
+																	{selectedFiles.map((file, idx) => (
+																		<li
+																			key={idx}
+																			className="relative border rounded-lg overflow-hidden shadow-sm group"
+																		>
+																			<Image
+																				alt={file.name}
+																				src={URL.createObjectURL(file)}
+																				width={200}
+																				height={200}
+																				className="object-cover w-full h-[150px]"
+																			/>
+																			<span
+																				className={cn(
+																					"absolute top-1 left-1 text-xs bg-white text-gray-800 px-2 py-0.5 rounded",
+																					{
+																						"bg-blue-500 text-white": idx === 0,
+																					},
+																				)}
+																			>
+																				{idx === 0
+																					? "Product image"
+																					: "Additional"}
+																			</span>
+																			<Button
+																				type="button"
+																				onClick={() => removeFile(idx)}
+																				className="absolute shrink-0 cursor-pointer top-1 right-1 bg-red-500 text-white rounded-full size-5 hover:bg-red-500 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition"
+																			>
+																				<X />
+																			</Button>
+																			<p className="text-sm text-center py-2 px-1 bg-gray-50 text-gray-700 truncate">
+																				{file.name}
+																			</p>
+																		</li>
+																	))}
+																</ul>
+															</>
+														)}
+													</div>
 												</FormControl>
-												<SelectContent>
-													<SelectGroup>
-														<SelectItem value="consumer-electronics">
-															Electronics
-														</SelectItem>
-														<SelectItem value="laptops">Laptops</SelectItem>
-														<SelectItem value="phones">Phones</SelectItem>
-														<SelectItem value="audio">Audio</SelectItem>
-														<SelectItem value="others">Others</SelectItem>
+												<FormMessage />
+											</FormItem>
+										);
+									}}
+								/>
+								<div className="grid grid-cols-2 gap-4">
+									<FormField
+										control={form.control}
+										name="category"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Category</FormLabel>
+												<Select
+													onValueChange={(value) => {
+														if (value === "custom") {
+															setIsCustomCategory(true);
+														} else {
+															setIsCustomCategory(false);
+															field.onChange(value);
+														}
+													}}
+													value={isCustomCategory ? "custom" : field.value}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Select category" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectGroup>
+															<SelectItem value="consumer-electronics">
+																Electronics
+															</SelectItem>
+															<SelectItem value="laptops">Laptops</SelectItem>
+															<SelectItem value="phones">Phones</SelectItem>
+															<SelectItem value="audio">Audio</SelectItem>
+															<SelectItem value="others">Others</SelectItem>
+															<SelectItem value="custom">
+																+ Add Custom...
+															</SelectItem>
+														</SelectGroup>
+													</SelectContent>
+												</Select>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+
+									{isCustomCategory && (
+										<FormField
+											control={form.control}
+											name="custom_category"
+											render={({ field }) => (
+												<FormItem className="col-span-2">
+													<FormLabel>Custom Category Name</FormLabel>
+													<FormControl>
+														<Input placeholder="Enter category..." {...field} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									)}
+
+									<FormField
+										control={form.control}
+										name="status"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Status</FormLabel>
+												<Select
+													onValueChange={(value) => {
+														if (value === "custom") {
+															setIsCustomStatus(true);
+														} else {
+															setIsCustomStatus(false);
+															field.onChange(value);
+														}
+													}}
+													value={isCustomStatus ? "custom" : field.value}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Select status" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectGroup>
+															<SelectItem value="available">
+																Available
+															</SelectItem>
+															<SelectItem value="unavailable">
+																Unavailable
+															</SelectItem>
+															<SelectItem value="new">New</SelectItem>
+															<SelectItem value="low-stock">
+																Low Stock
+															</SelectItem>
+															<SelectItem value="custom">
+																+ Add Custom...
+															</SelectItem>
+														</SelectGroup>
+													</SelectContent>
+												</Select>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+
+									{isCustomStatus && (
+										<FormField
+											control={form.control}
+											name="custom_status"
+											render={({ field }) => (
+												<FormItem className="col-span-2">
+													<FormLabel>Custom Status</FormLabel>
+													<FormControl>
+														<Input placeholder="Enter status..." {...field} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									)}
+
+									<FormField
+										control={form.control}
+										name="condition"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Condition</FormLabel>
+												<Select
+													onValueChange={(value) => {
+														if (value === "custom") {
+															setIsCustomCondition(true);
+														} else {
+															setIsCustomCondition(false);
+															field.onChange(value);
+														}
+													}}
+													value={isCustomCondition ? "custom" : field.value}
+												>
+													<FormControl>
+														<SelectTrigger>
+															<SelectValue placeholder="Select condition" />
+														</SelectTrigger>
+													</FormControl>
+													<SelectContent>
+														<SelectItem value="New">New</SelectItem>
+														<SelectItem value="Open Box">Open Box</SelectItem>
+														<SelectItem value="Renewed">Renewed</SelectItem>
+														<SelectItem value="Used">Used</SelectItem>
 														<SelectItem value="custom">
 															+ Add Custom...
 														</SelectItem>
-													</SelectGroup>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								{isCustomCategory && (
-									<FormField
-										control={form.control}
-										name="custom_category"
-										render={({ field }) => (
-											<FormItem className="col-span-2">
-												<FormLabel>Custom Category Name</FormLabel>
-												<FormControl>
-													<Input placeholder="Enter category..." {...field} />
-												</FormControl>
+													</SelectContent>
+												</Select>
 												<FormMessage />
 											</FormItem>
 										)}
 									/>
-								)}
 
-								<FormField
-									control={form.control}
-									name="status"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Status</FormLabel>
-											<Select
-												onValueChange={(value) => {
-													if (value === "custom") {
-														setIsCustomStatus(true);
-													} else {
-														setIsCustomStatus(false);
-														field.onChange(value);
-													}
-												}}
-												value={isCustomStatus ? "custom" : field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select status" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectGroup>
-														<SelectItem value="available">Available</SelectItem>
-														<SelectItem value="unavailable">
-															Unavailable
-														</SelectItem>
-														<SelectItem value="new">New</SelectItem>
-														<SelectItem value="low-stock">Low Stock</SelectItem>
-														<SelectItem value="custom">
-															+ Add Custom...
-														</SelectItem>
-													</SelectGroup>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
+									{isCustomCondition && (
+										<FormField
+											control={form.control}
+											name="custom_condition"
+											render={({ field }) => (
+												<FormItem className="col-span-2">
+													<FormLabel>Custom Condition</FormLabel>
+													<FormControl>
+														<Input
+															placeholder="Enter condition..."
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
 									)}
-								/>
-
-								{isCustomStatus && (
-									<FormField
-										control={form.control}
-										name="custom_status"
-										render={({ field }) => (
-											<FormItem className="col-span-2">
-												<FormLabel>Custom Status</FormLabel>
-												<FormControl>
-													<Input placeholder="Enter status..." {...field} />
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								)}
-
-								<FormField
-									control={form.control}
-									name="condition"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Condition</FormLabel>
-											<Select
-												onValueChange={(value) => {
-													if (value === "custom") {
-														setIsCustomCondition(true);
-													} else {
-														setIsCustomCondition(false);
-														field.onChange(value);
-													}
-												}}
-												value={isCustomCondition ? "custom" : field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select condition" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="New">New</SelectItem>
-													<SelectItem value="Open Box">Open Box</SelectItem>
-													<SelectItem value="Renewed">Renewed</SelectItem>
-													<SelectItem value="Used">Used</SelectItem>
-													<SelectItem value="custom">
-														+ Add Custom...
-													</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								{isCustomCondition && (
-									<FormField
-										control={form.control}
-										name="custom_condition"
-										render={({ field }) => (
-											<FormItem className="col-span-2">
-												<FormLabel>Custom Condition</FormLabel>
-												<FormControl>
-													<Input placeholder="Enter condition..." {...field} />
-												</FormControl>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
-								)}
+								</div>
 							</div>
-						</div>
-						<SheetFooter>
-							<Button type="submit">
-								{isLoading ? "please wait..." : "Add To Products"}
-							</Button>
-						</SheetFooter>
+							<SheetFooter className="mt-6">
+								<Button type="submit" disabled={isLoading}>
+									{isLoading ? "please wait..." : "Add To Products"}
+								</Button>
+							</SheetFooter>
+						</fieldset>
 					</form>
 				</Form>
 			</SheetContent>
