@@ -33,6 +33,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -376,30 +383,59 @@ const PreorderTable = () => {
 						<TableBody>
 							{table?.getRowModel().rows?.length ? (
 								table?.getRowModel().rows.map((row) => {
-									const isPending =
-										row.original.fulfillment_status === "pending";
 									return (
-										<TableRow
-											key={row.id}
-											data-state={row.getIsSelected() && "selected"}
-											onDoubleClick={() => handleViewDetails(row.original.id)}
-											className={
-												isPending
-													? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30 cursor-pointer"
-													: "cursor-pointer"
-											}
-										>
-											{row.getVisibleCells().map((cell) => {
-												return (
-													<TableCell key={cell.id}>
-														{flexRender(
-															cell.column.columnDef.cell,
-															cell.getContext(),
-														)}
-													</TableCell>
-												);
-											})}
-										</TableRow>
+										<ContextMenu key={row.id}>
+											<ContextMenuTrigger asChild>
+												<TableRow
+													data-state={row.getIsSelected() && "selected"}
+													onDoubleClick={() =>
+														handleViewDetails(row.original.id)
+													}
+													className="cursor-pointer"
+												>
+													{row.getVisibleCells().map((cell) => {
+														return (
+															<TableCell key={cell.id}>
+																{flexRender(
+																	cell.column.columnDef.cell,
+																	cell.getContext(),
+																)}
+															</TableCell>
+														);
+													})}
+												</TableRow>
+											</ContextMenuTrigger>
+											<ContextMenuContent className="w-48">
+												<ContextMenuItem
+													onClick={() => handleViewDetails(row.original.id)}
+												>
+													View Details
+												</ContextMenuItem>
+												<ContextMenuSeparator />
+												<ContextMenuItem
+													onClick={() =>
+														handleMarkAsDelivered(Number(row.original.id))
+													}
+													disabled={
+														row?.original.fulfillment_status?.toLowerCase() !==
+														"pending"
+													}
+												>
+													Mark Delivered
+												</ContextMenuItem>
+												<ContextMenuSeparator />
+												<ContextMenuItem
+													disabled={
+														row?.original.fulfillment_status?.toLowerCase() ===
+														"pending"
+													}
+													onClick={() => handleDelete(Number(row.original.id))}
+													className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
+												>
+													Delete
+												</ContextMenuItem>
+											</ContextMenuContent>
+										</ContextMenu>
 									);
 								})
 							) : (

@@ -38,6 +38,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -126,7 +133,7 @@ const columns = (
 						row.original.fulfillment_status === "pending",
 				})}
 			>
-				{row.original.status === "completed" ? (
+				{row.original.status === "paid" ? (
 					<IconCircleCheckFilled className="fill-green-800 dark:fill-green-900" />
 				) : (
 					<IconLoader />
@@ -200,7 +207,7 @@ const columns = (
 			<Badge
 				variant="outline"
 				className={cn("text-muted-foreground px-1.5", {
-					"bg-blue-400 text-white border-blue-500":
+					"bg-sidebar-accent text-sidebar-accent-foreground":
 						row.original.fulfillment_status === "pending",
 				})}
 			>
@@ -516,32 +523,70 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 									<TableBody>
 										{table?.getRowModel().rows?.length ? (
 											table?.getRowModel().rows.map((row) => {
-												const isPending =
-													row.original.fulfillment_status === "pending";
+												const isActiveRow =
+													row.original.status === "paid" &&
+													row.original.fulfillment_status !== "delivered";
 												return (
-													<TableRow
-														key={row.id}
-														data-state={row.getIsSelected() && "selected"}
-														onDoubleClick={() =>
-															handleViewDetails(row.original.id)
-														}
-														className={
-															isPending
-																? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30 cursor-pointer"
-																: "cursor-pointer"
-														}
-													>
-														{row.getVisibleCells().map((cell) => {
-															return (
-																<TableCell key={cell.id}>
-																	{flexRender(
-																		cell.column.columnDef.cell,
-																		cell.getContext(),
-																	)}
-																</TableCell>
-															);
-														})}
-													</TableRow>
+													<ContextMenu key={row.id}>
+														<ContextMenuTrigger asChild>
+															<TableRow
+																data-state={row.getIsSelected() && "selected"}
+																onDoubleClick={() =>
+																	handleViewDetails(row.original.id)
+																}
+																className={
+																	isActiveRow
+																		? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 cursor-pointer"
+																		: "cursor-pointer"
+																}
+															>
+																{row.getVisibleCells().map((cell) => {
+																	return (
+																		<TableCell key={cell.id}>
+																			{flexRender(
+																				cell.column.columnDef.cell,
+																				cell.getContext(),
+																			)}
+																		</TableCell>
+																	);
+																})}
+															</TableRow>
+														</ContextMenuTrigger>
+														<ContextMenuContent className="w-48">
+															<ContextMenuItem
+																onClick={() =>
+																	handleViewDetails(row.original.id)
+																}
+															>
+																View Details
+															</ContextMenuItem>
+															<ContextMenuSeparator />
+															<ContextMenuItem
+																disabled={
+																	row?.original.fulfillment_status !== "pending"
+																}
+																onClick={() =>
+																	handleMarkAsDelivered(
+																		row.original.id,
+																		salesData,
+																		setSalesData,
+																	)
+																}
+															>
+																Mark Delivered
+															</ContextMenuItem>
+															<ContextMenuSeparator />
+															<ContextMenuItem
+																disabled={
+																	row?.original.fulfillment_status === "pending"
+																}
+																onClick={() => handleDelete(row.original.id)}
+																className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
+															>
+																Delete
+															</ContextMenuItem>
+														</ContextMenuContent>
+													</ContextMenu>
 												);
 											})
 										) : (

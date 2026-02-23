@@ -65,16 +65,13 @@ export default function SalesTableWrapper() {
 	}
 
 	const sortedSales = sales?.sort((a, b) => {
-		if (
-			a.fulfillment_status === "pending" &&
-			b.fulfillment_status !== "pending"
-		)
-			return -1;
-		if (
-			a.fulfillment_status !== "pending" &&
-			b.fulfillment_status === "pending"
-		)
-			return 1;
+		const aIsActive =
+			a.status === "paid" && a.fulfillment_status !== "delivered";
+		const bIsActive =
+			b.status === "paid" && b.fulfillment_status !== "delivered";
+
+		if (aIsActive && !bIsActive) return -1;
+		if (!aIsActive && bIsActive) return 1;
 		return 0;
 	});
 

@@ -21,6 +21,17 @@ const Page = () => {
 		toast.error(error.message);
 	}
 
+	const sortedArchivedSales = archived_sales?.data?.sort((a, b) => {
+		const aIsActive =
+			a.status === "paid" && a.fulfillment_status !== "delivered";
+		const bIsActive =
+			b.status === "paid" && b.fulfillment_status !== "delivered";
+
+		if (aIsActive && !bIsActive) return -1;
+		if (!aIsActive && bIsActive) return 1;
+		return 0;
+	});
+
 	return (
 		<div className="container space-y-5 mx-auto">
 			<div className="flex flex-col mb-6">
@@ -32,7 +43,7 @@ const Page = () => {
 					View history of completed and cancelled sales orders.
 				</p>
 			</div>
-			<ArchivedDataTable data={(archived_sales?.data ?? []) as salesType[]} />
+			<ArchivedDataTable data={(sortedArchivedSales ?? []) as salesType[]} />
 		</div>
 	);
 };

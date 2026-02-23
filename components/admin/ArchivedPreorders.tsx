@@ -33,6 +33,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	ContextMenu,
+	ContextMenuContent,
+	ContextMenuItem,
+	ContextMenuSeparator,
+	ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -316,29 +323,40 @@ const ArchivedPreorders = ({
 						<TableBody>
 							{table?.getRowModel().rows?.length ? (
 								table?.getRowModel().rows.map((row) => {
-									const isPending =
-										row.original.fulfillment_status === "pending";
 									return (
-										<TableRow
-											key={row.id}
-											data-state={row.getIsSelected() && "selected"}
-											className={
-												isPending
-													? "bg-blue-100 hover:bg-blue-200 text-white dark:bg-yellow-900/30"
-													: ""
-											}
-										>
-											{row.getVisibleCells().map((cell) => {
-												return (
-													<TableCell key={cell.id}>
-														{flexRender(
-															cell.column.columnDef.cell,
-															cell.getContext(),
-														)}
-													</TableCell>
-												);
-											})}
-										</TableRow>
+										<ContextMenu key={row.id}>
+											<ContextMenuTrigger asChild>
+												<TableRow
+													data-state={row.getIsSelected() && "selected"}
+													className=""
+												>
+													{row.getVisibleCells().map((cell) => {
+														return (
+															<TableCell key={cell.id}>
+																{flexRender(
+																	cell.column.columnDef.cell,
+																	cell.getContext(),
+																)}
+															</TableCell>
+														);
+													})}
+												</TableRow>
+											</ContextMenuTrigger>
+											<ContextMenuContent className="w-48">
+												<ContextMenuItem
+													onClick={() => handleRestoreArchived(row.original.id)}
+												>
+													Restore
+												</ContextMenuItem>
+												<ContextMenuSeparator />
+												<ContextMenuItem
+													onClick={() => handleDeletePermanent(row.original.id)}
+													className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
+												>
+													Delete
+												</ContextMenuItem>
+											</ContextMenuContent>
+										</ContextMenu>
 									);
 								})
 							) : (

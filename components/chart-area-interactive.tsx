@@ -165,7 +165,7 @@ export function ChartAreaInteractive() {
 		<Card className="w-full">
 			<CardHeader>
 				<CardTitle className="text-lg">Revenue Over Time</CardTitle>
-				<CardDescription className="text-orange-300">
+				<CardDescription className="text-orange-500">
 					Total Revenue: ${formatCurrency(totalRevenue)}
 					{" • "}
 					Avg Order Value: {formatCurrency(avgOrderValue)}

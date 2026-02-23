@@ -1,11 +1,10 @@
 "use client";
 
 import {
-	IconCreditCard,
 	IconDotsVertical,
 	IconLogout,
-	IconNotification,
-	IconUserCircle,
+	IconMoon,
+	IconSun,
 } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,39 +23,26 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useRouter } from "next/navigation";
-
-export function NavUser() {
+export function NavUser({
+	user,
+}: {
+	user: {
+		name: string;
+		email: string;
+		avatar: string;
+	};
+}) {
 	const { isMobile } = useSidebar();
-	const router = useRouter();
-
-	const [user, setUser] = useState({
-		name: "",
-		email: "",
-		avatar: "",
-	});
+	const { theme, setTheme, systemTheme } = useTheme();
+	const [mounted, setMounted] = useState(false);
 
 	useEffect(() => {
-		const getSession = async () => {
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			const userData = session?.user;
-			setUser({
-				name: userData?.user_metadata?.full_name || userData?.email || "User",
-				email: userData?.email || "",
-				avatar: userData?.user_metadata?.avatar_url || "",
-			});
-		};
-		getSession();
+		setMounted(true);
 	}, []);
 
-	const handleLogout = async () => {
-		await supabase.auth.signOut();
-		router.push("/");
-	};
+	const currentTheme = theme === "system" ? systemTheme : theme;
 
 	return (
 		<SidebarMenu>
@@ -100,8 +86,28 @@ export function NavUser() {
 								</div>
 							</div>
 						</DropdownMenuLabel>
-
-						<DropdownMenuItem onClick={handleLogout}>
+						<DropdownMenuSeparator />
+						<DropdownMenuGroup>
+							<DropdownMenuItem
+								onClick={(e) => {
+									e.preventDefault();
+									setTheme(currentTheme === "dark" ? "light" : "dark");
+								}}
+							>
+								{mounted ? (
+									currentTheme === "dark" ? (
+										<IconSun />
+									) : (
+										<IconMoon className="dark:text-white" />
+									)
+								) : (
+									<IconMoon className="dark:text-white" />
+								)}
+								Toggle Theme
+							</DropdownMenuItem>
+						</DropdownMenuGroup>
+						<DropdownMenuSeparator />
+						<DropdownMenuItem>
 							<IconLogout />
 							Log out
 						</DropdownMenuItem>

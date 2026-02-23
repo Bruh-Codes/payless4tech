@@ -139,17 +139,6 @@ export default function AdminOverview() {
 			? (uniqueCustomers.length / 1_000_000).toFixed(2) + "M"
 			: Intl.NumberFormat().format(uniqueCustomers.length);
 
-	// Debug the calculated values
-	console.log("Calculated values:", {
-		totalProducts,
-		outOfStock,
-		totalNewProducts,
-		totalCustomers,
-		outOfStockProductsCount: outOfStockProducts.length,
-		newProductsCount: newProducts.length,
-		uniqueCustomersCount: uniqueCustomers.length,
-	});
-
 	return (
 		<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
 			{/* End debug display */}

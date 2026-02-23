@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-const ThemeToggle = () => {
+const ThemeToggle = ({ children }: { children?: React.ReactNode }) => {
 	const { setTheme, theme, systemTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
 
@@ -30,6 +30,7 @@ const ThemeToggle = () => {
 			className="text-foreground"
 			aria-label="Toggle theme"
 		>
+			{children}
 			{currentTheme === "dark" ? (
 				<Sun className="h-5 w-5" />
 			) : (
