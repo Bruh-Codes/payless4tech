@@ -6,11 +6,20 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 	const { email, amount, items } = body;
 	const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
+	const saleId = items && items.length > 0 ? items[0].sale_id : null;
+
 	const params = JSON.stringify({
 		email,
 		amount,
 		callback_url: `${baseUrl}/api/paystack/redirect`,
 		metadata: {
+			custom_fields: [
+				{
+					display_name: "Sale ID",
+					variable_name: "sale_id",
+					value: saleId,
+				},
+			],
 			items: items?.map((item: any) => ({ ...item })),
 		},
 	});

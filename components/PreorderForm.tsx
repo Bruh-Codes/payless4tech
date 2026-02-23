@@ -19,8 +19,9 @@ import {
 import { Textarea } from "./ui/textarea";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Separator } from "./ui/separator";
 import { authClient } from "@/lib/auth-client";
+import { supabase } from "@/integrations/supabase/client";
+import Image from "next/image";
 
 interface PreorderFormProps {
 	isOpen: boolean;
@@ -87,15 +88,11 @@ export const PreorderForm = ({
 	// Listen for custom preorder events from product cards
 	useEffect(() => {
 		const handlePreorderEvent = (event: Event) => {
-			// console.log("Preorder event received:", event);
-
 			// Check if this is a custom event with product data
 			if (event instanceof CustomEvent && event.type === "preorder") {
 				const eventDetail = (event as any).detail;
 
 				if (eventDetail && typeof eventDetail === "object") {
-					console.log("Pre-filling form with product data:", eventDetail);
-
 					// Update form with product information
 					setFormData((prev) => ({
 						...prev,
@@ -127,18 +124,22 @@ export const PreorderForm = ({
 		setIsSubmitting(true);
 
 		try {
-			// // Insert into Supabase
-			// const { error: dbError } = await supabase.from("preorders").insert([
-			// 	{
-			// 		full_name: formData.fullName,
-			// 		email: formData.email,
-			// 		phone_number: formData.phoneNumber,
-			// 		item_type: formData.itemType,
-			// 		specifications: { details: formData.specifications },
-			// 	},
-			// ]);
+			// Insert into Supabase
+			const { error: dbError } = await supabase.from("preorders").insert([
+				{
+					full_name: formData.fullName,
+					email: formData.email,
+					phone_number: formData.phoneNumber,
+					item_type: formData.itemType,
+					specifications: { details: formData.specifications },
+					// Make sure we carry product info if available
+					product_id: userDetails?.productId,
+					product_name: formData.productName,
+					product_image: formData.productImage,
+				},
+			]);
 
-			// if (dbError) throw dbError;
+			if (dbError) throw dbError;
 
 			// Send email notification
 			// const { error: emailError } = await supabase.functions.invoke(
@@ -189,30 +190,42 @@ export const PreorderForm = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[600px] max-w-[90vw] p-4">
-				<DialogHeader>
-					<DialogTitle>Preorder Request</DialogTitle>
-					<DialogDescription>
-						Fill out the form below to place a preorder request.
-					</DialogDescription>
-				</DialogHeader>
-				<Separator />
+			<DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[90vh] p-0 overflow-hidden rounded-2xl flex flex-col gap-0">
+				<div className="px-6 py-5 bg-muted/20 border-b">
+					<DialogHeader>
+						<DialogTitle className="text-xl font-bold">
+							Preorder Request
+						</DialogTitle>
+						<DialogDescription>
+							Fill out the form below to place a preorder request.
+						</DialogDescription>
+					</DialogHeader>
+				</div>
 
 				<motion.form
-					initial={{ opacity: 0, y: 20 }}
+					initial={{ opacity: 0, y: 10 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.3, ease: "easeOut" }}
 					onSubmit={handleSubmit}
-					className="space-y-6 overflow-y-auto max-h-[75vh] px-6 py-4"
+					className="space-y-6 overflow-y-auto px-6 py-6"
 				>
 					{formData.productImage && (
-						<div className="space-y-4">
-							<Label>Product Image</Label>
-							<img
+						<div className="flex gap-4 p-4 rounded-xl bg-muted/40 border border-border/50 items-center shadow-sm">
+							<Image
 								src={formData.productImage}
 								alt={formData.productName}
-								className="w-full h-52 object-cover rounded-lg border border-border"
+								width={96}
+								height={96}
+								className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-lg border bg-background"
 							/>
+							<div className="flex flex-col">
+								<span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+									Requested Item
+								</span>
+								<span className="font-semibold text-base md:text-lg line-clamp-2 text-foreground">
+									{formData.productName}
+								</span>
+							</div>
 						</div>
 					)}
 					<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -311,9 +324,15 @@ export const PreorderForm = ({
 						/>
 					</div>
 
-					<Button type="submit" disabled={isSubmitting}>
-						{isSubmitting ? "Submitting..." : "Submit Preorder"}
-					</Button>
+					<div className="pt-2 pb-4">
+						<Button
+							type="submit"
+							className="w-full h-12 text-base font-semibold rounded-xl transition-all shadow-md"
+							disabled={isSubmitting}
+						>
+							{isSubmitting ? "Submitting Request..." : "Submit Preorder"}
+						</Button>
+					</div>
 				</motion.form>
 			</DialogContent>
 		</Dialog>

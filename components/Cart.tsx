@@ -22,8 +22,14 @@ import { ShoppingCart } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 
 const Cart = () => {
-	const { state, removeItem, updateQuantity, checkout, toggleWarranty } =
-		useCart();
+	const {
+		state,
+		removeItem,
+		updateQuantity,
+		checkout,
+		toggleWarranty,
+		isInitialized,
+	} = useCart();
 	const [isCheckOutLoading, setIsCheckOutLoading] = useState(false);
 	const [triggerSheet, setTriggerSheet] = useState(false);
 	const [checkoutSheetOpen, setCheckoutSheetOpen] = useState(false);
@@ -84,7 +90,7 @@ const Cart = () => {
 						className="relative hover:bg-orange-400 hover:text-white cursor-pointer"
 					>
 						<ShoppingCart className="h-4 w-4" />
-						{state.items.length > 0 && (
+						{isInitialized && state.items.length > 0 && (
 							<Badge
 								variant="destructive"
 								className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
@@ -100,7 +106,11 @@ const Cart = () => {
 					</SheetHeader>
 					<ScrollArea className="h-[calc(100vh-16rem)] flex-1 pr-4">
 						<div className="mt-8">
-							{state.items.length === 0 ? (
+							{!isInitialized ? (
+								<div className="flex justify-center items-center py-8">
+									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+								</div>
+							) : state.items.length === 0 ? (
 								<p className="text-center text-muted-foreground">
 									Your cart is empty
 								</p>
@@ -121,7 +131,11 @@ const Cart = () => {
 														{item.name}
 													</h3>
 													<p className="text-sm text-muted-foreground">
-														₵{item.price.toLocaleString()}
+														₵
+														{(typeof item.price === "object"
+															? (item.price as any).value
+															: item.price
+														).toLocaleString()}
 													</p>
 												</div>
 											</div>

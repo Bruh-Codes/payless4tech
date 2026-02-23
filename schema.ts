@@ -10,7 +10,6 @@ import {
 	foreignKey,
 	index,
 	unique,
-	uniqueIndex,
 	pgPolicy,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -118,6 +117,18 @@ export const account = pgTable(
 	],
 );
 
+export const carts = pgTable("carts", {
+	id: text().primaryKey().notNull(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	items: jsonb("items").default("[]").notNull(),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
+		.defaultNow()
+		.notNull(),
+});
+
 export const archivedSales = pgTable("archived_sales", {
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	id: uuid().defaultRandom().primaryKey().notNull(),
@@ -180,6 +191,8 @@ export const products = pgTable("products", {
 	status: text().default("available"),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	stock: bigint({ mode: "number" }).default(sql`'300'`),
+	isFeatured: boolean("is_featured").default(false),
+	isNewArrival: boolean("is_new_arrival").default(false),
 });
 
 export const saleItems = pgTable(

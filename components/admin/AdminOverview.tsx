@@ -20,8 +20,6 @@ interface Sale {
 }
 
 export default function AdminOverview() {
-	console.log("AdminOverview component rendering...");
-
 	const {
 		data: productsData,
 		isLoading: isLoadingProducts,
@@ -29,13 +27,11 @@ export default function AdminOverview() {
 	} = useQuery({
 		queryKey: ["admin", "products"],
 		queryFn: async () => {
-			console.log("Fetching products...");
 			const { data, error } = await supabase.from("products").select("*");
 			if (error) {
 				console.error("Products query error:", error);
 				throw error;
 			}
-			console.log("Products data:", data);
 			return data as Product[];
 		},
 		staleTime: 1000 * 60 * 5, // 5 minutes
@@ -48,20 +44,17 @@ export default function AdminOverview() {
 	} = useQuery({
 		queryKey: ["admin", "sales"],
 		queryFn: async () => {
-			console.log("Fetching sales...");
 			const { data, error } = await supabase.from("sales").select("*");
 			if (error) {
 				console.error("Sales query error:", error);
 				throw error;
 			}
-			console.log("Sales data:", data);
 			return data as Sale[];
 		},
 		staleTime: 1000 * 60 * 2, // 2 minutes
 	});
 
 	if (isLoadingProducts || isLoadingSales) {
-		console.log("Loading states:", { isLoadingProducts, isLoadingSales });
 		return <AdminCardsSkeleton />;
 	}
 
@@ -86,17 +79,8 @@ export default function AdminOverview() {
 	const products = productsData || [];
 	const sales = salesData || [];
 
-	console.log("Processed data:", {
-		productsLength: products.length,
-		salesLength: sales.length,
-		productsData: !!productsData,
-		salesData: !!salesData,
-		products: products.slice(0, 3), // Log first 3 products
-	});
-
 	// Handle case where no products exist
 	if (!productsData && !isLoadingProducts) {
-		console.warn("Products data is null/undefined and not loading");
 		return (
 			<div className="text-yellow-500 p-4">
 				No products data available. Please refresh the page.

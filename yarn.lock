@@ -6696,6 +6696,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"idb-keyval@npm:^6.2.2":
+  version: 6.2.2
+  resolution: "idb-keyval@npm:6.2.2"
+  checksum: 10c0/b52f0d2937cc2ec9f1da536b0b5c0875af3043ca210714beaffead4ec1f44f2ad322220305fd024596203855224d9e3523aed83e971dfb62ddc21b5b1721aeef
+  languageName: node
+  linkType: hard
+
 "idb@npm:^7.0.1":
   version: 7.1.1
   resolution: "idb@npm:7.1.1"
@@ -8062,6 +8069,7 @@ __metadata:
     embla-carousel-react: "npm:^8.6.0"
     framer-motion: "npm:^12.34.0"
     i: "npm:^0.3.7"
+    idb-keyval: "npm:^6.2.2"
     input-otp: "npm:^1.4.2"
     lodash: "npm:^4.17.21"
     lucide-react: "npm:^0.575.0"

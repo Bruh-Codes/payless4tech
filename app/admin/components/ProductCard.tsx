@@ -58,8 +58,9 @@ export interface Product {
 	condition?: string;
 	original_price?: string;
 	image?: File | null;
-	additionalImages?: File[];
 	detailed_specs?: string;
+	is_featured?: boolean;
+	is_new_arrival?: boolean;
 }
 
 import { z } from "zod";
@@ -76,15 +77,20 @@ import { IconPlus } from "@tabler/icons-react";
 
 interface ProductCardProps {
 	product: Product;
-	onEdit: (product: Product) => void;
 	onDelete: (id: string) => void;
 	onStatusChange: (id: string, status: string) => void;
+	onToggleFlag?: (
+		id: string,
+		field: "is_featured" | "is_new_arrival",
+		value: boolean,
+	) => void;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({
 	product,
 	onDelete,
 	onStatusChange,
+	onToggleFlag,
 }) => {
 	const [toggleSheet, setToggleSheet] = useState(false);
 	const [disableUpdate, setDisableUpdate] = useState(true);
@@ -364,6 +370,34 @@ const ProductCard: React.FC<ProductCardProps> = ({
 						<DropdownMenuItem onClick={() => onDelete(product.id)}>
 							<Trash2 className="mr-2 h-4 w-4 text-red-500" />
 							<span className="text-red-500">Delete</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={() =>
+								onToggleFlag?.(product.id, "is_featured", !product.is_featured)
+							}
+						>
+							<Star className="mr-2 h-4 w-4 text-yellow-500" />
+							<span>
+								{product.is_featured
+									? "Remove Featured Deal"
+									: "Mark as Featured Deal"}
+							</span>
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={() =>
+								onToggleFlag?.(
+									product.id,
+									"is_new_arrival",
+									!product.is_new_arrival,
+								)
+							}
+						>
+							<Star className="mr-2 h-4 w-4 text-blue-500" />
+							<span>
+								{product.is_new_arrival
+									? "Remove New Arrival"
+									: "Mark as New Arrival"}
+							</span>
 						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => onStatusChange(product.id, "new")}>
 							<Star className="mr-2 h-4 w-4" />

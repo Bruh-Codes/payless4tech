@@ -15,6 +15,20 @@
       "when": 1771605665900,
       "tag": "0001_aspiring_stryfe",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771820169964,
+      "tag": "0002_futuristic_justice",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1771824433406,
+      "tag": "0003_absent_sabretooth",
+      "breakpoints": true
     }
   ]
 }

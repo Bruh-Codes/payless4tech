@@ -20,6 +20,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -54,6 +55,8 @@ export const formSchema = z.object({
 	custom_status: z.string().optional(),
 	image: z.union([z.instanceof(File), z.null(), z.undefined()]),
 	additionalImages: z.union([z.array(z.instanceof(File)), z.undefined()]),
+	is_featured: z.boolean().default(false).optional(),
+	is_new_arrival: z.boolean().default(false).optional(),
 });
 
 export function AddProductsSheet() {
@@ -76,6 +79,8 @@ export function AddProductsSheet() {
 			detailed_specs: "",
 			image: undefined,
 			original_price: "1", // string
+			is_featured: false,
+			is_new_arrival: false,
 		},
 	});
 
@@ -212,6 +217,8 @@ export function AddProductsSheet() {
 			detailed_specs: values.detailed_specs || "",
 			stock: values.stock || "",
 			status: finalStatus || "",
+			is_featured: values.is_featured || false,
+			is_new_arrival: values.is_new_arrival || false,
 			image: selectedFiles[0] ?? null, // First file as main image (File | null)
 			additionalImages: selectedFiles.length > 1 ? selectedFiles.slice(1) : [], // File[]
 		};
@@ -668,6 +675,53 @@ export function AddProductsSheet() {
 											)}
 										/>
 									)}
+								</div>
+
+								<div className="grid grid-cols-2 gap-4 mt-4 col-span-2">
+									<FormField
+										control={form.control}
+										name="is_featured"
+										render={({ field }) => (
+											<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+												<div className="space-y-0.5">
+													<FormLabel className="text-base">
+														Featured Deal
+													</FormLabel>
+													<div className="text-sm text-muted-foreground mr-4">
+														Show on homepage.
+													</div>
+												</div>
+												<FormControl>
+													<Switch
+														checked={field.value ?? false}
+														onCheckedChange={field.onChange}
+													/>
+												</FormControl>
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name="is_new_arrival"
+										render={({ field }) => (
+											<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+												<div className="space-y-0.5">
+													<FormLabel className="text-base">
+														New Arrival
+													</FormLabel>
+													<div className="text-sm text-muted-foreground mr-4">
+														Show on homepage.
+													</div>
+												</div>
+												<FormControl>
+													<Switch
+														checked={field.value ?? false}
+														onCheckedChange={field.onChange}
+													/>
+												</FormControl>
+											</FormItem>
+										)}
+									/>
 								</div>
 							</div>
 							<SheetFooter className="mt-6">

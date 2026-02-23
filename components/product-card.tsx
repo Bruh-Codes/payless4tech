@@ -51,10 +51,19 @@ const ProductCard = memo(
 
 		const currencySymbol = getCurrencySymbol(product.currency);
 
-		const discount = product.originalPrice
+		const priceValue =
+			typeof product.price === "object"
+				? (product.price as any).value
+				: product.price;
+		const originalPriceValue = product.originalPrice
+			? typeof product.originalPrice === "object"
+				? (product.originalPrice as any).value
+				: product.originalPrice
+			: undefined;
+
+		const discount = originalPriceValue
 			? Math.round(
-					((product.originalPrice - product.price) / product.originalPrice) *
-						100,
+					((originalPriceValue - priceValue) / originalPriceValue) * 100,
 				)
 			: 0;
 
@@ -69,7 +78,7 @@ const ProductCard = memo(
 			addItem({
 				id: product.id,
 				name: product.title,
-				price: product.price,
+				price: priceValue,
 				quantity: 1,
 				image_url: product.image,
 			});
@@ -190,13 +199,13 @@ const ProductCard = memo(
 					<div className="flex items-baseline gap-2 mb-3">
 						<span className="text-lg font-bold text-foreground">
 							{currencySymbol}
-							{formatPrice(product.price, product.currency)}
+							{formatPrice(priceValue, product.currency)}
 						</span>
-						{product.originalPrice && (
+						{originalPriceValue && (
 							<>
 								<span className="text-sm text-muted-foreground line-through">
 									{currencySymbol}
-									{formatPrice(product.originalPrice, product.currency)}
+									{formatPrice(originalPriceValue, product.currency)}
 								</span>
 								{discount > 0 && (
 									<span className="text-sm font-bold text-orange-500">

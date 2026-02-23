@@ -5,10 +5,14 @@ import React, {
 	useContext,
 	useReducer,
 	useCallback,
+	useEffect,
+	useState,
 } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { getCart, saveCart, clearCartStorage } from "@/lib/indexeddb";
+
 interface CartItem {
 	id: string;
 	name: string;
@@ -37,7 +41,8 @@ type CartAction =
 	| { type: "REMOVE_ITEM"; payload: string }
 	| { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
 	| { type: "TOGGLE_WARRANTY"; payload: boolean }
-	| { type: "CLEAR_CART" };
+	| { type: "CLEAR_CART" }
+	| { type: "SET_CART"; payload: CartState };
 
 const initialState: CartState = {
 	items: [],
@@ -53,10 +58,13 @@ const CartContext = createContext<{
 	toggleWarranty: (value: boolean) => void;
 	clearCart: () => void;
 	checkout: (details: CheckoutDetails) => Promise<void>;
+	isInitialized: boolean;
 } | null>(null);
 
 const cartReducer = (state: CartState, action: CartAction): CartState => {
 	switch (action.type) {
+		case "SET_CART":
+			return action.payload;
 		case "ADD_ITEM": {
 			const existingItem = state.items.find(
 				(item) => item.id === action.payload.id,
@@ -129,7 +137,94 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 	children,
 }) => {
 	const [state, dispatch] = useReducer(cartReducer, initialState);
-	const { data: session } = authClient.useSession();
+	const { data: session, isPending: isSessionPending } =
+		authClient.useSession();
+	const [isInitialized, setIsInitialized] = useState(false);
+
+	// Load cart on mount or authentication change
+	useEffect(() => {
+		const loadInitialCart = async () => {
+			if (isSessionPending) return;
+
+			let loadedCart: CartState | null = null;
+			let localCart = await getCart<CartState>();
+
+			if (session?.user?.id) {
+				// Fetch from Supabase
+				const { data: dbCart, error } = await supabase
+					.from("carts")
+					.select("items")
+					.eq("user_id", session.user.id)
+					.single();
+
+				if (!error && dbCart && Array.isArray(dbCart.items)) {
+					// We only sync items from DB for now, re-calc total
+					const items = dbCart.items as CartItem[];
+					const total = items.reduce(
+						(sum, item) => sum + item.price * item.quantity,
+						0,
+					);
+					loadedCart = { items, total, extendedWarranty: false };
+
+					// Merge local cart if exists and DB was empty
+					if (items.length === 0 && localCart && localCart.items.length > 0) {
+						loadedCart = localCart;
+					}
+				} else if (localCart && localCart.items.length > 0) {
+					// Fallback to local if no DB record exists
+					loadedCart = localCart;
+				}
+			} else {
+				// Load exclusively from IndexedDB for guests
+				if (localCart) {
+					loadedCart = localCart;
+				}
+			}
+
+			if (loadedCart) {
+				dispatch({ type: "SET_CART", payload: loadedCart });
+			}
+
+			setIsInitialized(true);
+		};
+
+		loadInitialCart();
+	}, [session?.user?.id, isSessionPending]);
+
+	// Sync state to IndexedDB and Supabase when it changes
+	useEffect(() => {
+		if (!isInitialized) return;
+
+		// Always keep local updated
+		saveCart(state);
+
+		// If user is logged in, sync to Supabase
+		if (session?.user?.id) {
+			const syncToDb = async () => {
+				const { error } = await supabase.from("carts").upsert(
+					{
+						id: session.user.id, // Assuming cart ID can just mirror User ID or similar. Let's let Postgres handle id generation, or upsert by user_id
+						user_id: session.user.id,
+						items: state.items as any,
+						updated_at: new Date().toISOString(),
+					},
+					{ onConflict: "user_id" },
+				);
+				if (error) {
+					console.error("Failed to sync cart to database:", error);
+				}
+			};
+
+			// Simple debouncing using a timeout
+			const timerId = setTimeout(() => {
+				syncToDb();
+			}, 1000);
+
+			return () => clearTimeout(timerId);
+		}
+
+		return undefined;
+	}, [state, isInitialized, session?.user?.id]);
 
 	const addItem = useCallback((item: CartItem) => {
 		dispatch({ type: "ADD_ITEM", payload: item });
@@ -151,9 +246,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 		dispatch({ type: "TOGGLE_WARRANTY", payload: value });
 	}, []);
 
-	const clearCart = useCallback(() => {
+	const clearCart = useCallback(async () => {
 		dispatch({ type: "CLEAR_CART" });
-	}, []);
+		await clearCartStorage();
+		if (session?.user?.id) {
+			await supabase
+				.from("carts")
+				.update({ items: [] })
+				.eq("user_id", session.user.id);
+		}
+	}, [session?.user?.id]);
 
 	const checkout = useCallback(
 		async (details: CheckoutDetails) => {
@@ -263,6 +365,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 				toggleWarranty,
 				clearCart,
 				checkout,
+				isInitialized,
 			}}
 		>
 			{children}

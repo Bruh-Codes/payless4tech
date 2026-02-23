@@ -18,6 +18,8 @@ export interface ProductFormData {
 	detailed_specs: string;
 	status?: string;
 	stock?: string;
+	is_featured?: boolean;
+	is_new_arrival?: boolean;
 }
 
 interface UseProductFormProps {
@@ -54,6 +56,8 @@ export const useProductForm = ({
 		additionalImages: [],
 		original_price: "",
 		detailed_specs: "",
+		is_featured: false,
+		is_new_arrival: false,
 	});
 
 	useEffect(() => {
@@ -99,6 +103,8 @@ export const useProductForm = ({
 						: "",
 					detailed_specs: product.detailed_specs || "",
 					stock: product.stock || "",
+					is_featured: product.is_featured || false,
+					is_new_arrival: product.is_new_arrival || false,
 				});
 			}
 		} catch (error: any) {
@@ -113,7 +119,7 @@ export const useProductForm = ({
 
 	const handleFormChange = (
 		field: keyof ProductFormData,
-		value: string | File | null | File[],
+		value: string | boolean | File | null | File[],
 	) => {
 		setNewProduct((prev) => ({ ...prev, [field]: value }));
 	};
@@ -256,6 +262,8 @@ export const useProductForm = ({
 				detailed_specs: dataToUse.detailed_specs || null,
 				status: dataToUse.status,
 				stock: dataToUse.stock || 0,
+				is_featured: dataToUse.is_featured || false,
+				is_new_arrival: dataToUse.is_new_arrival || false,
 				...(mainImageUrl && { image_url: mainImageUrl }),
 			};
 
@@ -328,6 +336,8 @@ export const useProductForm = ({
 				additionalImages: [],
 				original_price: "",
 				detailed_specs: "",
+				is_featured: false,
+				is_new_arrival: false,
 			});
 			queryClient.invalidateQueries({
 				queryKey: ["products"],

@@ -15,16 +15,12 @@ export async function POST(req: NextRequest) {
 		const rawBody = await req.text();
 		const signature = req.headers.get("x-paystack-signature");
 
-		// console.log("🔔 Raw Body:", rawBody);
-		// console.log("🔔 Signature Header:", signature);
-
 		const expectedSignature = crypto
 			.createHmac("sha512", process.env.PAYSTACK_SECRET_KEY!)
 			.update(rawBody)
 			.digest("hex");
 
 		if (expectedSignature !== signature) {
-			// console.warn("❌ Invalid signature");
 			return withNgrokHeader({ error: "Invalid signature" }, 401);
 		}
 
@@ -32,17 +28,13 @@ export async function POST(req: NextRequest) {
 		try {
 			event = JSON.parse(rawBody);
 		} catch (err) {
-			// console.error("❌ Failed to parse JSON:", err);
 			return withNgrokHeader({ error: "Invalid JSON" }, 400);
 		}
-
-		// console.log("📦 Parsed Event:", JSON.stringify(event, null, 2));
 
 		if (event.event === "charge.success") {
 			const metadata = event?.data?.metadata;
 
 			if (!metadata) {
-				// console.warn("⚠️ Metadata is missing:", event?.data);
 				return withNgrokHeader({ error: "metadata missing in data" }, 400);
 			}
 
@@ -53,7 +45,6 @@ export async function POST(req: NextRequest) {
 			);
 
 			if (!saleField || !saleField.value) {
-				// console.warn("⚠️ sale_id missing in custom_fields:", customFields);
 				return withNgrokHeader(
 					{ error: "sale_id missing in metadata.custom_fields" },
 					400,
@@ -65,19 +56,16 @@ export async function POST(req: NextRequest) {
 			// Update sale status in Supabase
 			const { error } = await supabase
 				.from("sales")
-				.update({ status: "completed" })
+				.update({ status: "paid" })
 				.eq("id", saleId);
 
 			if (error) {
-				// console.error("❌ Supabase update error:", error.message);
 				return withNgrokHeader({ error: "Database update failed" }, 500);
 			}
 
-			// console.log("✅ Sale updated:", saleId);
 			return withNgrokHeader({ message: "Sale updated successfully" }, 200);
 		}
 
-		// console.log("ℹ️ Event ignored:", event.event);
 		return withNgrokHeader({ message: "Event ignored" }, 200);
 	} catch (error: any) {
 		console.error("Webhook error:", error);

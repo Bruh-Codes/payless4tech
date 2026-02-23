@@ -20,7 +20,9 @@ export async function GET(
 			)
 		) {
 			const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-			const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+			const supabaseKey =
+				process.env.SUPABASE_SERVICE_ROLE_KEY ||
+				process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
 			const supabase = createClient(supabaseUrl, supabaseKey);
 
 			const { data: productData, error: productError } = await supabase
@@ -123,7 +125,10 @@ export async function GET(
 	} catch (error) {
 		console.error("Error fetching eBay product:", error);
 		return NextResponse.json(
-			{ error: "Failed to fetch product" },
+			{
+				error: "Failed to fetch product",
+				details: error instanceof Error ? error.message : String(error),
+			},
 			{ status: 500 },
 		);
 	}

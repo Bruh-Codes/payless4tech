@@ -8,6 +8,12 @@ import { Package, Truck, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Navbar from "@/components/navbar";
+import {
+	Accordion,
+	AccordionContent,
+	AccordionItem,
+	AccordionTrigger,
+} from "@/components/ui/accordion";
 
 interface Order {
 	id: string;
@@ -154,117 +160,169 @@ const OrdersPage = () => {
 					</Card>
 				) : (
 					<div className="space-y-6">
-						{orders?.map((order) => (
-							<Card key={order.id} className="overflow-hidden py-0">
-								<CardHeader className="bg-primary/10 dark:bg-muted/50 py-2">
-									<div className="flex items-center justify-between">
-										<div>
-											<CardTitle className="text-lg">
-												Order #{order.id.slice(0, 8)}
-											</CardTitle>
-											<p className="text-sm text-muted-foreground">
-												Placed on{" "}
-												{new Date(order.created_at).toLocaleDateString()}
-											</p>
+						{(() => {
+							const activeOrders =
+								orders?.filter((o) => o.fulfillment_status !== "delivered") ||
+								[];
+							const deliveredOrders =
+								orders?.filter((o) => o.fulfillment_status === "delivered") ||
+								[];
+
+							const OrderCard = ({ order }: { order: Order }) => (
+								<Card className="overflow-hidden py-0">
+									<CardHeader className="bg-primary/10 dark:bg-muted/50 py-2">
+										<div className="flex items-center justify-between">
+											<div>
+												<CardTitle className="text-lg">
+													Order #{order.id.slice(0, 8)}
+												</CardTitle>
+												<p className="text-sm text-muted-foreground">
+													Placed on{" "}
+													{new Date(order.created_at).toLocaleDateString()}
+												</p>
+											</div>
+											<div className="flex items-center gap-2">
+												{getStatusIcon(order.fulfillment_status)}
+												<Badge
+													className={getStatusColor(order.fulfillment_status)}
+												>
+													{order.fulfillment_status?.charAt(0).toUpperCase() +
+														order.fulfillment_status?.slice(1) || "Pending"}
+												</Badge>
+											</div>
 										</div>
-										<div className="flex items-center gap-2">
-											{getStatusIcon(order.fulfillment_status)}
-											<Badge
-												className={getStatusColor(order.fulfillment_status)}
-											>
-												{order.fulfillment_status?.charAt(0).toUpperCase() +
-													order.fulfillment_status?.slice(1) || "Pending"}
-											</Badge>
-										</div>
-									</div>
-								</CardHeader>
-								<CardContent className="p-6">
-									<div className="grid md:grid-cols-2 gap-6">
-										<div>
-											<h3 className="font-semibold mb-3">Order Details</h3>
-											<div className="space-y-2 text-sm">
-												<div>
-													<span className="font-medium">Customer:</span>{" "}
-													{order.name}
-												</div>
-												<div>
-													<span className="font-medium">Email:</span>{" "}
-													{order.email}
-												</div>
-												<div>
-													<span className="font-medium">Phone:</span>{" "}
-													{order.phone_number}
-												</div>
-												<div>
-													<span className="font-medium">Delivery Address:</span>{" "}
-													{order.delivery_address}
-												</div>
-												{order.extended_warranty && (
+									</CardHeader>
+									<CardContent className="p-6">
+										<div className="grid md:grid-cols-2 gap-6">
+											<div>
+												<h3 className="font-semibold mb-3">Order Details</h3>
+												<div className="space-y-2 text-sm">
 													<div>
-														<Badge variant="secondary">
-															Extended Warranty Included
-														</Badge>
+														<span className="font-medium">Customer:</span>{" "}
+														{order.name}
+													</div>
+													<div>
+														<span className="font-medium">Email:</span>{" "}
+														{order.email}
+													</div>
+													<div>
+														<span className="font-medium">Phone:</span>{" "}
+														{order.phone_number}
+													</div>
+													<div>
+														<span className="font-medium">
+															Delivery Address:
+														</span>{" "}
+														{order.delivery_address}
+													</div>
+													{order.extended_warranty && (
+														<div>
+															<Badge variant="secondary">
+																Extended Warranty Included
+															</Badge>
+														</div>
+													)}
+												</div>
+											</div>
+
+											<div>
+												<h3 className="font-semibold mb-3">Items</h3>
+												<div className="space-y-2">
+													{order.product?.map((item, index) => (
+														<div
+															key={index}
+															className="flex justify-between text-sm"
+														>
+															<span>
+																{item.name} x{item.quantity}
+															</span>
+															<span className="font-medium">
+																₵{(item.price * item.quantity).toFixed(2)}
+															</span>
+														</div>
+													))}
+													<div className="border-t pt-2 mt-2">
+														<div className="flex justify-between font-semibold">
+															<span>Total:</span>
+															<span>₵{order.total_amount.toFixed(2)}</span>
+														</div>
+													</div>
+												</div>
+											</div>
+										</div>
+
+										<div className="mt-6 p-4 bg-primary/10 dark:bg-muted/50 rounded-lg">
+											<h4 className="font-medium mb-2">
+												Order Status Timeline
+											</h4>
+											<div className="space-y-2 text-sm">
+												<div className="flex items-center gap-2">
+													<CheckCircle className="h-4 w-4 text-green-600" />
+													<span>Order Confirmed</span>
+												</div>
+												{order.fulfillment_status !== "pending" && (
+													<div className="flex items-center gap-2">
+														<Package className="h-4 w-4 text-blue-600" />
+														<span>Processing</span>
+													</div>
+												)}
+												{order.fulfillment_status === "shipped" && (
+													<div className="flex items-center gap-2">
+														<Truck className="h-4 w-4 text-blue-600" />
+														<span>Shipped</span>
+													</div>
+												)}
+												{order.fulfillment_status === "delivered" && (
+													<div className="flex items-center gap-2">
+														<CheckCircle className="h-4 w-4 text-green-600" />
+														<span>Delivered</span>
 													</div>
 												)}
 											</div>
 										</div>
+									</CardContent>
+								</Card>
+							);
 
-										<div>
-											<h3 className="font-semibold mb-3">Items</h3>
-											<div className="space-y-2">
-												{order.product?.map((item, index) => (
-													<div
-														key={index}
-														className="flex justify-between text-sm"
-													>
-														<span>
-															{item.name} x{item.quantity}
-														</span>
-														<span className="font-medium">
-															₵{(item.price * item.quantity).toFixed(2)}
-														</span>
-													</div>
-												))}
-												<div className="border-t pt-2 mt-2">
-													<div className="flex justify-between font-semibold">
-														<span>Total:</span>
-														<span>₵{order.total_amount.toFixed(2)}</span>
-													</div>
-												</div>
-											</div>
+							return (
+								<>
+									{activeOrders.length > 0 && (
+										<div className="space-y-6 mb-8">
+											<h2 className="text-xl font-semibold">Active Orders</h2>
+											{activeOrders.map((order) => (
+												<OrderCard key={order.id} order={order} />
+											))}
 										</div>
-									</div>
+									)}
 
-									<div className="mt-6 p-4 bg-primary/10 dark:bg-muted/50 rounded-lg">
-										<h4 className="font-medium mb-2">Order Status Timeline</h4>
-										<div className="space-y-2 text-sm">
-											<div className="flex items-center gap-2">
-												<CheckCircle className="h-4 w-4 text-green-600" />
-												<span>Order Confirmed</span>
-											</div>
-											{order.fulfillment_status !== "pending" && (
-												<div className="flex items-center gap-2">
-													<Package className="h-4 w-4 text-blue-600" />
-													<span>Processing</span>
-												</div>
-											)}
-											{order.fulfillment_status === "shipped" && (
-												<div className="flex items-center gap-2">
-													<Truck className="h-4 w-4 text-blue-600" />
-													<span>Shipped</span>
-												</div>
-											)}
-											{order.fulfillment_status === "delivered" && (
-												<div className="flex items-center gap-2">
-													<CheckCircle className="h-4 w-4 text-green-600" />
-													<span>Delivered</span>
-												</div>
-											)}
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						))}
+									{deliveredOrders.length > 0 && (
+										<Accordion type="single" collapsible className="w-full">
+											<AccordionItem
+												value="delivered"
+												className="border rounded-xl bg-card px-4 shadow-sm"
+											>
+												<AccordionTrigger className="hover:no-underline px-2 py-4">
+													<div className="flex items-center gap-2">
+														<CheckCircle className="h-5 w-5 text-green-600" />
+														<h2 className="text-xl font-semibold">
+															Delivered Orders ({deliveredOrders.length})
+														</h2>
+													</div>
+												</AccordionTrigger>
+												<AccordionContent className="pt-4 pb-6 px-1 space-y-6">
+													{deliveredOrders.map((order) => (
+														<OrderCard key={order.id} order={order} />
+													))}
+												</AccordionContent>
+											</AccordionItem>
+										</Accordion>
+									)}
+
+									{activeOrders.length === 0 &&
+										deliveredOrders.length === 0 && <p>No orders found.</p>}
+								</>
+							);
+						})()}
 					</div>
 				)}
 			</div>

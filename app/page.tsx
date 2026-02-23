@@ -7,10 +7,11 @@ import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 
+import Navbar from "@/components/navbar";
+import Hero from "@/components/Hero";
+
 // Dynamic imports for better bundle splitting
 const Footer = dynamic(() => import("@/components/Footer"));
-const Hero = dynamic(() => import("@/components/Hero"));
-const Navbar = dynamic(() => import("@/components/navbar"));
 const Categories = dynamic(() => import("@/components/ui/categories"));
 const FeaturedProducts = dynamic(
 	() => import("@/components/ui/featured-products"),

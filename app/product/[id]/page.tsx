@@ -195,13 +195,20 @@ const ProductDetail = () => {
 	const priceValue = (product as any).price?.value || 0;
 	const priceCurrency = (product as any).price?.currency || "GHS";
 
+	const originalPriceValue =
+		(product as any).originalPrice?.value ||
+		(typeof (product as any).originalPrice === "number"
+			? (product as any).originalPrice
+			: 0);
+
 	const currencySymbol = getCurrencySymbol(priceCurrency);
 
-	const discount = product.originalPrice
-		? Math.round(
-				((product.originalPrice - priceValue) / product.originalPrice) * 100,
-			)
-		: 0;
+	const discount =
+		originalPriceValue > priceValue
+			? Math.round(
+					((originalPriceValue - priceValue) / originalPriceValue) * 100,
+				)
+			: 0;
 
 	// Use real specifications from eBay API
 	const productSpecs = product.specifications || [];
@@ -248,7 +255,7 @@ const ProductDetail = () => {
 						className="space-y-3"
 					>
 						{/* Main Image */}
-						<div className="relative w-full rounded-xl overflow-hidden bg-secondary/30 border border-border aspect-[4/3] max-h-90">
+						<div className="relative w-full rounded-xl overflow-hidden bg-secondary/30 border border-border aspect-4/3 max-h-90">
 							<Image
 								width={200}
 								height={200}
@@ -269,7 +276,7 @@ const ProductDetail = () => {
 								<div
 									key={index}
 									onClick={() => setSelectedImage(index)}
-									className={`relative flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden cursor-pointer transition-all ${
+									className={`relative shrink-0 w-24 h-24 rounded-lg overflow-hidden cursor-pointer transition-all ${
 										selectedImage === index
 											? "border-2 border-orange-500"
 											: "border-2 border-border hover:border-primary/30"
@@ -306,10 +313,10 @@ const ProductDetail = () => {
 								{currencySymbol}
 								{formatPrice(priceValue, priceCurrency)}
 							</span>
-							{product.originalPrice && (
+							{originalPriceValue > 0 && (
 								<span className="text-lg text-muted-foreground line-through">
 									{currencySymbol}
-									{formatPrice(product.originalPrice, priceCurrency)}
+									{formatPrice(originalPriceValue, priceCurrency)}
 								</span>
 							)}
 							{discount > 0 && (

@@ -15,6 +15,7 @@ import {
 	CardTitle,
 	CardFooter,
 } from "@/components/ui/card";
+import Image from "next/image";
 
 export default function PreorderDetailsPage() {
 	const params = useParams();
@@ -166,9 +167,33 @@ export default function PreorderDetailsPage() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent className="space-y-4">
-						<div className="grid grid-cols-2 gap-y-2 text-sm">
-							<div className="text-muted-foreground">Item Type:</div>
-							<div className="font-medium">{preorder.item_type || "N/A"}</div>
+						<div className="flex gap-4 items-center">
+							{preorder.product_image ? (
+								<Image
+									src={preorder.product_image}
+									alt="product"
+									className="h-20 w-20 min-w-20 rounded-lg object-cover border"
+								/>
+							) : (
+								<div className="h-20 w-20 min-w-20 rounded-lg bg-muted flex items-center justify-center border text-xs text-muted-foreground">
+									N/A
+								</div>
+							)}
+							<div className="flex flex-col">
+								<span className="font-semibold text-lg text-foreground">
+									{preorder.product_name || "Custom Request"}
+								</span>
+								<div className="text-sm font-medium text-muted-foreground flex gap-1 items-center capitalize">
+									<Badge variant="secondary" className="px-1.5 py-0">
+										{preorder.item_type || "N/A"}
+									</Badge>
+									{preorder.product_id && (
+										<span className="text-xs uppercase ml-2 px-1">
+											REF: {preorder.product_id}
+										</span>
+									)}
+								</div>
+							</div>
 						</div>
 
 						<div className="mt-4">

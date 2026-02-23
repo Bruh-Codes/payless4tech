@@ -66,7 +66,6 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -81,6 +80,9 @@ export const schema = z.object({
 	full_name: z.string(),
 	phone_number: z.string(),
 	item_type: z.string(),
+	product_name: z.string().nullable().optional(),
+	product_image: z.string().nullable().optional(),
+	product_id: z.string().nullable().optional(),
 	specifications: z.any(),
 	fulfillment_status: z.enum(["pending", "delivered", "cancelled"]),
 });
@@ -92,49 +94,52 @@ const columns = (
 	handleViewDetails: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
-		accessorKey: "full_name",
-		header: "Full Name",
+		accessorKey: "Product",
+		header: "Product Ref",
 		cell: ({ row }) => (
-			<Badge variant="outline" className={cn("text-muted-foreground px-1.5")}>
-				{row.original.full_name}
-			</Badge>
-		),
-	},
-	{
-		accessorKey: "email",
-		header: "Email",
-		cell: ({ row }) => (
-			<Badge variant="outline" className={cn("text-muted-foreground px-1.5")}>
-				{row.original.email}
-			</Badge>
-		),
-	},
-
-	{
-		accessorKey: "Phone Number",
-		header: "Phone",
-		cell: ({ row }) => (
-			<div className="w-32">
-				<Badge variant="outline" className={cn("text-muted-foreground px-1.5")}>
-					{row.original.phone_number || "N/A"}
-				</Badge>
+			<div className="flex items-center gap-3 w-48">
+				{row.original.product_image ? (
+					<img
+						src={row.original.product_image}
+						alt="product"
+						className="h-10 w-10 min-w-10 rounded object-cover border"
+					/>
+				) : (
+					<div className="h-10 w-10 min-w-10 rounded bg-muted flex items-center justify-center border text-xs text-muted-foreground">
+						N/A
+					</div>
+				)}
+				<div className="flex flex-col overflow-hidden">
+					<span className="font-medium text-sm truncate">
+						{row.original.product_name || "Custom Request"}
+					</span>
+					{row.original.item_type && (
+						<span className="text-xs text-muted-foreground truncate capitalize">
+							{row.original.item_type}
+						</span>
+					)}
+				</div>
 			</div>
 		),
 	},
 	{
-		accessorKey: "item_type",
-		header: "Item Type",
+		accessorKey: "full_name",
+		header: "Customer",
 		cell: ({ row }) => (
-			<div className="w-32">
-				<Badge variant="outline" className={cn("text-muted-foreground px-1.5")}>
-					{row.original.item_type || "N/A"}
-				</Badge>
+			<div className="flex flex-col">
+				<span className="font-medium">{row.original.full_name}</span>
+				<span className="text-xs text-muted-foreground">
+					{row.original.email}
+				</span>
+				<span className="text-xs text-muted-foreground">
+					{row.original.phone_number || "N/A"}
+				</span>
 			</div>
 		),
 	},
 	{
 		accessorKey: "specifications",
-		header: "Specifications",
+		header: "Specifications / Notes",
 		cell: ({ row }) => {
 			let specs = row.original.specifications;
 
@@ -165,7 +170,24 @@ const columns = (
 			);
 		},
 	},
-
+	{
+		accessorKey: "fulfillment_status",
+		header: "Status",
+		cell: ({ row }) => (
+			<Badge
+				variant={
+					row.original.fulfillment_status === "delivered"
+						? "default"
+						: row.original.fulfillment_status === "cancelled"
+							? "destructive"
+							: "secondary"
+				}
+				className="capitalize"
+			>
+				{row.original.fulfillment_status}
+			</Badge>
+		),
+	},
 	{
 		id: "action",
 		cell: ({ row }) => (

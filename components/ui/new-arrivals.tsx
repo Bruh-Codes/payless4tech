@@ -1,13 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEbaySearch } from "@/hooks/useEbaySearch";
+import { useNewArrivalsProducts } from "@/hooks/useFeaturedProducts";
 import ProductCard from "@/components/product-card";
 import { convertEbayToLocalProduct } from "@/lib/ebay";
 import { ProductCardSkeleton } from "../LoadingSkeletons";
 
 const NewArrivals = () => {
-	const { data, isLoading, isError } = useEbaySearch("Samsung", 1, true);
+	const { data, isLoading, isError } = useNewArrivalsProducts(true);
 
 	const newArrivals = data?.items.map(convertEbayToLocalProduct) || [];
 

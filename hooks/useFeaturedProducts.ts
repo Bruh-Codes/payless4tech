@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { searchEbayProducts } from "@/lib/ebay";
+import { supabase } from "@/integrations/supabase/client";
 
 // Tech categories for the shop
 export const TECH_CATEGORIES = [
@@ -127,6 +128,38 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 				const categories = ["smartphones", "laptops", "audio", "gaming"];
 				console.log("Fetching products for categories:", categories);
 
+				// Fetch local featured products first
+				let localFeaturedItems: any[] = [];
+				try {
+					const { data: localProducts, error } = await supabase
+						.from("products")
+						.select("*")
+						.eq("is_featured", true)
+						.in("status", ["available", "new"])
+						.limit(10);
+
+					if (!error && localProducts) {
+						localFeaturedItems = localProducts.map((p) => ({
+							id: p.id,
+							title: p.name,
+							price: { value: p.price, currency: "GHS" },
+							originalPrice: p.original_price
+								? { value: parseFloat(p.original_price), currency: "GHS" }
+								: undefined,
+							image: p.image_url,
+							category: p.category,
+							condition: p.condition || "New",
+							shipping: "Request Delivery",
+							seller: "Payless4tech",
+							itemUrl: `/product/${p.id}`,
+							isPreorder: false,
+							isLocal: true,
+						}));
+					}
+				} catch (err) {
+					console.error("Error fetching local featured products:", err);
+				}
+
 				const promises = categories.map((category) => {
 					const searchTerm =
 						CATEGORY_SEARCH_TERMS[
@@ -163,13 +196,15 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 				});
 
 				// Combine successful results and take first few from each
-				const allProducts = results
+				const ebayProducts = results
 					.filter(
 						(result): result is PromiseFulfilledResult<any> =>
 							result.status === "fulfilled",
 					)
 					.flatMap((result) => result.value.items || [])
 					.slice(0, 20); // Increased to 20 products for better variety
+
+				const allProducts = [...localFeaturedItems, ...ebayProducts];
 
 				console.log("Final combined products:", allProducts.length);
 
@@ -196,5 +231,72 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 		retryDelay: 1000,
 		refetchOnWindowFocus: false,
 		refetchOnMount: false,
+	});
+}
+
+// Hook for fetching New Arrivals including local items
+export function useNewArrivalsProducts(enabled: boolean = true) {
+	return useQuery({
+		queryKey: ["new-arrivals-products"],
+		queryFn: async () => {
+			try {
+				let localNewArrivals: any[] = [];
+				const { data: localProducts, error } = await supabase
+					.from("products")
+					.select("*")
+					.eq("is_new_arrival", true)
+					.in("status", ["available", "new"])
+					.limit(10);
+
+				if (!error && localProducts) {
+					localNewArrivals = localProducts.map((p) => ({
+						id: p.id,
+						title: p.name,
+						price: { value: p.price, currency: "GHS" },
+						originalPrice: p.original_price
+							? { value: parseFloat(p.original_price), currency: "GHS" }
+							: undefined,
+						image: p.image_url,
+						category: p.category,
+						condition: p.condition || "New",
+						shipping: "Request Delivery",
+						seller: "Payless4tech",
+						itemUrl: `/product/${p.id}`,
+						isPreorder: false,
+						isLocal: true,
+					}));
+				}
+
+				// Fetch some eBay products generically
+				const ebayRes = await searchEbayProducts(
+					"Samsung",
+					1,
+					12,
+					"GHS",
+					"newlyListed",
+				);
+				const ebayProducts = ebayRes.items || [];
+
+				const combined = [...localNewArrivals, ...ebayProducts];
+
+				return {
+					items: combined,
+					totalCount: combined.length,
+					pageNumber: 1,
+				};
+			} catch (error) {
+				console.error("Error fetching new arrivals:", error);
+				return {
+					items: [],
+					totalCount: 0,
+					pageNumber: 1,
+				};
+			}
+		},
+		enabled,
+		staleTime: 15 * 60 * 1000, // 15 minutes
+		gcTime: 20 * 60 * 1000, // 20 minutes
+		retry: 1,
+		refetchOnWindowFocus: false,
 	});
 }

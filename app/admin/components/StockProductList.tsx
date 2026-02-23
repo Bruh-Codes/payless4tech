@@ -137,6 +137,35 @@ const StockProductList: React.FC<ProductListProps> = ({
 		},
 	});
 
+	// Toggle flag mutation (for is_featured and is_new_arrival)
+	const toggleFlagMutation = useMutation({
+		mutationFn: async ({
+			id,
+			field,
+			value,
+		}: {
+			id: string;
+			field: "is_featured" | "is_new_arrival";
+			value: boolean;
+		}) => {
+			const { error } = await supabase
+				.from("products")
+				.update({ [field]: value })
+				.eq("id", id);
+			if (error) {
+				throw new Error(`Error updating product ${field}`);
+			}
+			return { id, field, value };
+		},
+		onSuccess: ({ field }) => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
+			toast.success(`Product ${field} updated successfully`);
+		},
+		onError: () => {
+			toast.error("Failed to update product flag");
+		},
+	});
+
 	const dynamicCategories = useMemo(() => {
 		const allCategories = products.map((p) => p.category).filter(Boolean);
 		const unique = Array.from(new Set(allCategories));
@@ -157,16 +186,20 @@ const StockProductList: React.FC<ProductListProps> = ({
 		return unique.filter((s) => !standard.includes(s));
 	}, [products]);
 
-	const handleEdit = (product: AdminProductType) => {
-		// Used by AddProductsSheet when we implement Edit logic later
-	};
-
 	const handleDelete = (id: string) => {
 		deleteProductMutation.mutate(id);
 	};
 
 	const handleStatusUpdate = (id: string, status: string) => {
 		updateStatusMutation.mutate({ id, status });
+	};
+
+	const handleToggleFlag = (
+		id: string,
+		field: "is_featured" | "is_new_arrival",
+		value: boolean,
+	) => {
+		toggleFlagMutation.mutate({ id, field, value });
 	};
 
 	// Update handlers to use external functions if provided
@@ -304,9 +337,9 @@ const StockProductList: React.FC<ProductListProps> = ({
 							<AdminProductCard
 								key={product.id}
 								product={product}
-								onEdit={handleEdit}
 								onDelete={onDelete || handleDelete}
 								onStatusChange={handleStatusUpdate}
+								onToggleFlag={handleToggleFlag}
 							/>
 						))}
 					</div>
