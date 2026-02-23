@@ -73,6 +73,7 @@ import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useDebounce } from "use-debounce";
+import Image from "next/image";
 
 export const schema = z.object({
 	id: z.union([z.number(), z.string()]),
@@ -96,31 +97,47 @@ const columns = (
 	{
 		accessorKey: "Product",
 		header: "Product Ref",
-		cell: ({ row }) => (
-			<div className="flex items-center gap-3 w-48">
-				{row.original.product_image ? (
-					<img
-						src={row.original.product_image}
-						alt="product"
-						className="h-10 w-10 min-w-10 rounded object-cover border"
-					/>
-				) : (
-					<div className="h-10 w-10 min-w-10 rounded bg-muted flex items-center justify-center border text-xs text-muted-foreground">
-						N/A
-					</div>
-				)}
-				<div className="flex flex-col overflow-hidden">
-					<span className="font-medium text-sm truncate">
-						{row.original.product_name || "Custom Request"}
-					</span>
-					{row.original.item_type && (
-						<span className="text-xs text-muted-foreground truncate capitalize">
-							{row.original.item_type}
-						</span>
+		cell: ({ row }) => {
+			let specs = row.original.specifications;
+
+			// Parse JSON if needed
+			if (typeof specs === "string" && specs.startsWith("{")) {
+				try {
+					specs = JSON.parse(specs);
+				} catch (e) {
+					// Fallback
+				}
+			}
+
+			const productName = specs?.product_name || "Custom Request";
+			const productImage = specs?.product_image;
+
+			return (
+				<div className="flex items-center gap-3 w-48">
+					{productImage ? (
+						<Image
+							src={productImage}
+							alt="product"
+							width={40}
+							height={40}
+							className="min-w-10 rounded object-cover border"
+						/>
+					) : (
+						<div className="h-10 w-10 min-w-10 rounded bg-muted flex items-center justify-center border text-xs text-muted-foreground">
+							N/A
+						</div>
 					)}
+					<div className="flex flex-col overflow-hidden">
+						<span className="font-medium text-sm truncate">{productName}</span>
+						{row.original.item_type && (
+							<span className="text-xs text-muted-foreground truncate capitalize">
+								{row.original.item_type}
+							</span>
+						)}
+					</div>
 				</div>
-			</div>
-		),
+			);
+		},
 	},
 	{
 		accessorKey: "full_name",
@@ -152,13 +169,20 @@ const columns = (
 				}
 			}
 
+			// Filter out our system keys
+			let displaySpecs = specs;
+			if (typeof specs === "object" && specs !== null) {
+				const { product_id, product_name, product_image, ...rest } = specs;
+				displaySpecs = rest;
+			}
+
 			// Render object as strings
 			const content =
-				typeof specs === "object" && specs !== null
-					? Object.entries(specs)
+				typeof displaySpecs === "object" && displaySpecs !== null
+					? Object.entries(displaySpecs)
 							.map(([k, v]) => `${k}: ${v}`)
 							.join(", ")
-					: String(specs || "N/A");
+					: String(displaySpecs || "N/A");
 
 			return (
 				<div

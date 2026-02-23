@@ -112,6 +112,16 @@ export default function PreorderDetailsPage() {
 		specifications = preorder.specifications;
 	}
 
+	const productName = specifications?.product_name || preorder.product_name;
+	const productImage = specifications?.product_image || preorder.product_image;
+	const productId = specifications?.product_id || preorder.product_id;
+
+	// Filter out system keys for the raw specs display
+	const displaySpecs = { ...specifications };
+	delete displaySpecs.product_name;
+	delete displaySpecs.product_image;
+	delete displaySpecs.product_id;
+
 	return (
 		<div className="p-6 md:p-10 mx-auto max-w-5xl space-y-6">
 			<div className="flex items-center gap-4">
@@ -168,10 +178,12 @@ export default function PreorderDetailsPage() {
 					</CardHeader>
 					<CardContent className="space-y-4">
 						<div className="flex gap-4 items-center">
-							{preorder.product_image ? (
+							{productImage ? (
 								<Image
-									src={preorder.product_image}
+									src={productImage}
 									alt="product"
+									width={80}
+									height={80}
 									className="h-20 w-20 min-w-20 rounded-lg object-cover border"
 								/>
 							) : (
@@ -181,15 +193,15 @@ export default function PreorderDetailsPage() {
 							)}
 							<div className="flex flex-col">
 								<span className="font-semibold text-lg text-foreground">
-									{preorder.product_name || "Custom Request"}
+									{productName || "Custom Request"}
 								</span>
-								<div className="text-sm font-medium text-muted-foreground flex gap-1 items-center capitalize">
+								<div className="text-sm font-medium text-muted-foreground flex gap-1 items-center capitalize mt-1">
 									<Badge variant="secondary" className="px-1.5 py-0">
 										{preorder.item_type || "N/A"}
 									</Badge>
-									{preorder.product_id && (
+									{productId && (
 										<span className="text-xs uppercase ml-2 px-1">
-											REF: {preorder.product_id}
+											REF: {productId}
 										</span>
 									)}
 								</div>
@@ -200,17 +212,19 @@ export default function PreorderDetailsPage() {
 							<div className="text-sm text-muted-foreground mb-2">
 								Specifications:
 							</div>
-							{Object.keys(specifications).length > 0 ? (
-								<div className="bg-muted/50 p-4 rounded-md text-sm font-mono space-y-1">
-									{Object.entries(specifications).map(([key, value]) => (
+							{Object.keys(displaySpecs).length > 0 ? (
+								<div className="bg-muted/50 p-4 rounded-md text-sm space-y-1">
+									{Object.entries(displaySpecs).map(([key, value]) => (
 										<div
 											key={key}
-											className="flex flex-col sm:flex-row sm:justify-between py-1 border-b last:border-0 border-muted-foreground/20"
+											className="flex flex-col sm:flex-row sm:justify-between py-2 border-b last:border-0 border-muted-foreground/20"
 										>
 											<span className="font-semibold capitalize text-muted-foreground">
 												{key.replace(/_/g, " ")}:
 											</span>
-											<span>{String(value)}</span>
+											<span className="text-right sm:w-2/3">
+												{String(value)}
+											</span>
 										</div>
 									))}
 								</div>

@@ -131,11 +131,12 @@ export const PreorderForm = ({
 					email: formData.email,
 					phone_number: formData.phoneNumber,
 					item_type: formData.itemType,
-					specifications: { details: formData.specifications },
-					// Make sure we carry product info if available
-					product_id: userDetails?.productId,
-					product_name: formData.productName,
-					product_image: formData.productImage,
+					specifications: {
+						details: formData.specifications,
+						product_id: userDetails?.productId,
+						product_name: formData.productName,
+						product_image: formData.productImage,
+					},
 				},
 			]);
 
