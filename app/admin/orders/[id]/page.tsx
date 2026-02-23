@@ -23,6 +23,12 @@ import {
 	CardTitle,
 	CardFooter,
 } from "@/components/ui/card";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { salesType } from "@/components/admin/SalesTableWrapper";
 
 export default function OrderDetailsPage() {
@@ -39,7 +45,7 @@ export default function OrderDetailsPage() {
 				const { data, error } = await supabase
 					.from("sales")
 					.select("*")
-					.eq("id", Number(orderId))
+					.eq("id", orderId)
 					.single();
 
 				if (error) throw error;
@@ -62,7 +68,7 @@ export default function OrderDetailsPage() {
 			const { error } = await supabase
 				.from("sales")
 				.update({ fulfillment_status: "delivered" })
-				.eq("id", Number(orderId));
+				.eq("id", orderId);
 
 			if (error) throw error;
 
@@ -259,9 +265,26 @@ export default function OrderDetailsPage() {
 					</CardContent>
 				) : (
 					<CardFooter className="flex flex-wrap gap-4">
-						<Button onClick={handleMarkDelivered}>
-							<Truck className="h-4 w-4 mr-2" /> Mark as Delivered
-						</Button>
+						{order.status === "pending" ? (
+							<TooltipProvider>
+								<Tooltip>
+									<TooltipTrigger asChild>
+										<span tabIndex={0} className="cursor-not-allowed">
+											<Button disabled className="pointer-events-none">
+												<Truck className="h-4 w-4 mr-2" /> Mark as Delivered
+											</Button>
+										</span>
+									</TooltipTrigger>
+									<TooltipContent side="top">
+										<p>Payment must be fulfilled before delivery.</p>
+									</TooltipContent>
+								</Tooltip>
+							</TooltipProvider>
+						) : (
+							<Button onClick={handleMarkDelivered}>
+								<Truck className="h-4 w-4 mr-2" /> Mark as Delivered
+							</Button>
+						)}
 
 						<Button variant="secondary" onClick={handleSendEmail}>
 							<Mail className="h-4 w-4 mr-2" /> Send Missing Info Email

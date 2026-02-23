@@ -58,6 +58,7 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 
@@ -152,8 +153,10 @@ const columns = (
 
 const ArchivedPreorders = ({
 	preorders,
+	isLoading = false,
 }: {
 	preorders: z.infer<typeof preorderSchema>[];
+	isLoading?: boolean;
 }) => {
 	const queryClient = useQueryClient();
 	const [rowSelection, setRowSelection] = React.useState({});
@@ -190,7 +193,7 @@ const ArchivedPreorders = ({
 
 	// Delete permanent mutation
 	const deletePermanentMutation = useMutation({
-		mutationFn: async (id: number) => {
+		mutationFn: async (id: string | number) => {
 			const { error } = await supabase
 				.from("archived_preorders")
 				.delete()
@@ -211,7 +214,7 @@ const ArchivedPreorders = ({
 
 	// Restore archived mutation
 	const restoreArchivedMutation = useMutation({
-		mutationFn: async (id: number) => {
+		mutationFn: async (id: string | number) => {
 			// Get the archived preorder by id
 			const { data, error: fetchError } = await supabase
 				.from("archived_preorders")
@@ -256,11 +259,11 @@ const ArchivedPreorders = ({
 		},
 	});
 
-	const handleDeletePermanent = (id: number) => {
+	const handleDeletePermanent = (id: string | number) => {
 		deletePermanentMutation.mutate(id);
 	};
 
-	const handleRestoreArchived = (id: number) => {
+	const handleRestoreArchived = (id: string | number) => {
 		restoreArchivedMutation.mutate(id);
 	};
 
@@ -359,6 +362,16 @@ const ArchivedPreorders = ({
 										</ContextMenu>
 									);
 								})
+							) : isLoading ? (
+								Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										{table.getVisibleLeafColumns().map((column) => (
+											<TableCell key={column.id}>
+												<Skeleton className="h-6 w-full" />
+											</TableCell>
+										))}
+									</TableRow>
+								))
 							) : (
 								<TableRow>
 									<TableCell colSpan={20} className="h-24 text-center">

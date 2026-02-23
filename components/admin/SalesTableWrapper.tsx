@@ -16,7 +16,7 @@ const DataTable = dynamicImport(
 );
 
 export interface salesType {
-	id: number;
+	id: string;
 	email: string;
 	user_id: string;
 	total_amount: string;
@@ -55,10 +55,6 @@ export default function SalesTableWrapper() {
 		staleTime: 1000 * 60 * 2, // 2 minutes
 	});
 
-	if (isLoading) {
-		return <TableSkeleton />;
-	}
-
 	if (error) {
 		console.log("Error fetching sales data", error);
 		return <div className="text-red-500">Failed to load sales data</div>;
@@ -75,5 +71,5 @@ export default function SalesTableWrapper() {
 		return 0;
 	});
 
-	return <DataTable data={sortedSales as salesType[]} />;
+	return <DataTable isLoading={isLoading} data={sortedSales as salesType[]} />;
 }

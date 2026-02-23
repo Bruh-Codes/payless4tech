@@ -61,6 +61,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "use-debounce";
 
 export const schema = z.object({
 	id: z.union([z.number(), z.string()]),
@@ -73,8 +76,9 @@ export const schema = z.object({
 });
 
 const columns = (
-	handleDelete: (id: number) => void,
-	handleMarkAsDelivered: (id: number) => void,
+	handleDelete: (id: string | number) => void,
+	handleMarkAsDelivered: (id: string | number) => void,
+	handleMarkAsUndelivered: (id: string | number) => void,
 	handleViewDetails: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
@@ -172,12 +176,20 @@ const columns = (
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						onClick={() => handleMarkAsDelivered(Number(row.original.id))}
+						onClick={() => handleMarkAsDelivered(row.original.id)}
 						disabled={
 							row?.original.fulfillment_status?.toLowerCase() !== "pending"
 						}
 					>
 						Mark Delivered
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() => handleMarkAsUndelivered(row.original.id)}
+						disabled={
+							row?.original.fulfillment_status?.toLowerCase() !== "delivered"
+						}
+					>
+						Mark Undelivered
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
@@ -207,40 +219,55 @@ const PreorderTable = () => {
 		pageIndex: 0,
 		pageSize: 10,
 	});
+	const [searchQuery, setSearchQuery] = React.useState("");
+	const [debouncedQuery] = useDebounce(searchQuery, 300);
 
 	const queryClient = useQueryClient();
 	const router = useRouter();
 
-	const { data, error } = useQuery({
-		queryKey: ["admin", "preorders"],
+	const {
+		data: queryResult,
+		error,
+		isLoading,
+	} = useQuery({
+		queryKey: [
+			"admin",
+			"preorders",
+			pagination.pageIndex,
+			pagination.pageSize,
+			debouncedQuery,
+		],
 		queryFn: async () => {
-			let { data: preorder, error } = await supabase
+			const from = pagination.pageIndex * pagination.pageSize;
+			const to = from + pagination.pageSize - 1;
+
+			let req = supabase
 				.from("preorders")
-				.select("*")
-				.order("created_at", { ascending: false });
+				.select("*", { count: "exact" })
+				.order("fulfillment_status", { ascending: false })
+				.order("created_at", { ascending: false })
+				.range(from, to);
+
+			if (debouncedQuery) {
+				req = req.or(
+					`full_name.ilike.%${debouncedQuery}%,email.ilike.%${debouncedQuery}%,phone_number.ilike.%${debouncedQuery}%,item_type.ilike.%${debouncedQuery}%`,
+				);
+			}
+
+			const { data: preorder, error, count } = await req;
 
 			if (error) {
 				console.error("Error fetching preorders:", error);
-				return [];
+				return { data: [], count: 0 };
 			}
 
-			const sortedPreorders = (preorder || []).sort((a, b) => {
-				if (
-					a.fulfillment_status === "pending" &&
-					b.fulfillment_status !== "pending"
-				)
-					return -1;
-				if (
-					a.fulfillment_status !== "pending" &&
-					b.fulfillment_status === "pending"
-				)
-					return 1;
-				return 0;
-			});
-			return sortedPreorders;
+			return { data: preorder || [], count: count || 0 };
 		},
 		staleTime: 1000 * 60 * 3, // 3 minutes
 	});
+
+	const data = queryResult?.data ?? [];
+	const totalCount = queryResult?.count ?? 0;
 
 	React.useEffect(() => {
 		if (error) {
@@ -312,6 +339,26 @@ const PreorderTable = () => {
 		},
 	});
 
+	// Mark as undelivered mutation
+	const markAsUndeliveredMutation = useMutation({
+		mutationFn: async (id: number | string) => {
+			const { error } = await supabase
+				.from("preorders")
+				.update({ fulfillment_status: "pending" })
+				.eq("id", id.toString());
+
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "preorders"] });
+			toast.success("Marked as undelivered.");
+		},
+		onError: () => {
+			toast.error("Failed to mark as undelivered.");
+		},
+	});
+
 	const handleViewDetails = (id: string | number) => {
 		router.push(`/admin/preorders/${id}`);
 	};
@@ -324,9 +371,18 @@ const PreorderTable = () => {
 		markAsDeliveredMutation.mutate(id);
 	};
 
+	const handleMarkAsUndelivered = (id: number | string) => {
+		markAsUndeliveredMutation.mutate(id);
+	};
+
 	const table = useReactTable({
 		data: data ?? [],
-		columns: columns(handleDelete, handleMarkAsDelivered, handleViewDetails),
+		columns: columns(
+			handleDelete,
+			handleMarkAsDelivered,
+			handleMarkAsUndelivered,
+			handleViewDetails,
+		),
 		state: {
 			sorting,
 			columnVisibility,
@@ -343,23 +399,52 @@ const PreorderTable = () => {
 		onPaginationChange: setPagination,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		manualPagination: true,
+		pageCount: Math.ceil(totalCount / pagination.pageSize),
 		getPaginationRowModel: getPaginationRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFacetedRowModel: getFacetedRowModel(),
 		getFacetedUniqueValues: getFacetedUniqueValues(),
 	});
 
-	return !data ? (
-		<p className="text-center">No data available.</p>
-	) : (
-		<>
+	return (
+		<div className="space-y-4">
+			<div className="flex items-center">
+				<Input
+					placeholder="Search by name, email, phone, or item type..."
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					className="max-w-sm"
+				/>
+			</div>
 			<div className="overflow-hidden rounded-lg border">
 				{!table || !table?.getRowModel() ? (
-					<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
-						{Array.isArray(data) && data.length === 0
-							? "No data available."
-							: "Unable to load data. Please check your internet connection."}
-					</div>
+					isLoading ? (
+						<Table>
+							<TableHeader className="bg-muted sticky top-0 z-10">
+								<TableRow>
+									<TableHead>
+										<Skeleton className="h-4 w-24" />
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										<TableCell>
+											<Skeleton className="h-6 w-full" />
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
+					) : (
+						<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
+							{Array.isArray(data) && data.length === 0
+								? "No data available."
+								: "Unable to load data. Please check your internet connection."}
+						</div>
+					)
 				) : (
 					<Table>
 						<TableHeader className="bg-muted sticky top-0 z-10">
@@ -413,9 +498,7 @@ const PreorderTable = () => {
 												</ContextMenuItem>
 												<ContextMenuSeparator />
 												<ContextMenuItem
-													onClick={() =>
-														handleMarkAsDelivered(Number(row.original.id))
-													}
+													onClick={() => handleMarkAsDelivered(row.original.id)}
 													disabled={
 														row?.original.fulfillment_status?.toLowerCase() !==
 														"pending"
@@ -423,13 +506,24 @@ const PreorderTable = () => {
 												>
 													Mark Delivered
 												</ContextMenuItem>
+												<ContextMenuItem
+													onClick={() =>
+														handleMarkAsUndelivered(row.original.id)
+													}
+													disabled={
+														row?.original.fulfillment_status?.toLowerCase() !==
+														"delivered"
+													}
+												>
+													Mark Undelivered
+												</ContextMenuItem>
 												<ContextMenuSeparator />
 												<ContextMenuItem
 													disabled={
 														row?.original.fulfillment_status?.toLowerCase() ===
 														"pending"
 													}
-													onClick={() => handleDelete(Number(row.original.id))}
+													onClick={() => handleDelete(row.original.id)}
 													className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
 												>
 													Delete
@@ -438,6 +532,16 @@ const PreorderTable = () => {
 										</ContextMenu>
 									);
 								})
+							) : isLoading ? (
+								Array.from({ length: 5 }).map((_, i) => (
+									<TableRow key={i}>
+										{table.getVisibleLeafColumns().map((column) => (
+											<TableCell key={column.id}>
+												<Skeleton className="h-6 w-full" />
+											</TableCell>
+										))}
+									</TableRow>
+								))
 							) : (
 								<TableRow>
 									<TableCell colSpan={20} className="h-24 text-center">
@@ -526,7 +630,7 @@ const PreorderTable = () => {
 					</div>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };
 

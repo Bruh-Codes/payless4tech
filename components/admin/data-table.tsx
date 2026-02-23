@@ -67,9 +67,13 @@ import PreorderTable from "./PreorderTable";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { useDebounce } from "use-debounce";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export const schema = z.object({
-	id: z.number(),
+	id: z.union([z.number(), z.string()]),
 	email: z.string(),
 	user_id: z.string(),
 	total_amount: z.string(),
@@ -90,36 +94,10 @@ export const schema = z.object({
 	),
 });
 
-const handleMarkAsDelivered = async (
-	id: number,
-	data: any[],
-	setData: Function,
-) => {
-	const { error } = await supabase
-		.from("sales")
-		.update({ fulfillment_status: "delivered" })
-		.eq("id", id);
-
-	if (error) {
-		console.error("Error updating order status:", error);
-		toast.error("Error", { description: "Failed to update order status" });
-	} else {
-		// Update local state
-		const updated = data.map((row) =>
-			row.id === id ? { ...row, fulfillment_status: "delivered" } : row,
-		);
-		setData(updated);
-
-		toast.success("Success", {
-			description: "Order status updated successfully",
-		});
-	}
-};
-
 const columns = (
-	data: z.infer<typeof schema>[],
-	setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
-	handleDelete: (id: number) => void,
+	handleDelete: (id: string | number) => void,
+	handleMarkAsDelivered: (id: string | number) => void,
+	handleMarkAsUndelivered: (id: string | number) => void,
 	handleViewDetails: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
@@ -179,8 +157,8 @@ const columns = (
 
 			return (
 				<ul className="space-y-1 text-sm text-muted-foreground">
-					{safeProduct?.map(({ name, quantity, price, id }) => (
-						<li key={id} className="flex items-start gap-2">
+					{safeProduct?.map(({ name, quantity, price, id }, index) => (
+						<li key={id || index} className="flex items-start gap-2">
 							<span className="font-medium truncate text-foreground">
 								Name:
 							</span>{" "}
@@ -305,11 +283,15 @@ const columns = (
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						disabled={row?.original.fulfillment_status !== "pending"}
-						onClick={() =>
-							handleMarkAsDelivered(row.original.id, data, setData)
-						}
+						onClick={() => handleMarkAsDelivered(row.original.id)}
 					>
 						Mark Delivered
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						disabled={row?.original.fulfillment_status !== "delivered"}
+						onClick={() => handleMarkAsUndelivered(row.original.id)}
+					>
+						Mark Undelivered
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						disabled={row?.original.fulfillment_status === "pending"}
@@ -326,7 +308,7 @@ const columns = (
 
 export default columns;
 
-export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
+export function DataTable() {
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
@@ -335,68 +317,154 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 	);
 	const [sorting, setSorting] = React.useState<SortingState>([]);
 	const [activeTab, setActiveTab] = React.useState("outline");
-	const [salesData, setSalesData] = React.useState<z.infer<typeof schema>[]>(
-		data || [],
-	);
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
+	const [searchQuery, setSearchQuery] = React.useState("");
+	const [debouncedQuery] = useDebounce(searchQuery, 300);
 
+	const queryClient = useQueryClient();
 	const router = useRouter();
+
+	const {
+		data: queryResult,
+		error,
+		isLoading,
+	} = useQuery({
+		queryKey: [
+			"admin",
+			"sales",
+			pagination.pageIndex,
+			pagination.pageSize,
+			debouncedQuery,
+		],
+		queryFn: async () => {
+			const from = pagination.pageIndex * pagination.pageSize;
+			const to = from + pagination.pageSize - 1;
+
+			let req = supabase
+				.from("sales")
+				.select("*", { count: "exact" })
+				.order("created_at", { ascending: false })
+				.range(from, to);
+
+			if (debouncedQuery) {
+				req = req.or(
+					`email.ilike.%${debouncedQuery}%,phone_number.ilike.%${debouncedQuery}%,delivery_address.ilike.%${debouncedQuery}%`,
+				);
+			}
+
+			const { data, error, count } = await req;
+			if (error) throw error;
+			return { data: data || [], count: count || 0 };
+		},
+		staleTime: 1000 * 60 * 2, // 2 minutes
+	});
+
+	if (error) {
+		console.error("Error fetching sales data", error);
+	}
+
+	const rawData = queryResult?.data ?? [];
+	const totalCount = queryResult?.count ?? 0;
+
+	// Sort active items logic
+	const salesData = [...rawData].sort((a, b) => {
+		const aIsActive =
+			a.status === "paid" && a.fulfillment_status !== "delivered";
+		const bIsActive =
+			b.status === "paid" && b.fulfillment_status !== "delivered";
+
+		if (aIsActive && !bIsActive) return -1;
+		if (!aIsActive && bIsActive) return 1;
+		return 0;
+	});
 
 	const handleViewDetails = (id: string | number) => {
 		router.push(`/admin/orders/${id}`);
 	};
 
-	const [pagination, setPagination] = React.useState({
-		pageIndex: 0,
-		pageSize: 10,
+	const deleteMutation = useMutation({
+		mutationFn: async (id: string | number) => {
+			const { data: saleData, error: fetchError } = await supabase
+				.from("sales")
+				.select("*")
+				.eq("id", id)
+				.single();
+
+			if (fetchError || !saleData)
+				throw new Error("Failed to fetch sale for archiving");
+
+			const { error: archiveError } = await supabase
+				.from("archived_sales")
+				.insert([saleData]);
+
+			if (archiveError) throw new Error("Failed to archive sale");
+
+			const { error: deleteError } = await supabase
+				.from("sales")
+				.delete()
+				.eq("id", id);
+
+			if (deleteError) throw new Error("Failed to delete sale");
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "sales"] });
+			toast.success("Order archived successfully.");
+		},
+		onError: (error: any) => {
+			toast.error(error.message);
+		},
 	});
 
-	const handleDelete = async (id: number) => {
-		// Fetch the sale to archive
-		const { data: saleData, error: fetchError } = await supabase
-			.from("sales")
-			.select("*")
-			.eq("id", id)
-			.single();
+	const markAsDeliveredMutation = useMutation({
+		mutationFn: async (id: string | number) => {
+			const { error } = await supabase
+				.from("sales")
+				.update({ fulfillment_status: "delivered" })
+				.eq("id", id);
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "sales"] });
+			toast.success("Marked as delivered.");
+		},
+		onError: () => toast.error("Failed to mark as delivered."),
+	});
 
-		if (fetchError || !saleData) {
-			console.error("Error fetching sale:", fetchError);
-			toast.error("Error", {
-				description: "Failed to fetch sale for archiving",
-			});
-			return;
-		}
+	const markAsUndeliveredMutation = useMutation({
+		mutationFn: async (id: string | number) => {
+			const { error } = await supabase
+				.from("sales")
+				.update({ fulfillment_status: "pending" })
+				.eq("id", id);
+			if (error) throw error;
+			return id;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["admin", "sales"] });
+			toast.success("Marked as undelivered.");
+		},
+		onError: () => toast.error("Failed to mark as undelivered."),
+	});
 
-		// Insert into archived_sales
-		const { error: archiveError } = await supabase
-			.from("archived_sales")
-			.insert([saleData]);
-
-		if (archiveError) {
-			console.error("Error archiving sale:", archiveError);
-			toast.error("Error", { description: "Failed to archive sale" });
-			return;
-		}
-
-		// Delete from sales
-		const { error: deleteError } = await supabase
-			.from("sales")
-			.delete()
-			.eq("id", id);
-
-		if (deleteError) {
-			console.error("Error deleting sale:", deleteError);
-			toast.error("Error", { description: "Failed to delete sale" });
-			return;
-		}
-
-		// Update local state
-		toast.success("Success", { description: "Order archived successfully" });
-		setSalesData((prev) => prev.filter((row) => row.id !== id));
-	};
+	const handleDelete = (id: string | number) => deleteMutation.mutate(id);
+	const handleMarkAsDelivered = (id: string | number) =>
+		markAsDeliveredMutation.mutate(id);
+	const handleMarkAsUndelivered = (id: string | number) =>
+		markAsUndeliveredMutation.mutate(id);
 
 	const table = useReactTable({
-		data: salesData,
-		columns: columns(salesData, setSalesData, handleDelete, handleViewDetails),
+		data: salesData as z.infer<typeof schema>[],
+		columns: columns(
+			handleDelete,
+			handleMarkAsDelivered,
+			handleMarkAsUndelivered,
+			handleViewDetails,
+		),
 		state: {
 			sorting,
 			columnVisibility,
@@ -413,6 +481,8 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 		onPaginationChange: setPagination,
 		getCoreRowModel: getCoreRowModel(),
 		getFilteredRowModel: getFilteredRowModel(),
+		manualPagination: true,
+		pageCount: Math.ceil(totalCount / pagination.pageSize),
 		getPaginationRowModel: getPaginationRowModel(),
 		getSortedRowModel: getSortedRowModel(),
 		getFacetedRowModel: getFacetedRowModel(),
@@ -487,207 +557,236 @@ export function DataTable({ data }: { data: z.infer<typeof schema>[] }) {
 			</div>
 			<TabsContent
 				value="outline"
-				className="relative flex flex-col gap-4 overflow-auto"
+				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
 			>
-				{!data ? (
-					<p className="text-center">No data available.</p>
-				) : (
-					<>
-						<div className="overflow-hidden rounded-lg border">
-							{!table || !table?.getRowModel() ? (
-								<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
-									{Array.isArray(data) && data.length === 0
-										? "No data available."
-										: "Unable to load data. Please check your internet connection."}
-								</div>
-							) : (
-								<Table>
-									<TableHeader className="bg-muted sticky top-0 z-10">
-										{table?.getHeaderGroups()?.map((headerGroup) => (
-											<TableRow key={headerGroup.id}>
-												{headerGroup?.headers.map((header) => {
-													return (
-														<TableHead key={header.id} colSpan={header.colSpan}>
-															{header.isPlaceholder
-																? null
-																: flexRender(
-																		header.column.columnDef.header,
-																		header.getContext(),
+				<div className="flex items-center">
+					<Input
+						placeholder="Search by email, phone, or address..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						className="max-w-sm"
+					/>
+				</div>
+				<div className="overflow-hidden rounded-lg border">
+					{!table || !table?.getRowModel() ? (
+						isLoading ? (
+							<Table>
+								<TableHeader className="bg-muted sticky top-0 z-10">
+									<TableRow>
+										<TableHead>
+											<Skeleton className="h-4 w-24" />
+										</TableHead>
+									</TableRow>
+								</TableHeader>
+								<TableBody>
+									{Array.from({ length: 5 }).map((_, i) => (
+										<TableRow key={i}>
+											<TableCell>
+												<Skeleton className="h-6 w-full" />
+											</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
+						) : (
+							<div className="h-24 flex items-center justify-center text-center text-muted-foreground">
+								{Array.isArray(salesData) && salesData.length === 0
+									? "No data available."
+									: "Unable to load data. Please check your internet connection."}
+							</div>
+						)
+					) : (
+						<Table>
+							<TableHeader className="bg-muted sticky top-0 z-10">
+								{table?.getHeaderGroups()?.map((headerGroup) => (
+									<TableRow key={headerGroup.id}>
+										{headerGroup?.headers.map((header) => {
+											return (
+												<TableHead key={header.id} colSpan={header.colSpan}>
+													{header.isPlaceholder
+														? null
+														: flexRender(
+																header.column.columnDef.header,
+																header.getContext(),
+															)}
+												</TableHead>
+											);
+										})}
+									</TableRow>
+								))}
+							</TableHeader>
+							<TableBody>
+								{table?.getRowModel().rows?.length ? (
+									table?.getRowModel().rows.map((row) => {
+										const isActiveRow =
+											row.original.status === "paid" &&
+											row.original.fulfillment_status !== "delivered";
+										return (
+											<ContextMenu key={row.id}>
+												<ContextMenuTrigger asChild>
+													<TableRow
+														data-state={row.getIsSelected() && "selected"}
+														onDoubleClick={() =>
+															handleViewDetails(row.original.id)
+														}
+														className={
+															isActiveRow
+																? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 cursor-pointer"
+																: "cursor-pointer"
+														}
+													>
+														{row.getVisibleCells().map((cell) => {
+															return (
+																<TableCell key={cell.id}>
+																	{flexRender(
+																		cell.column.columnDef.cell,
+																		cell.getContext(),
 																	)}
-														</TableHead>
-													);
-												})}
-											</TableRow>
-										))}
-									</TableHeader>
-									<TableBody>
-										{table?.getRowModel().rows?.length ? (
-											table?.getRowModel().rows.map((row) => {
-												const isActiveRow =
-													row.original.status === "paid" &&
-													row.original.fulfillment_status !== "delivered";
-												return (
-													<ContextMenu key={row.id}>
-														<ContextMenuTrigger asChild>
-															<TableRow
-																data-state={row.getIsSelected() && "selected"}
-																onDoubleClick={() =>
-																	handleViewDetails(row.original.id)
-																}
-																className={
-																	isActiveRow
-																		? "bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 cursor-pointer"
-																		: "cursor-pointer"
-																}
-															>
-																{row.getVisibleCells().map((cell) => {
-																	return (
-																		<TableCell key={cell.id}>
-																			{flexRender(
-																				cell.column.columnDef.cell,
-																				cell.getContext(),
-																			)}
-																		</TableCell>
-																	);
-																})}
-															</TableRow>
-														</ContextMenuTrigger>
-														<ContextMenuContent className="w-48">
-															<ContextMenuItem
-																onClick={() =>
-																	handleViewDetails(row.original.id)
-																}
-															>
-																View Details
-															</ContextMenuItem>
-															<ContextMenuSeparator />
-															<ContextMenuItem
-																disabled={
-																	row?.original.fulfillment_status !== "pending"
-																}
-																onClick={() =>
-																	handleMarkAsDelivered(
-																		row.original.id,
-																		salesData,
-																		setSalesData,
-																	)
-																}
-															>
-																Mark Delivered
-															</ContextMenuItem>
-															<ContextMenuSeparator />
-															<ContextMenuItem
-																disabled={
-																	row?.original.fulfillment_status === "pending"
-																}
-																onClick={() => handleDelete(row.original.id)}
-																className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
-															>
-																Delete
-															</ContextMenuItem>
-														</ContextMenuContent>
-													</ContextMenu>
-												);
-											})
-										) : (
-											<TableRow>
-												<TableCell colSpan={20} className="h-24 text-center">
-													No results.
+																</TableCell>
+															);
+														})}
+													</TableRow>
+												</ContextMenuTrigger>
+												<ContextMenuContent className="w-48">
+													<ContextMenuItem
+														onClick={() => handleViewDetails(row.original.id)}
+													>
+														View Details
+													</ContextMenuItem>
+													<ContextMenuSeparator />
+													<ContextMenuItem
+														disabled={
+															row?.original.fulfillment_status !== "pending"
+														}
+														onClick={() =>
+															handleMarkAsDelivered(row.original.id)
+														}
+													>
+														Mark Delivered
+													</ContextMenuItem>
+													<ContextMenuSeparator />
+													<ContextMenuItem
+														disabled={
+															row?.original.fulfillment_status !== "delivered"
+														}
+														onClick={() =>
+															handleMarkAsUndelivered(row.original.id)
+														}
+													>
+														Mark Undelivered
+													</ContextMenuItem>
+													<ContextMenuSeparator />
+													<ContextMenuItem
+														disabled={
+															row?.original.fulfillment_status === "pending"
+														}
+														onClick={() => handleDelete(row.original.id)}
+														className="text-red-600 focus:bg-red-50 focus:text-red-600 dark:focus:bg-red-950 dark:focus:text-red-400"
+													>
+														Delete
+													</ContextMenuItem>
+												</ContextMenuContent>
+											</ContextMenu>
+										);
+									})
+								) : isLoading ? (
+									Array.from({ length: 5 }).map((_, i) => (
+										<TableRow key={i}>
+											{table.getVisibleLeafColumns().map((column) => (
+												<TableCell key={column.id}>
+													<Skeleton className="h-6 w-full" />
 												</TableCell>
-											</TableRow>
-										)}
-									</TableBody>
-								</Table>
-							)}
-						</div>
-						<div className="flex items-center justify-between px-4">
-							<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
-								{table?.getFilteredSelectedRowModel()?.rows.length} of{" "}
-								{table?.getFilteredRowModel()?.rows.length} row(s) selected.
-							</div>
-							<div className="flex w-full items-center gap-8 lg:w-fit">
-								<div className="hidden items-center gap-2 lg:flex">
-									<Label
-										htmlFor="rows-per-page"
-										className="text-sm font-medium"
-									>
-										Rows per page
-									</Label>
-									<Select
-										value={`${table?.getState().pagination.pageSize}`}
-										onValueChange={(value) => {
-											table?.setPageSize(Number(value));
-										}}
-									>
-										<SelectTrigger
-											size="sm"
-											className="w-20"
-											id="rows-per-page"
-										>
-											<SelectValue
-												placeholder={table?.getState().pagination.pageSize}
-											/>
-										</SelectTrigger>
-										<SelectContent side="top">
-											{[10, 20, 30, 40, 50].map((pageSize) => (
-												<SelectItem key={pageSize} value={`${pageSize}`}>
-													{pageSize}
-												</SelectItem>
 											))}
-										</SelectContent>
-									</Select>
-								</div>
-								<div className="flex w-fit items-center justify-center text-sm font-medium">
-									Page {table?.getState().pagination.pageIndex + 1} of{" "}
-									{table?.getPageCount()}
-								</div>
-								<div className="ml-auto flex items-center gap-2 lg:ml-0">
-									<Button
-										variant="outline"
-										className="hidden h-8 w-8 p-0 lg:flex"
-										onClick={() => table?.setPageIndex(0)}
-										disabled={!table?.getCanPreviousPage()}
-									>
-										<span className="sr-only">Go to first page</span>
-										<IconChevronsLeft />
-									</Button>
-									<Button
-										variant="outline"
-										className="size-8"
-										size="icon"
-										onClick={() => table?.previousPage()}
-										disabled={!table?.getCanPreviousPage()}
-									>
-										<span className="sr-only">Go to previous page</span>
-										<IconChevronLeft />
-									</Button>
-									<Button
-										variant="outline"
-										className="size-8"
-										size="icon"
-										onClick={() => table?.nextPage()}
-										disabled={!table?.getCanNextPage()}
-									>
-										<span className="sr-only">Go to next page</span>
-										<IconChevronRight />
-									</Button>
-									<Button
-										variant="outline"
-										className="hidden size-8 lg:flex"
-										size="icon"
-										onClick={() =>
-											table?.setPageIndex(table?.getPageCount() - 1)
-										}
-										disabled={!table?.getCanNextPage()}
-									>
-										<span className="sr-only">Go to last page</span>
-										<IconChevronsRight />
-									</Button>
-								</div>
-							</div>
+										</TableRow>
+									))
+								) : (
+									<TableRow>
+										<TableCell colSpan={20} className="h-24 text-center">
+											No results.
+										</TableCell>
+									</TableRow>
+								)}
+							</TableBody>
+						</Table>
+					)}
+				</div>
+				<div className="flex items-center justify-between px-4">
+					<div className="text-muted-foreground hidden flex-1 text-sm lg:flex">
+						{table?.getFilteredSelectedRowModel()?.rows.length} of{" "}
+						{table?.getFilteredRowModel()?.rows.length} row(s) selected.
+					</div>
+					<div className="flex w-full items-center gap-8 lg:w-fit">
+						<div className="hidden items-center gap-2 lg:flex">
+							<Label htmlFor="rows-per-page" className="text-sm font-medium">
+								Rows per page
+							</Label>
+							<Select
+								value={`${table?.getState().pagination.pageSize}`}
+								onValueChange={(value) => {
+									table?.setPageSize(Number(value));
+								}}
+							>
+								<SelectTrigger size="sm" className="w-20" id="rows-per-page">
+									<SelectValue
+										placeholder={table?.getState().pagination.pageSize}
+									/>
+								</SelectTrigger>
+								<SelectContent side="top">
+									{[10, 20, 30, 40, 50].map((pageSize) => (
+										<SelectItem key={pageSize} value={`${pageSize}`}>
+											{pageSize}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 						</div>
-					</>
-				)}
+						<div className="flex w-fit items-center justify-center text-sm font-medium">
+							Page {table?.getState().pagination.pageIndex + 1} of{" "}
+							{table?.getPageCount()}
+						</div>
+						<div className="ml-auto flex items-center gap-2 lg:ml-0">
+							<Button
+								variant="outline"
+								className="hidden h-8 w-8 p-0 lg:flex"
+								onClick={() => table?.setPageIndex(0)}
+								disabled={!table?.getCanPreviousPage()}
+							>
+								<span className="sr-only">Go to first page</span>
+								<IconChevronsLeft />
+							</Button>
+							<Button
+								variant="outline"
+								className="size-8"
+								size="icon"
+								onClick={() => table?.previousPage()}
+								disabled={!table?.getCanPreviousPage()}
+							>
+								<span className="sr-only">Go to previous page</span>
+								<IconChevronLeft />
+							</Button>
+							<Button
+								variant="outline"
+								className="size-8"
+								size="icon"
+								onClick={() => table?.nextPage()}
+								disabled={!table?.getCanNextPage()}
+							>
+								<span className="sr-only">Go to next page</span>
+								<IconChevronRight />
+							</Button>
+							<Button
+								variant="outline"
+								className="hidden size-8 lg:flex"
+								size="icon"
+								onClick={() => table?.setPageIndex(table?.getPageCount() - 1)}
+								disabled={!table?.getCanNextPage()}
+							>
+								<span className="sr-only">Go to last page</span>
+								<IconChevronsRight />
+							</Button>
+						</div>
+					</div>
+				</div>
 			</TabsContent>
 			<TabsContent
 				value="preorders"

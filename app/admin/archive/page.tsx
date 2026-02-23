@@ -8,7 +8,11 @@ import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 const Page = () => {
-	const { data: archived_sales, error } = useQuery({
+	const {
+		data: archived_sales,
+		error,
+		isLoading,
+	} = useQuery({
 		queryKey: ["admin", "archived_sales"],
 		queryFn: async () => {
 			const response = await supabase.from("archived_sales").select("*");
@@ -43,7 +47,10 @@ const Page = () => {
 					View history of completed and cancelled sales orders.
 				</p>
 			</div>
-			<ArchivedDataTable data={(sortedArchivedSales ?? []) as salesType[]} />
+			<ArchivedDataTable
+				isLoading={isLoading}
+				data={(sortedArchivedSales ?? []) as salesType[]}
+			/>
 		</div>
 	);
 };

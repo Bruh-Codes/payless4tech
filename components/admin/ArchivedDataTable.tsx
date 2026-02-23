@@ -75,9 +75,10 @@ import {
 } from "@/components/ui/dialog";
 import ArchivedPreorders, { preorderSchema } from "./ArchivedPreorders";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const schema = z.object({
-	id: z.number(),
+	id: z.union([z.number(), z.string()]),
 	email: z.string(),
 	user_id: z.string(),
 	total_amount: z.string(),
@@ -101,8 +102,8 @@ export const schema = z.object({
 const columns = (
 	// data: z.infer<typeof schema>[],
 	// setData: React.Dispatch<React.SetStateAction<z.infer<typeof schema>[]>>,
-	handleDeletePermanent: (id: number) => void,
-	handleRestoreArchived: (id: number) => void,
+	handleDeletePermanent: (id: string | number) => void,
+	handleRestoreArchived: (id: string | number) => void,
 ): ColumnDef<z.infer<typeof schema>>[] => [
 	{
 		accessorKey: "status",
@@ -162,8 +163,8 @@ const columns = (
 
 			return (
 				<ul className="space-y-1 text-sm text-muted-foreground">
-					{safeProduct?.map(({ name, quantity, price, id }) => (
-						<li key={id} className="flex items-start gap-2">
+					{safeProduct?.map(({ name, quantity, price, id }, index) => (
+						<li key={id || index} className="flex items-start gap-2">
 							<span className="font-medium truncate text-foreground">
 								Name:
 							</span>{" "}
@@ -303,8 +304,10 @@ export default columns;
 
 export function ArchivedDataTable({
 	data,
+	isLoading = false,
 }: {
 	data: z.infer<typeof schema>[];
+	isLoading?: boolean;
 }) {
 	const queryClient = useQueryClient();
 	const [rowSelection, setRowSelection] = React.useState({});
@@ -324,7 +327,11 @@ export function ArchivedDataTable({
 		setSalesData(data || []);
 	}, [data]);
 
-	const { data: preorders, error } = useQuery({
+	const {
+		data: preorders,
+		error,
+		isLoading: isPreordersLoading,
+	} = useQuery({
 		queryKey: ["admin", "archived_preorders"],
 		queryFn: async () => {
 			const response = await supabase.from("archived_preorders").select("*");
@@ -344,7 +351,7 @@ export function ArchivedDataTable({
 
 	// Delete permanent mutation
 	const deletePermanentMutation = useMutation({
-		mutationFn: async (id: number) => {
+		mutationFn: async (id: string | number) => {
 			const { error } = await supabase
 				.from("archived_sales")
 				.delete()
@@ -363,7 +370,7 @@ export function ArchivedDataTable({
 
 	// Restore archived mutation
 	const restoreArchivedMutation = useMutation({
-		mutationFn: async (id: number) => {
+		mutationFn: async (id: string | number) => {
 			// Fetch the record from archived_sales
 			const { data: archivedRecord, error: fetchError } = await supabase
 				.from("archived_sales")
@@ -408,11 +415,11 @@ export function ArchivedDataTable({
 		},
 	});
 
-	const handleDeletePermanent = (id: number) => {
+	const handleDeletePermanent = (id: string | number) => {
 		deletePermanentMutation.mutate(id);
 	};
 
-	const handleRestoreArchived = (id: number) => {
+	const handleRestoreArchived = (id: string | number) => {
 		restoreArchivedMutation.mutate(id);
 	};
 
@@ -651,6 +658,16 @@ export function ArchivedDataTable({
 													</ContextMenu>
 												);
 											})
+										) : isLoading ? (
+											Array.from({ length: 5 }).map((_, i) => (
+												<TableRow key={i}>
+													{table.getVisibleLeafColumns().map((column) => (
+														<TableCell key={column.id}>
+															<Skeleton className="h-6 w-full" />
+														</TableCell>
+													))}
+												</TableRow>
+											))
 										) : (
 											<TableRow>
 												<TableCell colSpan={20} className="h-24 text-center">
@@ -756,6 +773,7 @@ export function ArchivedDataTable({
 				className="relative flex flex-col gap-4 overflow-auto"
 			>
 				<ArchivedPreorders
+					isLoading={isPreordersLoading}
 					preorders={preorders?.data as z.infer<typeof preorderSchema>[]}
 				/>
 			</TabsContent>
