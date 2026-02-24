@@ -7,7 +7,9 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"ngrok start": " ngrok http 3000"
+		"ngrok start": " ngrok http 3000",
+		"test:integration": "node scripts/test-integration.js",
+		"test:bizhub": "node scripts/test-integration.js"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.0.1",

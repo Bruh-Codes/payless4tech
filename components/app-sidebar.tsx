@@ -6,6 +6,8 @@ import {
 	IconFolder,
 	IconInnerShadowTop,
 	IconListDetails,
+	IconDownload,
+	IconSettings,
 } from "@tabler/icons-react";
 
 import { NavMain } from "@/components/nav-main";
@@ -29,11 +31,20 @@ const data = {
 			icon: IconDashboard,
 		},
 		{
+			title: "Bizhub Import",
+			url: "/admin/bizhub-import",
+			icon: IconDownload,
+		},
+		{
+			title: "Manage Products",
+			url: "/admin/products/manage",
+			icon: IconSettings,
+		},
+		{
 			title: "Products",
 			url: "/admin/products",
 			icon: IconListDetails,
 		},
-
 		{
 			title: "Archive",
 			url: "/admin/archive",

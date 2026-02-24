@@ -16,7 +16,6 @@ import { Footer } from "@/components/Footer";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { cn } from "@/lib/utils";
 import { PreorderForm } from "@/components/PreorderForm";
-import { useSession } from "@supabase/auth-helpers-react";
 
 interface ProductImage {
 	created_at: string;
@@ -73,7 +72,6 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 	const [isLoading, setIsLoading] = useState(true);
 	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
 	const [preordered, setPreordered] = useState(false);
-	const session = useSession();
 
 	useEffect(() => {
 		fetchProduct();
@@ -101,14 +99,17 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		try {
 			console.log("Fetching product details for ID:", id);
 
+			// Fetch product from Supabase database (published products)
 			const { data: productData, error: productError } = await supabase
 				.from("products")
 				.select("*")
 				.eq("id", id)
+				.eq("status", "active") // Only show published products
 				.single();
 
 			if (productError) throw productError;
 
+			// Fetch additional images if any
 			const { data: imagesData, error: imagesError } = await supabase
 				.from("product_images")
 				.select("*")
@@ -117,15 +118,20 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 
 			if (imagesError) throw imagesError;
 
-			const fullProduct = { ...productData, images: imagesData || [] };
+			const fullProduct = { 
+				...productData, 
+				images: imagesData || [],
+				status: productData.bizhub_quantity > 0 ? 'active' : 'out_of_stock'
+			};
+			
 			setProduct(fullProduct);
-			setSelectedImage(fullProduct.image_url);
+			setSelectedImage(fullProduct.image_url || (imagesData && imagesData[0]?.image_url) || "");
 
 			updateMetaTags(fullProduct);
 		} catch (error: any) {
 			console.error("Error fetching product:", error);
 			toast.error("Error", {
-				description: "Failed to load product details",
+				description: error.message || "Failed to load product details",
 			});
 		} finally {
 			setIsLoading(false);

@@ -38,29 +38,31 @@ export const SidebarFilter = ({
 	}, []);
 
 	const fetchCategories = async () => {
-		const manualCategories = ["Monitor"];
 		try {
+			// Get published products from Supabase
 			const { data: products, error } = await supabase
 				.from("products")
-				.select("category, name");
+				.select("category, name, make")
+				.eq("status", "active"); // Only published products
 
 			if (error) {
-				console.error("Error fetching categories:", error);
+				console.error("Error fetching categories from database:", error);
 				return;
 			}
 
 			// Group products by category and extract unique brands
 			const categoryMap = new Map<string, Set<string>>();
 
-			products.forEach((product) => {
+			products?.forEach((product) => {
 				// Skip products with empty categories
 				if (!product.category) return;
 
 				if (!categoryMap.has(product.category)) {
 					categoryMap.set(product.category, new Set());
 				}
-				// Extract brand from product name (assuming brand is first word)
-				const brand = product.name.split(" ")[0];
+				
+				// Use the 'make' field for brand, fallback to first word of name
+				const brand = product.make || product.name.split(" ")[0];
 				categoryMap.get(product.category)?.add(brand);
 			});
 
