@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/db-client";
+import { supabase } from "@/integrations/supabase/client";
 import { ProductCard } from "./ProductCard";
 import { LoadingState } from "./LoadingState";
 import { useCart } from "@/contexts/CartContext";

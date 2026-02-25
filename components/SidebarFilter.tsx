@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { supabase } from "@/lib/db-client";
+import { supabase } from "@/integrations/supabase/client";
 
 interface CategoryData {
 	category: string;

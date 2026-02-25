@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getProducts, type BizhubProduct } from "@/lib/bizhub-api";
-import { supabase } from "@/lib/db-client";
+import { supabase } from "@/integrations/supabase/client";
 import { Search, Import, Check, X, Eye, Plus } from "lucide-react";
 import Image from "next/image";
 
