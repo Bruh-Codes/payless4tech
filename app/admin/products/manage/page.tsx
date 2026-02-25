@@ -16,7 +16,7 @@ import {
   Eye, 
   EyeOff, 
   Archive, 
-  Sync, 
+  RefreshCw as Sync, 
   Upload,
   Save,
   X
