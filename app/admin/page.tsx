@@ -29,7 +29,23 @@ export interface salesType {
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-	let { data: sales, error } = await supabase.from("sales").select("*");
+	// Only fetch data if we're not in build time and Supabase is properly configured
+	let sales: any[] = [];
+	let error = null;
+
+	try {
+		// Check if we have the required environment variables
+		if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+			const result = await supabase.from("sales").select("*");
+			sales = result.data || [];
+			error = result.error;
+		}
+	} catch (e) {
+		// Handle any errors during build time gracefully
+		console.log("Admin page: Supabase not available during build");
+		sales = [];
+		error = null;
+	}
 
 	const sortedSales = sales?.sort((a, b) => {
 		if (
@@ -44,6 +60,7 @@ export default async function Page() {
 			return 1;
 		return 0;
 	});
+	
 	if (error) {
 		console.log("Error fetching sales data", error);
 	}
