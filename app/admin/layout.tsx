@@ -1,12 +1,12 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ReactNode } from "react";
-import AdminAuth from "./AdminAuth";
+import SimpleAdminAuth from "./SimpleAdminAuth";
 import QueryProvider from "@/components/admin/QueryProvider";
 
 const layout = ({ children }: { children: ReactNode }) => {
 	return (
-		<AdminAuth>
+		<SimpleAdminAuth>
 			<QueryProvider>
 				<SidebarProvider>
 					<AppSidebar variant="inset" />
@@ -19,7 +19,7 @@ const layout = ({ children }: { children: ReactNode }) => {
 					</SidebarInset>
 				</SidebarProvider>
 			</QueryProvider>
-		</AdminAuth>
+		</SimpleAdminAuth>
 	);
 };
 export default layout;

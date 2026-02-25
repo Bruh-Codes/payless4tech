@@ -2,7 +2,7 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/admin/data-table";
-import { supabase } from "@/integrations/supabase/client";
+import { db as supabase } from "@/lib/database";
 
 export interface salesType {
 	id: number;
