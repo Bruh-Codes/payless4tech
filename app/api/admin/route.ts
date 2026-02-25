@@ -3,6 +3,13 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/integrations/supabase/admin";
 
 export async function POST(request: NextRequest) {
+	// Check if admin client is available
+	if (!supabaseAdmin) {
+		return new Response(JSON.stringify({ error: "Admin functionality not configured" }), {
+			status: 503,
+		});
+	}
+
 	// Extract the Authorization token
 	const authHeader = (await headers()).get("authorization");
 	const token = authHeader?.replace("Bearer ", "");
