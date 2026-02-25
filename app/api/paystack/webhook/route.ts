@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 
-// Create Supabase client using service role key
-const supabase = createClient(
-	process.env.NEXT_PUBLIC_SUPABASE_URL!,
-	process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Create Supabase client using service role key (only if available)
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
+	? createClient(
+			process.env.NEXT_PUBLIC_SUPABASE_URL,
+			process.env.SUPABASE_SERVICE_ROLE_KEY
+		)
+	: null;
 
 // Utility to skip ngrok warning page
 const withNgrokHeader = (body: any, status: number) => {
@@ -16,6 +18,15 @@ const withNgrokHeader = (body: any, status: number) => {
 	});
 };
 export async function POST(req: NextRequest) {
+	// Check if required services are available
+	if (!supabase) {
+		return withNgrokHeader({ error: "Payment processing not configured" }, 503);
+	}
+
+	if (!process.env.PAYSTACK_SECRET_KEY) {
+		return withNgrokHeader({ error: "Paystack not configured" }, 503);
+	}
+
 	const rawBody = await req.text();
 	const signature = req.headers.get("x-paystack-signature");
 
@@ -23,7 +34,7 @@ export async function POST(req: NextRequest) {
 	// console.log("🔔 Signature Header:", signature);
 
 	const expectedSignature = crypto
-		.createHmac("sha512", process.env.PAYSTACK_SECRET_KEY!)
+		.createHmac("sha512", process.env.PAYSTACK_SECRET_KEY)
 		.update(rawBody)
 		.digest("hex");
 
