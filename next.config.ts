@@ -7,21 +7,6 @@ const nextConfig: NextConfig = {
 		ignoreBuildErrors: true,
 	},
 	serverExternalPackages: ['pg', 'pg-connection-string', 'pg-pool', 'pg-protocol'],
-	webpack: (config, { isServer }) => {
-		if (!isServer) {
-			// Don't try to bundle these Node.js modules on the client
-			config.resolve.fallback = {
-				...config.resolve.fallback,
-				fs: false,
-				net: false,
-				tls: false,
-				dns: false,
-				pg: false,
-				'pg-native': false,
-			};
-		}
-		return config;
-	},
 	images: {
 		remotePatterns: [
 			{

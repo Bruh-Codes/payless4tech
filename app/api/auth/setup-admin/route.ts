@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminUser } from '@/lib/simple-auth';
-import { db } from '@/lib/database';
+import { query } from '@/lib/db-server';
 
 export async function POST(request: NextRequest) {
   try {
     // Check if any admin users already exist
-    const existingAdmins = await db.from('admin_users').select('id').limit(1);
+    const existingAdmins = await query('SELECT id FROM admin_users LIMIT 1');
     
     if (existingAdmins.data && existingAdmins.data.length > 0) {
       return NextResponse.json(
