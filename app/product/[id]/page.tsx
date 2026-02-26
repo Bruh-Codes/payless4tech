@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { db as supabase } from "@/lib/database";
+// Database access via API routes (pg can't run in browser)
 import { useCart } from "@/contexts/CartContext";
 import { ShoppingCart, Trash2 } from "lucide-react";
 
@@ -99,33 +99,33 @@ const ProductDetails = ({ params }: { params: Promise<{ id: string }> }) => {
 		try {
 			console.log("Fetching product details for ID:", id);
 
-			// Fetch product from Supabase database (published products)
-			const { data: productData, error: productError } = await supabase
-				.from("products")
-				.select("*")
-				.eq("id", id)
-				.eq("status", "active") // Only show published products
-				.single();
-
-			if (productError) throw productError;
-
-			// Fetch additional images if any
-			const { data: imagesData, error: imagesError } = await supabase
-				.from("product_images")
-				.select("*")
-				.eq("product_id", id)
-				.order("display_order", { ascending: true });
-
-			if (imagesError) throw imagesError;
+			// Fetch product via API route
+			const response = await fetch(`/api/products?status=all&limit=100`);
+			const result = await response.json();
+			
+			if (!result.success) throw new Error(result.error);
+			
+			const productData = result.data?.find((p: any) => String(p.id) === String(id));
+			
+			if (!productData) throw new Error("Product not found");
 
 			const fullProduct = { 
-				...productData, 
-				images: imagesData || [],
-				status: productData.bizhub_quantity > 0 ? 'active' : 'out_of_stock'
+				...productData,
+				image_url: productData.featured_image,
+				images: (productData.gallery_images || []).map((url: string, i: number) => ({
+					id: `img-${i}`,
+					image_url: url,
+					product_id: productData.id,
+					display_order: i,
+					created_at: productData.created_at,
+					updated_at: productData.updated_at
+				})),
+				bizhub_quantity: productData.stock_quantity,
+				status: productData.stock_quantity > 0 ? 'active' : 'out_of_stock'
 			};
 			
 			setProduct(fullProduct);
-			setSelectedImage(fullProduct.image_url || (imagesData && imagesData[0]?.image_url) || "");
+			setSelectedImage(fullProduct.image_url || (fullProduct.images[0]?.image_url) || "");
 
 			updateMetaTags(fullProduct);
 		} catch (error: any) {

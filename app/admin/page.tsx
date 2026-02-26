@@ -2,7 +2,7 @@ import AdminOverview from "@/components/admin/AdminOverview";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { DataTable } from "@/components/admin/data-table";
-import { db as supabase } from "@/lib/database";
+import { query } from "@/lib/database";
 
 export interface salesType {
 	id: number;
@@ -34,15 +34,11 @@ export default async function Page() {
 	let error = null;
 
 	try {
-		// Check if we have the required environment variables
-		if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-			const result = await supabase.from("sales").select("*");
-			sales = result.data || [];
-			error = result.error;
-		}
+		const result = await query('SELECT * FROM sales ORDER BY created_at DESC LIMIT 100');
+		sales = result.data || [];
+		error = result.error;
 	} catch (e) {
-		// Handle any errors during build time gracefully
-		console.log("Admin page: Supabase not available during build");
+		console.log("Admin page: Database not available during build");
 		sales = [];
 		error = null;
 	}
