@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
 	typescript: {
 		ignoreBuildErrors: true,
 	},
-	serverExternalPackages: ['pg', 'pg-connection-string', 'pg-pool', 'pg-protocol'],
+	/* pg removed - using API proxy instead */
 	images: {
 		remotePatterns: [
 			{
