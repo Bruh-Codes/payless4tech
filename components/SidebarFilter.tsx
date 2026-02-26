@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { db as supabase } from "@/lib/database";
+// Database import removed - using API routes instead
 
 interface CategoryData {
 	category: string;
@@ -39,16 +39,16 @@ export const SidebarFilter = ({
 
 	const fetchCategories = async () => {
 		try {
-			// Get published products from Supabase
-			const { data: products, error } = await supabase
-				.from("products")
-				.select("category, name, make")
-				.eq("status", "active"); // Only published products
-
-			if (error) {
-				console.error("Error fetching categories from database:", error);
+			// Get published products via API
+			const response = await fetch('/api/products?status=published&limit=100');
+			const result = await response.json();
+			
+			if (!result.success) {
+				console.error("Error fetching categories from database:", result.error);
 				return;
 			}
+			
+			const products = result.data;
 
 			// Group products by category and extract unique brands
 			const categoryMap = new Map<string, Set<string>>();

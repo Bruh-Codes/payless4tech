@@ -3,7 +3,32 @@
  * Replaces Supabase with direct PostgreSQL connection
  */
 
-import { Pool, PoolClient } from 'pg';
+import type { Pool, PoolClient } from 'pg';
+
+// Lazy load pg only on server side
+let pg: typeof import('pg') | null = null;
+let pool: Pool | null = null;
+
+const getPool = () => {
+  if (typeof window !== 'undefined') {
+    throw new Error('Database client can only be used on server side');
+  }
+  
+  if (!pool) {
+    if (!pg) {
+      pg = require('pg');
+    }
+    pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  }
+  
+  return pool;
+};
 
 // Database connection pool
 const pool = new Pool({
@@ -16,9 +41,14 @@ const pool = new Pool({
 
 // Database query helper with automatic connection management
 export async function query<T = any>(text: string, params?: any[]): Promise<{ data: T[] | null; error: any }> {
+  if (typeof window !== 'undefined') {
+    return { data: null, error: new Error('Database queries can only be run on server side') };
+  }
+
   let client: PoolClient | null = null;
   
   try {
+    const pool = getPool();
     client = await pool.connect();
     const result = await client.query(text, params);
     return { data: result.rows, error: null };

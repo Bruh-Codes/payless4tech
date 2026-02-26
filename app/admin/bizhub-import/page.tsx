@@ -9,7 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { getProducts, type BizhubProduct } from "@/lib/bizhub-api";
-import { db as supabase } from "@/lib/database";
 import { Search, Import, Check, X, Eye, Plus } from "lucide-react";
 import Image from "next/image";
 
@@ -51,13 +50,13 @@ const BizhubImportPage = () => {
         throw new Error(response.error?.message || "Failed to fetch Bizhub products");
       }
 
-      // Check which products are already imported
-      const { data: existingProducts } = await supabase
-        .from("products")
-        .select("bizhub_id, status");
+      // Check which products are already imported via API
+      const existingResponse = await fetch('/api/products?status=all&limit=1000');
+      const existingResult = await existingResponse.json();
+      const existingProducts = existingResult.success ? existingResult.data : [];
 
       const existingMap = new Map(
-        existingProducts?.map(p => [p.bizhub_id, p.status === 'active']) || []
+        existingProducts?.map((p: any) => [p.bizhub_asset_id, p.status === 'published']) || []
       );
 
       const productsWithStatus = response.data.map(product => ({
@@ -111,44 +110,30 @@ const BizhubImportPage = () => {
     setImportingIds(prev => new Set([...prev, selectedProduct.id]));
 
     try {
-      // Create product in Supabase with enhanced details
+      // Create product via API route
       const productData = {
-        bizhub_id: selectedProduct.id,
+        bizhub_asset_id: selectedProduct.id,
         name: selectedProduct.name,
         description: enhancedDescription,
-        detailed_specs: enhancedSpecs,
+        short_description: enhancedSpecs,
         price: customPrice || selectedProduct.price,
-        original_price: selectedProduct.price, // Store original Bizhub price
-        condition: selectedProduct.condition,
-        category: selectedProduct.category.toLowerCase(),
-        image_url: selectedImages[0] || null,
-        status: 'draft', // Start as draft, can be published later
-        // Additional Bizhub data
-        make: selectedProduct.make,
-        model: selectedProduct.model,
-        asset_tag: selectedProduct.asset_tag,
-        currency: selectedProduct.currency,
-        bizhub_quantity: selectedProduct.quantity
+        compare_at_price: selectedProduct.price,
+        currency: selectedProduct.currency || 'GHS',
+        stock_quantity: selectedProduct.quantity,
+        featured_image: selectedImages[0] || null,
+        gallery_images: selectedImages.slice(1),
+        category_id: 1, // Laptops
+        status: 'draft'
       };
 
-      const { data: newProduct, error } = await supabase
-        .from("products")
-        .insert(productData)
-        .select()
-        .single();
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
 
-      if (error) throw error;
-
-      // Insert additional images if any
-      if (selectedImages.length > 1) {
-        const imageInserts = selectedImages.slice(1).map((url, index) => ({
-          product_id: newProduct.id,
-          image_url: url,
-          display_order: index + 1
-        }));
-
-        await supabase.from("product_images").insert(imageInserts);
-      }
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
       toast.success("Product imported successfully!", {
         description: `${selectedProduct.name} has been added to your website inventory as a draft.`
@@ -184,27 +169,28 @@ const BizhubImportPage = () => {
 
     try {
       const productData = {
-        bizhub_id: product.id,
+        bizhub_asset_id: product.id,
         name: product.name,
-        description: product.description,
-        detailed_specs: JSON.stringify(product.specs),
+        description: product.description || `${product.make} ${product.model} - ${product.condition}`,
+        short_description: JSON.stringify(product.specs),
         price: product.price,
-        condition: product.condition,
-        category: product.category.toLowerCase(),
-        image_url: product.images[0] || null,
-        status: 'draft',
-        make: product.make,
-        model: product.model,
-        asset_tag: product.asset_tag,
-        currency: product.currency,
-        bizhub_quantity: product.quantity
+        compare_at_price: product.price,
+        currency: product.currency || 'GHS',
+        stock_quantity: product.quantity,
+        featured_image: product.images?.[0] || null,
+        gallery_images: product.images?.slice(1) || [],
+        category_id: 1,
+        status: 'draft'
       };
 
-      const { error } = await supabase
-        .from("products")
-        .insert(productData);
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productData)
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
       toast.success("Product imported!", {
         description: `${product.name} imported as draft. You can enhance it before publishing.`

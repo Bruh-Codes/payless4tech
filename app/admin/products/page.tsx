@@ -3,7 +3,6 @@
 import StockProductList from "../components/StockProductList";
 import { Product } from "../components/ProductCard";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -15,13 +14,15 @@ const Products = () => {
 	} = useQuery({
 		queryKey: ["products"],
 		queryFn: async () => {
-			const response = await supabase.from("products").select("*");
-			return response;
+			const response = await fetch('/api/products?status=all&limit=100');
+			const result = await response.json();
+			if (!result.success) throw new Error(result.error);
+			return { data: result.data };
 		},
 	});
 
 	if (error) {
-		console.error("Supabase error:", error);
+		console.error("Products error:", error);
 		toast.error("Error loading products", {
 			description: error.message,
 		});

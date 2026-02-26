@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { db as supabase } from "@/lib/database";
 import { getProduct } from "@/lib/bizhub-api";
 import { 
   Search, 
@@ -74,13 +73,11 @@ const ProductManagePage = () => {
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .order("updated_at", { ascending: false });
-
-      if (error) throw error;
-      setProducts(data || []);
+      const response = await fetch('/api/products?status=all&limit=100');
+      const result = await response.json();
+      
+      if (!result.success) throw new Error(result.error);
+      setProducts(result.data || []);
     } catch (error: any) {
       console.error("Error fetching products:", error);
       toast.error("Failed to load products", {
@@ -113,15 +110,14 @@ const ProductManagePage = () => {
     setUpdatingIds(prev => new Set([...prev, productId]));
 
     try {
-      const { error } = await supabase
-        .from("products")
-        .update({ 
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", productId);
+      const response = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, status: newStatus })
+      });
 
-      if (error) throw error;
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
 
       setProducts(prev => 
         prev.map(p => 
@@ -171,16 +167,18 @@ const ProductManagePage = () => {
       const bizhubProduct = response.data;
       
       // Update quantity and original price from Bizhub
-      const { error } = await supabase
-        .from("products")
-        .update({
-          bizhub_quantity: bizhubProduct.quantity,
-          original_price: bizhubProduct.price,
-          updated_at: new Date().toISOString()
+      const updateResponse = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: product.id,
+          stock_quantity: bizhubProduct.quantity,
+          compare_at_price: bizhubProduct.price
         })
-        .eq("id", product.id);
+      });
 
-      if (error) throw error;
+      const updateResult = await updateResponse.json();
+      if (!updateResult.success) throw new Error(updateResult.error);
 
       setProducts(prev =>
         prev.map(p =>
@@ -231,15 +229,14 @@ const ProductManagePage = () => {
     setUpdatingIds(prev => new Set([...prev, editingProduct.id]));
 
     try {
-      const { error } = await supabase
-        .from("products")
-        .update({
-          ...editForm,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", editingProduct.id);
+      const saveResponse = await fetch('/api/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingProduct.id, ...editForm })
+      });
 
-      if (error) throw error;
+      const saveResult = await saveResponse.json();
+      if (!saveResult.success) throw new Error(saveResult.error);
 
       setProducts(prev =>
         prev.map(p =>

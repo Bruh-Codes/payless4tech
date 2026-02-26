@@ -6,7 +6,6 @@ import { LoadingState } from "./LoadingState";
 import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils";
 import { type ClassValue } from "clsx";
-import { db } from "@/lib/database";
 
 interface Product {
 	id: string;
@@ -55,24 +54,26 @@ export const ProductGrid = ({
 		setError(null);
 
 		try {
-			// Fetch only published products from Railway database
-			const { data, error } = await db
-				.from("products")
-				.select("*")
-				.eq("status", "published") // Only published products for customers
-				.order("updated_at", { ascending: false })
-				.limit(limit || 50);
+			// Fetch published products via API route (server-side database access)
+			const params = new URLSearchParams({ status: 'published', limit: String(limit || 50) });
+			const response = await fetch(`/api/products?${params}`);
+			
+			if (!response.ok) {
+				throw new Error(`Failed to load products: ${response.statusText}`);
+			}
 
-			if (error) {
-				throw new Error(error.message || 'Failed to load products');
+			const result = await response.json();
+			
+			if (!result.success) {
+				throw new Error(result.error || 'Failed to load products');
 			}
 
 			// Transform to match Product interface
-			const transformedProducts = (data || []).map(product => ({
+			const transformedProducts = (result.data || []).map((product: any) => ({
 				id: product.id,
 				name: product.name,
 				price: product.price,
-				condition: "Renewed", // Default condition for display
+				condition: "Renewed",
 				image_url: product.featured_image,
 				original_price: product.compare_at_price,
 				category: product.category_id === 1 ? "laptops" : "business-laptops",
@@ -80,8 +81,7 @@ export const ProductGrid = ({
 				detailed_specs: product.short_description,
 				created_at: product.created_at,
 				updated_at: product.updated_at,
-				// Additional fields from Railway database
-				make: product.name.split(' ')[0], // Extract make from name
+				make: product.name.split(' ')[0],
 				model: product.name.split(' ').slice(1).join(' '),
 				quantity: product.stock_quantity,
 				in_stock: product.stock_quantity > 0,
