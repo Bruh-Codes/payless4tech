@@ -7,8 +7,9 @@ let pool: any = null;
 
 function getPool() {
   if (!pool) {
-    const { Pool } = require('pg');
-    pool = new Pool({
+    // Use eval to prevent webpack from statically analyzing this require
+    const pg = eval('require')('pg');
+    pool = new pg.Pool({
       connectionString: process.env.DATABASE_URL,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
       max: 20,
