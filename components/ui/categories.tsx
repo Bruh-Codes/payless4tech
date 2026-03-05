@@ -49,7 +49,7 @@ const Categories = () => {
 								className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-80 transition-opacity duration-300"
 								loading="lazy"
 							/>
-							<div className="absolute inset-0 bg-gradient-to-t group-hover:from-orange-150 from-orange-300/40 via-orange-50/50 to-transparent dark:from-background dark:via-background/70 dark:to-transparent" />
+							<div className="absolute inset-0 bg-gradient-to-t group-hover:from-brand-color/60 from-brand-color/20 via-brand-color/5 to-transparent dark:from-background dark:via-background/70 dark:to-transparent transition-colors duration-300" />
 							<div className="relative z-10 text-center transition-all duration-300">
 								<span className="text-lg font-semibold text-foreground opacity-60 group-hover:opacity-100 transition-opacity duration-300">
 									{cat.name}

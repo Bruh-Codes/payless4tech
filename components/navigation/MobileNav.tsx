@@ -33,7 +33,7 @@ export const MobileNav = () => {
 			<SheetTrigger asChild>
 				<Button
 					variant="ghost"
-					className="lg:hidden cursor-pointer hover:bg-orange-400"
+					className="lg:hidden cursor-pointer hover:bg-primary/10"
 				>
 					<Menu className="h-6 w-6" />
 				</Button>
@@ -45,7 +45,7 @@ export const MobileNav = () => {
 							key={route.href}
 							href={route.href}
 							className={cn(
-								"block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground hover:bg-orange-400"
+								"block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:text-foreground focus:bg-muted focus:text-foreground hover:bg-muted/60",
 							)}
 						>
 							{route.label}

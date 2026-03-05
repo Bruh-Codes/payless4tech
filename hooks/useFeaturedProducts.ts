@@ -126,7 +126,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 			try {
 				// Get products from a few key categories
 				const categories = ["smartphones", "laptops", "audio", "gaming"];
-				console.log("Fetching products for categories:", categories);
+				// console.log("Fetching products for categories:", categories);
 
 				// Fetch local featured products first
 				let localFeaturedItems: any[] = [];
@@ -170,7 +170,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 					return searchEbayProducts(
 						searchTerm,
 						1,
-						12, // Increased limit to get more results
+						5, // Increased limit to get more results
 						"GHS", // Use GHS currency
 						"newlyListed", // Get latest products
 						category, // Pass category for filtering
@@ -178,7 +178,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 				});
 
 				const results = await Promise.allSettled(promises);
-				console.log("Category search results:", results);
+				// console.log("Category search results:", results);
 
 				// Log each result for debugging
 				results.forEach((result, index) => {
@@ -201,8 +201,7 @@ export function useMixedFeaturedProducts(enabled: boolean = true) {
 						(result): result is PromiseFulfilledResult<any> =>
 							result.status === "fulfilled",
 					)
-					.flatMap((result) => result.value.items || [])
-					.slice(0, 20); // Increased to 20 products for better variety
+					.flatMap((result) => result.value.items || []);
 
 				const allProducts = [...localFeaturedItems, ...ebayProducts];
 

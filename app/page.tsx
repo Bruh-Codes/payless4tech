@@ -9,30 +9,11 @@ import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 
 import Navbar from "@/components/navbar";
 import Hero from "@/components/Hero";
+import FeaturedProducts from "@/components/ui/featured-products";
 
 // Dynamic imports for better bundle splitting
 const Footer = dynamic(() => import("@/components/Footer"));
 const Categories = dynamic(() => import("@/components/ui/categories"));
-const FeaturedProducts = dynamic(
-	() => import("@/components/ui/featured-products"),
-	{
-		loading: () => (
-			<section className="py-16">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-					<div className="mb-10">
-						<div className="h-8 w-48 bg-muted animate-pulse rounded-md mb-2" />
-						<div className="h-4 w-64 bg-muted animate-pulse rounded-md" />
-					</div>
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-						{Array.from({ length: 4 }).map((_, i) => (
-							<ProductCardSkeleton key={i} />
-						))}
-					</div>
-				</div>
-			</section>
-		),
-	},
-);
 const NewArrivals = dynamic(() => import("@/components/ui/new-arrivals"), {
 	loading: () => (
 		<section className="py-16 bg-muted/30">
@@ -52,6 +33,9 @@ const NewArrivals = dynamic(() => import("@/components/ui/new-arrivals"), {
 });
 const WhyChooseUs = dynamic(() => import("@/components/why-choose-us"));
 const PreorderSection = dynamic(() => import("@/components/PreorderSection"));
+const GoogleReviewsSection = dynamic(
+	() => import("@/components/GoogleReviewsSection"),
+);
 
 const Page = () => {
 	const searchParams = useSearchParams();
@@ -86,6 +70,7 @@ const Page = () => {
 				<Hero />
 				<Categories />
 				<FeaturedProducts />
+				<GoogleReviewsSection />
 				<NewArrivals />
 				<WhyChooseUs />
 				<PreorderSection />

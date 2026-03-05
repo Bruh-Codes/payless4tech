@@ -81,7 +81,7 @@ const PreorderSection = () => {
 						</p>
 						<Button
 							size="lg"
-							className="bg-[#F97316] hover:bg-[#F97316]/90 text-white font-bold px-8 py-3 text-base md:text-lg"
+							className="bg-accent hover:bg-accent/90 text-accent-foreground font-bold px-8 py-3 text-base md:text-lg"
 							onClick={() => setIsPreorderFormOpen(true)}
 						>
 							Preorder Now

@@ -27,7 +27,7 @@ const ThemeToggle = ({ children }: { children?: React.ReactNode }) => {
 				const newTheme = currentTheme === "dark" ? "light" : "dark";
 				setTheme(newTheme);
 			}}
-			className="text-foreground"
+			className="text-foreground hover:bg-gray-100 dark:hover:bg-accent"
 			aria-label="Toggle theme"
 		>
 			{children}

@@ -83,11 +83,11 @@ const Cart = () => {
 			<Sheet onOpenChange={setTriggerSheet} open={triggerSheet}>
 				<SheetTrigger asChild>
 					<Button
-						variant="outline"
+						variant="secondary"
 						size="icon"
 						title="cart"
 						aria-label="cart"
-						className="relative hover:bg-orange-400 hover:text-white cursor-pointer"
+						className="relative cursor-pointer"
 					>
 						<ShoppingCart className="h-4 w-4" />
 						{isInitialized && state.items.length > 0 && (
@@ -108,7 +108,7 @@ const Cart = () => {
 						<div className="mt-8">
 							{!isInitialized ? (
 								<div className="flex justify-center items-center py-8">
-									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-border"></div>
 								</div>
 							) : state.items.length === 0 ? (
 								<p className="text-center text-muted-foreground">

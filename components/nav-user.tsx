@@ -3,15 +3,12 @@
 import {
 	IconDotsVertical,
 	IconLogout,
-	IconMoon,
-	IconSun,
 } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -23,8 +20,6 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
 export function NavUser({
 	user,
 }: {
@@ -35,14 +30,6 @@ export function NavUser({
 	};
 }) {
 	const { isMobile } = useSidebar();
-	const { theme, setTheme, systemTheme } = useTheme();
-	const [mounted, setMounted] = useState(false);
-
-	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	const currentTheme = theme === "system" ? systemTheme : theme;
 
 	return (
 		<SidebarMenu>
@@ -86,26 +73,6 @@ export function NavUser({
 								</div>
 							</div>
 						</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuGroup>
-							<DropdownMenuItem
-								onClick={(e) => {
-									e.preventDefault();
-									setTheme(currentTheme === "dark" ? "light" : "dark");
-								}}
-							>
-								{mounted ? (
-									currentTheme === "dark" ? (
-										<IconSun />
-									) : (
-										<IconMoon className="dark:text-white" />
-									)
-								) : (
-									<IconMoon className="dark:text-white" />
-								)}
-								Toggle Theme
-							</DropdownMenuItem>
-						</DropdownMenuGroup>
 						<DropdownMenuSeparator />
 						<DropdownMenuItem>
 							<IconLogout />

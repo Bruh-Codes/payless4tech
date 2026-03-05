@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/contexts/CartContext";
 import { memo } from "react";
+import { ShoppingCart, Eye, Package, Check } from "lucide-react";
 
 interface ProductCardProps {
 	product: Product & { itemUrl?: string };
@@ -25,6 +26,7 @@ const ProductCard = memo(
 	}: ProductCardProps) => {
 		const router = useRouter();
 		const { addItem, state: cartState } = useCart();
+
 		// Currency symbol mapping
 		const getCurrencySymbol = (currency?: string) => {
 			switch (currency) {
@@ -111,170 +113,116 @@ const ProductCard = memo(
 
 		return (
 			<motion.div
-				initial={{ opacity: 0, y: 10 }}
+				initial={{ opacity: 0, y: 20 }}
 				whileInView={{ opacity: 1, y: 0 }}
 				viewport={{ once: true, margin: "-50px" }}
 				transition={{
-					delay: Math.min(index * 0.03, 0.15),
-					duration: 0.3,
+					delay: Math.min(index * 0.1, 0.3),
+					duration: 0.4,
 					ease: "easeOut",
 				}}
+				whileHover={{
+					y: -4,
+					boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
+				}}
 				onClick={handleProductClick}
-				className="group cursor-pointer rounded-xl border border-border bg-card overflow-hidden transition-all duration-300 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5"
+				className="group relative bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
 			>
-				{/* Image */}
-				<div className="relative aspect-square overflow-hidden bg-secondary/30 group-hover:bg-secondary/40">
+				{/* Product Image */}
+				<div className="aspect-square overflow-hidden bg-muted/20">
 					{product.image &&
 					(product.image.startsWith("http://") ||
 						product.image.startsWith("https://") ||
 						product.image.startsWith("/")) ? (
-						<Image
-							src={product.image}
-							alt={product.title}
-							className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-							loading="lazy"
-							sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-							width={300}
-							height={300}
-						/>
+						<div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-muted/30 to-transparent p-4">
+							<Image
+								src={product.image}
+								alt={product.title}
+								className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500"
+								loading="lazy"
+								sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+								width={300}
+								height={300}
+							/>
+						</div>
 					) : (
-						<div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+						<div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
 							No Valid Image
 						</div>
 					)}
-					{/* Admin Status Badge (Left) */}
-					{isAdmin && product.status && (
-						<span
-							className={`absolute top-3 left-3 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm ${
-								product.status === "new"
-									? "bg-purple-300 text-purple-800 border-purple-400"
-									: product.status === "available"
-										? "bg-green-200 text-green-800 border-green-300"
-										: product.status === "unavailable"
-											? "bg-red-200 text-red-800 border-red-300"
-											: product.status === "low-stock"
-												? "bg-orange-200 text-orange-800 border-orange-300"
-												: "bg-gray-200 text-gray-800 border-gray-300"
-							}`}
-						>
-							{product.status.charAt(0).toUpperCase() +
-								product.status.slice(1).replace("-", " ")}
-						</span>
-					)}
-
-					{/* Condition Badge (Right) */}
-					{product.condition && product.condition !== "none" && !isAdmin && (
-						<span
-							className={`absolute top-3 right-3 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-md backdrop-blur-sm ${
-								product.condition === "New"
-									? "bg-emerald-500 text-white border-emerald-600 group-hover:bg-emerald-600"
-									: product.condition === "Refurbished" ||
-										  product.condition === "Seller Refurbished" ||
-										  product.condition === "Renewed"
-										? "bg-slate-700 text-white border-slate-800 group-hover:bg-slate-600"
-										: product.condition === "Like New" ||
-											  product.condition === "Open Box"
-											? "bg-amber-600 text-white border-amber-700 group-hover:bg-amber-500"
-											: "bg-blue-500 text-white border-blue-600 group-hover:bg-blue-600"
-							}`}
-						>
-							{product.condition === "New"
-								? "New"
-								: product.condition === "Refurbished" ||
-									  product.condition === "Seller Refurbished"
-									? "Renewed"
-									: product.condition === "Like New"
-										? "Open Box"
-										: product.condition}
-						</span>
-					)}
 				</div>
 
-				{/* Info */}
+				{/* Product Info */}
 				<div className="p-4">
-					<h3 className="text-sm font-semibold text-foreground line-clamp-2 mb-2 group-hover:text-primary transition-colors">
+					<h3 className="font-semibold text-lg text-foreground mb-3 group-hover:text-brand-color transition-colors line-clamp-2">
 						{product.title}
 					</h3>
 
-					<div className="flex items-baseline gap-2 mb-3">
-						<span className="text-lg font-bold text-foreground">
+					{/* Price */}
+					<div className="flex items-center gap-2 mb-4">
+						<span className="text-2xl font-bold text-foreground">
 							{currencySymbol}
 							{formatPrice(priceValue, product.currency)}
 						</span>
-						{originalPriceValue && (
-							<>
-								<span className="text-sm text-muted-foreground line-through">
-									{currencySymbol}
-									{formatPrice(originalPriceValue, product.currency)}
-								</span>
-								{discount > 0 && (
-									<span className="text-sm font-bold text-orange-500">
-										(Save {discount}%)
-									</span>
-								)}
-							</>
-						)}
 					</div>
 
+					{/* Add to Cart Button */}
 					{!hideActions && (
 						<div className="flex gap-2">
 							{isEbayProduct ? (
 								<Button
-									size="sm"
-									variant="outline"
-									className="flex-1 text-xs transition-all duration-200 cursor-pointer"
 									onClick={(e) => {
 										e.stopPropagation();
 										const productName = encodeURIComponent(product.title);
 										router.push(`/product/${product.id}?name=${productName}`);
 									}}
+									className="w-full h-11 bg-brand-color hover:bg-brand-color/90 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
 								>
+									<Eye className="h-4 w-4 mr-2" />
 									View Details
 								</Button>
 							) : product.isPreorder ? (
 								<Button
-									size="sm"
-									variant="outline"
-									className="flex-1 text-xs transition-all duration-200 cursor-pointer"
 									onClick={handlePreorder}
+									className="w-full h-11 bg-purple-700 hover:bg-purple-800 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
 								>
+									<Package className="h-4 w-4 mr-2" />
 									Pre-Order
 								</Button>
 							) : isInCart ? (
 								<Button
-									size="sm"
-									variant="secondary"
-									className="flex-1 text-xs bg-green-100 text-green-800 hover:bg-green-200 border-green-300 transition-all duration-200 cursor-pointer"
 									onClick={(e) => e.stopPropagation()}
+									className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
 								>
-									In Cart ✓
+									<Check className="h-4 w-4 mr-2" />
+									In Cart
 								</Button>
 							) : (
 								<Button
-									size="sm"
-									className="flex-1 text-xs transition-all duration-200 hover:bg-primary/90 hover:text-primary-foreground border-primary/30 hover:shadow-primary/20 cursor-pointer"
 									onClick={handleAddToCart}
+									className="w-full h-11 bg-brand-color hover:bg-brand-color/90 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
 								>
+									<ShoppingCart className="h-4 w-4 mr-2" />
 									Add to Cart
 								</Button>
 							)}
 						</div>
 					)}
+
 					{isAdmin && (
-						<div className="flex flex-col gap-2 mt-2 w-full">
-							<div className="flex justify-between items-center w-full">
-								<span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded shadow-sm border border-amber-200">
+						<div className="flex flex-col gap-2 mt-4">
+							<div className="flex justify-between items-center">
+								<span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded-lg shadow-sm border border-purple-200">
 									Stock: {product.stock || 0}
 								</span>
 							</div>
 							<Button
-								size="sm"
-								variant="outline"
-								className="w-full text-xs font-medium transition-all duration-200 cursor-pointer border-primary/20 hover:bg-primary/5 shadow-sm"
 								onClick={(e) => {
 									e.stopPropagation();
 									if (onClickOverride) onClickOverride();
 								}}
+								variant="outline"
+								className="w-full h-11 rounded-xl border-primary/20 hover:bg-primary/5"
 							>
 								Edit Product
 							</Button>

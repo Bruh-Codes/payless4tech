@@ -52,11 +52,11 @@ export const TableSkeleton = () => (
 
 // Admin overview cards skeleton
 export const AdminCardsSkeleton = () => (
-	<div className="*:data-[slot=card]:from-orange-50/30 *:data-[slot=card]:to-orange-100/20 dark:*:data-[slot=card]:from-primary/5 dark:*:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @md/main:grid-cols-2 @3xl/main:grid-cols-4">
+	<div className="*:data-[slot=card]:from-muted/40 *:data-[slot=card]:to-muted/20 dark:*:data-[slot=card]:from-primary/5 dark:*:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @md/main:grid-cols-2 @3xl/main:grid-cols-4">
 		{Array.from({ length: 4 }).map((_, i) => (
 			<div
 				key={i}
-				className="@container/card rounded-lg border bg-gradient-to-t from-orange-50/30 to-orange-100/20 dark:from-primary/5 dark:to-card dark:bg-card shadow-xs p-6"
+				className="@container/card rounded-lg border bg-gradient-to-t from-muted/40 to-muted/20 dark:from-primary/5 dark:to-card dark:bg-card shadow-xs p-6"
 			>
 				{/* Card Description skeleton */}
 				<div className="h-4 w-24 bg-muted/50 animate-pulse rounded-md mb-4" />

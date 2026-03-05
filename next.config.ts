@@ -26,12 +26,24 @@ const nextConfig: NextConfig = {
 			},
 			{
 				protocol: "https",
+				hostname: "www.awesomescreenshot.com",
+			},
+			{
+				protocol: "https",
 				hostname: "unsplash.com",
 			},
 
 			{
 				protocol: "https",
 				hostname: "ntudizdvtyhhrxpafuyj.supabase.co",
+			},
+			{
+				protocol: "https",
+				hostname: "www.apple.com",
+			},
+			{
+				protocol: "https",
+				hostname: "media.wired.com",
 			},
 			{
 				protocol: "https",

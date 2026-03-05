@@ -82,7 +82,10 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 						onOpenChange={setIsDropdownOpen}
 					>
 						<DropdownMenuTrigger asChild>
-							<button className="p-0 font-normal" disabled={isLoading}>
+							<button
+								className="p-0 font-normal hover:bg-gray-100 dark:hover:bg-accent rounded-lg transition-colors"
+								disabled={isLoading}
+							>
 								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
 									<Avatar className="h-8 w-8 rounded-lg">
 										<AvatarImage
@@ -110,14 +113,18 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 							<DropdownMenuItem asChild>
 								<Link
 									href="/orders"
-									className="flex items-center gap-2"
+									className="flex hover:text-foreground! items-center gap-2"
 									aria-label="View your order history and track orders"
 								>
 									<Package className="h-4 w-4" />
 									My Orders
 								</Link>
 							</DropdownMenuItem>
-							<DropdownMenuItem onClick={handleLogout} disabled={isLoading}>
+							<DropdownMenuItem
+								className="hover:text-foreground!"
+								onClick={handleLogout}
+								disabled={isLoading}
+							>
 								{isLoading ? "Logging out..." : "Log out"}
 							</DropdownMenuItem>
 						</DropdownMenuContent>
@@ -125,10 +132,7 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 				</>
 			) : (
 				<Link href="/login" aria-label="Sign in to your account">
-					<Button
-						size="sm"
-						className="hover:bg-orange-400 hover:text-white cursor-pointer"
-					>
+					<Button size="sm" className=" cursor-pointer">
 						SignIn
 					</Button>
 				</Link>

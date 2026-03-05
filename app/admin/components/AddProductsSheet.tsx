@@ -500,7 +500,7 @@ export function AddProductsSheet() {
 										);
 									}}
 								/>
-								<div className="grid grid-cols-2 gap-4">
+								<div className="grid grid-cols-1 gap-4">
 									<FormField
 										control={form.control}
 										name="category"
@@ -548,7 +548,7 @@ export function AddProductsSheet() {
 											control={form.control}
 											name="custom_category"
 											render={({ field }) => (
-												<FormItem className="col-span-2">
+												<FormItem>
 													<FormLabel>Custom Category Name</FormLabel>
 													<FormControl>
 														<Input placeholder="Enter category..." {...field} />
@@ -609,7 +609,7 @@ export function AddProductsSheet() {
 											control={form.control}
 											name="custom_status"
 											render={({ field }) => (
-												<FormItem className="col-span-2">
+												<FormItem>
 													<FormLabel>Custom Status</FormLabel>
 													<FormControl>
 														<Input placeholder="Enter status..." {...field} />
@@ -662,7 +662,7 @@ export function AddProductsSheet() {
 											control={form.control}
 											name="custom_condition"
 											render={({ field }) => (
-												<FormItem className="col-span-2">
+												<FormItem>
 													<FormLabel>Custom Condition</FormLabel>
 													<FormControl>
 														<Input
@@ -677,7 +677,7 @@ export function AddProductsSheet() {
 									)}
 								</div>
 
-								<div className="grid grid-cols-2 gap-4 mt-4 col-span-2">
+								<div className="grid grid-cols-1 gap-4 mt-4">
 									<FormField
 										control={form.control}
 										name="is_featured"
