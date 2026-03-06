@@ -20,6 +20,18 @@ const slides = [
     bgPosition: "center 35%",
   },
   {
+    id: "macbook-m4",
+    title: "MacBook Pro",
+    subtitle: "Supercharged by M4.",
+    description:
+      "Unmatched performance and incredible battery life for pro workflows.",
+    bgImage: "/images/hero/display_hero__c32k5z50p94y_large.jpg",
+    textColor: "text-slate-100",
+    theme: "dark",
+    align: "bottom",
+    bgPosition: "center",
+  },
+  {
     id: "galaxy-s26",
     title: "Galaxy S26 Ultra",
     subtitle: "Galaxy AI is here.",
@@ -39,7 +51,7 @@ const slides = [
     bgImage:
       "/images/hero/design_innovation_startframe__4mig33ckaf6y_large.jpg",
     textColor: "text-white",
-    theme: "dark",
+    theme: "light",
     align: "top",
     bgPosition: "center",
   },
@@ -50,7 +62,7 @@ const slides = [
     description: "The most advanced Mac for creators and professionals.",
     bgImage: "/images/hero/mac-macbook-pro-size-unselect-202601-gallery-1.jpg",
     textColor: "text-white",
-    theme: "dark",
+    theme: "light",
     align: "top",
     bgPosition: "center",
   },
@@ -65,9 +77,21 @@ const slides = [
     align: "center",
     bgPosition: "center",
   },
+  {
+    id: "m5-chip",
+    title: "M5 Chip",
+    subtitle: "Power beyond belief.",
+    description:
+      "The next generation of Apple silicon is here. Groundbreaking speed and efficiency.",
+    bgImage: "/images/hero/hero_startframe__ek0dqbh61vau_xlarge.jpg",
+    textColor: "text-white",
+    theme: "dark",
+    align: "center",
+    bgPosition: "center",
+  },
 ];
 
-const SLIDE_DURATION = 6000; // 3 seconds per slide
+const SLIDE_DURATION = 6000; // 6 seconds per slide
 
 const Hero = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -221,11 +245,7 @@ const Hero = () => {
               <Link href="/shop">
                 <Button
                   variant="outline"
-                  className={`h-12 px-8 rounded-full text-base font-medium border-2 backdrop-blur-md transition-all hover:scale-105 ${
-                    slide.theme === "dark"
-                      ? "border-white/30 text-white hover:bg-white/10 hover:border-white/50"
-                      : "border-black/20 text-black hover:bg-black/5 hover:border-black/40"
-                  }`}
+                  className="h-12 px-8 rounded-full text-base font-medium border-2 backdrop-blur-md transition-all hover:scale-105 border-white mix-blend-difference text-white hover:bg-white hover:text-black"
                 >
                   Buy Now
                 </Button>

@@ -14,7 +14,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import logo from "@/public/71f241a6-a4bb-422f-b7e6-29032fee0ed6.png";
+import logo from "@/public/images/logo/payless-logo.png";
 
 import { categories, Product } from "@/lib/products";
 import { searchEbayProducts } from "@/lib/ebay";
@@ -24,6 +24,7 @@ import Image from "next/image";
 import { AuthButtons } from "./auth/AuthButtons";
 import Cart from "./Cart";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 const Navbar = memo(() => {
   const [query, setQuery] = useState("");
@@ -198,11 +199,18 @@ const Navbar = memo(() => {
 					</div> */}
 
           <div className="flex h-12 items-center justify-between gap-4">
-            <Link href="/" className="shrink-0">
+            <Link href="/" className="shrink-0 flex items-center">
               <Image
                 src={logo}
                 alt="Payless4Tech"
-                className={`h-6 md:h-8 w-auto transition-all duration-300 ${isDarkNavbar ? "brightness-0 invert" : ""}`}
+                // Using mix-blend-multiply to remove the solid white bg on light slides.
+                // On dark slides, we invert it so the dark text becomes white and the white background becomes transparent against dark.
+                className={cn(
+                  "h-20 w-auto transition-all duration-300 object-contain",
+                  // isDarkNavbar
+                  // 	? "brightness-0 invert drop-shadow-[0_0_8px_rgba(255,255,255,0.4)]"
+                  // 	: "mix-blend-multiply drop-shadow-sm",
+                )}
                 priority
               />
             </Link>
@@ -363,7 +371,7 @@ const Navbar = memo(() => {
             <div
               className={`hidden md:flex items-center gap-2 lg:gap-4 ${
                 isDarkNavbar
-                  ? "dark [&_button]:bg-white/10 [&_button]:text-white hover:[&_button]:bg-white/20 [&_button]:border-white/20"
+                  ? "dark [&_button]:bg-white/10 [&_button]:text-white [&_button:hover]:bg-white/20 [&_button]:border-white/20"
                   : ""
               }`}
             >
@@ -376,7 +384,7 @@ const Navbar = memo(() => {
               className={`flex items-center gap-1 md:hidden ${isDarkNavbar ? "dark" : ""}`}
             >
               <div
-                className={`flex gap-2 items-center ${isDarkNavbar ? "[&_button]:bg-white/10 [&_button]:text-white hover:[&_button]:bg-white/20" : ""}`}
+                className={`flex gap-2 items-center ${isDarkNavbar ? "[&_button]:bg-white/10 [&_button]:text-white [&_button:hover]:bg-white/20" : ""}`}
               >
                 <Cart />
                 <AuthButtons className="hidden md:flex" />

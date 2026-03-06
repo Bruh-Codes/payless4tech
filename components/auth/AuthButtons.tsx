@@ -71,7 +71,9 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 								className="m-0"
 								aria-label="Access admin dashboard"
 							>
-								<Button size="sm">Dashboard</Button>
+								<Button variant={"secondary"} size="sm">
+									Dashboard
+								</Button>
 							</Link>
 						) : null}
 					</div>
@@ -83,7 +85,7 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 					>
 						<DropdownMenuTrigger asChild>
 							<button
-								className="p-0 font-normal hover:bg-gray-100 dark:hover:bg-accent rounded-lg transition-colors"
+								className="p-0 font-norma rounded-lg transition-colors"
 								disabled={isLoading}
 							>
 								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">

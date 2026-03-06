@@ -126,23 +126,22 @@ const ProductCard = memo(
 					boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
 				}}
 				onClick={handleProductClick}
-				className="group relative bg-card rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300"
+				className="group relative bg-[#fbfbfd] dark:bg-[#1c1c1e] rounded-[24px] overflow-hidden transition-all duration-500 hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:hover:shadow-[0_8px_30px_rgba(255,255,255,0.02)] border border-black/5 dark:border-white/5 flex flex-col h-full"
 			>
 				{/* Product Image */}
-				<div className="aspect-square overflow-hidden bg-muted/20">
+				<div className="aspect-square relative flex items-center justify-center p-8">
 					{product.image &&
 					(product.image.startsWith("http://") ||
 						product.image.startsWith("https://") ||
 						product.image.startsWith("/")) ? (
-						<div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-muted/30 to-transparent p-4">
+						<div className="flex h-full w-full items-center justify-center relative">
 							<Image
 								src={product.image}
 								alt={product.title}
-								className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-500"
+								className="h-full w-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] drop-shadow-sm"
 								loading="lazy"
 								sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-								width={300}
-								height={300}
+								fill
 							/>
 						</div>
 					) : (
@@ -153,81 +152,84 @@ const ProductCard = memo(
 				</div>
 
 				{/* Product Info */}
-				<div className="p-4">
-					<h3 className="font-semibold text-lg text-foreground mb-3 group-hover:text-brand-color transition-colors line-clamp-2">
+				<div className="p-6 pt-2 flex flex-col flex-1">
+					<h3 className="font-medium text-lg text-foreground mb-4 line-clamp-2 leading-tight group-hover:opacity-80 transition-opacity">
 						{product.title}
 					</h3>
 
-					{/* Price */}
-					<div className="flex items-center gap-2 mb-4">
-						<span className="text-2xl font-bold text-foreground">
-							{currencySymbol}
-							{formatPrice(priceValue, product.currency)}
-						</span>
-					</div>
+					{/* Spacer to push pricing and buttons to bottom */}
+					<div className="mt-auto">
+						{/* Price */}
+						<div className="flex items-center gap-2 mb-5">
+							<span className="text-xl tracking-tight font-semibold text-foreground">
+								{currencySymbol}
+								{formatPrice(priceValue, product.currency)}
+							</span>
+						</div>
 
-					{/* Add to Cart Button */}
-					{!hideActions && (
-						<div className="flex gap-2">
-							{isEbayProduct ? (
+						{/* Add to Cart Button */}
+						{!hideActions && (
+							<div className="flex gap-2 w-full">
+								{isEbayProduct ? (
+									<Button
+										onClick={(e) => {
+											e.stopPropagation();
+											const productName = encodeURIComponent(product.title);
+											router.push(`/product/${product.id}?name=${productName}`);
+										}}
+										className="w-full h-11 bg-[#f5f5f7] dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-foreground rounded-full font-medium transition-all duration-300 ease-out"
+									>
+										<Eye className="h-4 w-4 mr-2" />
+										View Details
+									</Button>
+								) : product.isPreorder ? (
+									<Button
+										onClick={handlePreorder}
+										className="w-full h-11 bg-foreground hover:bg-foreground/90 text-background rounded-full font-medium transition-all duration-300 ease-out hover:scale-[1.02]"
+									>
+										<Package className="h-4 w-4 mr-2" />
+										Pre-Order
+									</Button>
+								) : isInCart ? (
+									<Button
+										onClick={(e) => e.stopPropagation()}
+										className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-medium transition-all duration-300"
+									>
+										<Check className="h-4 w-4 mr-2" />
+										In Cart
+									</Button>
+								) : (
+									<Button
+										onClick={handleAddToCart}
+										className="w-full h-11 bg-foreground hover:bg-foreground/90 text-background rounded-full font-medium transition-all duration-300 ease-out hover:scale-[1.02]"
+									>
+										<ShoppingCart className="h-4 w-4 mr-2" />
+										Buy Now
+									</Button>
+								)}
+							</div>
+						)}
+
+						{isAdmin && (
+							<div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border/50">
+								<div className="flex justify-between items-center">
+									<span className="bg-gray-100 dark:bg-white/10 text-foreground text-xs font-semibold px-3 py-1.5 rounded-full">
+										Stock: {product.stock || 0}
+									</span>
+								</div>
 								<Button
 									onClick={(e) => {
 										e.stopPropagation();
-										const productName = encodeURIComponent(product.title);
-										router.push(`/product/${product.id}?name=${productName}`);
+										if (onClickOverride) onClickOverride();
 									}}
-									className="w-full h-11 bg-brand-color hover:bg-brand-color/90 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
+									variant="outline"
+									className="w-full h-10 rounded-full font-medium"
 								>
-									<Eye className="h-4 w-4 mr-2" />
-									View Details
+									Edit Product
 								</Button>
-							) : product.isPreorder ? (
-								<Button
-									onClick={handlePreorder}
-									className="w-full h-11 bg-purple-700 hover:bg-purple-800 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
-								>
-									<Package className="h-4 w-4 mr-2" />
-									Pre-Order
-								</Button>
-							) : isInCart ? (
-								<Button
-									onClick={(e) => e.stopPropagation()}
-									className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
-								>
-									<Check className="h-4 w-4 mr-2" />
-									In Cart
-								</Button>
-							) : (
-								<Button
-									onClick={handleAddToCart}
-									className="w-full h-11 bg-brand-color hover:bg-brand-color/90 text-white rounded-xl transition-all duration-300 hover:scale-[1.02] group-hover:shadow-lg"
-								>
-									<ShoppingCart className="h-4 w-4 mr-2" />
-									Add to Cart
-								</Button>
-							)}
-						</div>
-					)}
-
-					{isAdmin && (
-						<div className="flex flex-col gap-2 mt-4">
-							<div className="flex justify-between items-center">
-								<span className="bg-purple-100 text-purple-800 text-xs font-bold px-2 py-1 rounded-lg shadow-sm border border-purple-200">
-									Stock: {product.stock || 0}
-								</span>
 							</div>
-							<Button
-								onClick={(e) => {
-									e.stopPropagation();
-									if (onClickOverride) onClickOverride();
-								}}
-								variant="outline"
-								className="w-full h-11 rounded-xl border-primary/20 hover:bg-primary/5"
-							>
-								Edit Product
-							</Button>
-						</div>
-					)}
+						)}
+					</div>
 				</div>
 			</motion.div>
 		);

@@ -70,7 +70,7 @@ const Page = () => {
 				<Hero />
 				<Categories />
 				<FeaturedProducts />
-				<GoogleReviewsSection />
+				{/* <GoogleReviewsSection /> */}
 				<NewArrivals />
 				<WhyChooseUs />
 				<PreorderSection />
