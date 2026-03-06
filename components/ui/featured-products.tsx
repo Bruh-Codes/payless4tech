@@ -17,7 +17,7 @@ const FeaturedProducts = () => {
 	if (isLoading) {
 		return (
 			<section className="py-16">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 					<div className="mb-10">
 						<div className="h-8 bg-muted animate-pulse rounded w-48 mb-2"></div>
 						<div className="h-4 bg-muted animate-pulse rounded w-64"></div>
@@ -35,7 +35,7 @@ const FeaturedProducts = () => {
 	if (isError) {
 		return (
 			<section className="py-16">
-				<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+				<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 					<div className="text-center space-y-6">
 						<div className="space-y-2">
 							<h2 className="font-display text-3xl font-bold text-foreground">
@@ -69,7 +69,7 @@ const FeaturedProducts = () => {
 
 	return (
 		<section className="py-16">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 				<motion.div
 					initial={{ opacity: 0, y: 10 }}
 					whileInView={{ opacity: 1, y: 0 }}

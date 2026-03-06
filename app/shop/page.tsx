@@ -6,6 +6,7 @@ import {
 	useCallback,
 	useTransition,
 	useEffect,
+	Suspense,
 } from "react";
 
 import dynamic from "next/dynamic";
@@ -57,7 +58,7 @@ const sortOptions = [
 	{ label: "Popular", value: "popular" },
 ];
 
-const Page = () => {
+const ShopContent = () => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const categoryParam = searchParams.get("categories");
@@ -502,6 +503,20 @@ const Page = () => {
 				</div>
 			</div>
 		</>
+	);
+};
+
+const Page = () => {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-background flex items-center justify-center">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+				</div>
+			}
+		>
+			<ShopContent />
+		</Suspense>
 	);
 };
 

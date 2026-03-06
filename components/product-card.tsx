@@ -140,7 +140,7 @@ const ProductCard = memo(
 								alt={product.title}
 								className="h-full w-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] drop-shadow-sm"
 								loading="lazy"
-								sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+								sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 250px"
 								fill
 							/>
 						</div>

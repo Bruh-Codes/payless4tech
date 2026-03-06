@@ -90,7 +90,9 @@ export default function ProductDetailClient({
 
 	const productSpecs = product.specifications || [];
 	const productImages = Array.from(
-		new Set([product.image, ...(product.additionalImages || [])].filter(Boolean)),
+		new Set(
+			[product.image, ...(product.additionalImages || [])].filter(Boolean),
+		),
 	);
 
 	return (
@@ -107,7 +109,7 @@ export default function ProductDetailClient({
 					</button>
 					<ChevronRight className="h-3.5 w-3.5" />
 					<button
-						onClick={() => router.push(`/search?q=${product.category}`)}
+						onClick={() => router.push(`/shop?categories=${product.category}`)}
 						className="capitalize transition-colors hover:text-foreground"
 					>
 						{product.category}
@@ -125,7 +127,7 @@ export default function ProductDetailClient({
 						className="space-y-3"
 					>
 						<div className="relative aspect-4/3 w-full max-h-90 overflow-hidden rounded-xl border border-border bg-secondary/30">
-							<div className="flex h-full w-full items-center justify-center bg-gradient-to-b from-muted/30 to-transparent p-4 sm:p-6">
+							<div className="flex h-full w-full items-center justify-center bg-linear-to-b from-muted/30 to-transparent p-4 sm:p-6">
 								<Image
 									width={200}
 									height={200}
@@ -310,19 +312,21 @@ export default function ProductDetailClient({
 							<h2 className="font-display text-xl font-bold text-foreground">
 								You May Also Like
 							</h2>
-							{product.categoryId && !isLoadingRelated && related.length > 0 && (
-								<div className="text-center">
-									<Link href={`/shop?categories=${product.category}`}>
-										<Button
-											variant="outline"
-											className="inline-flex items-center gap-2"
-										>
-											<span>View More Products</span>
-											<ChevronRight className="h-4 w-4" />
-										</Button>
-									</Link>
-								</div>
-							)}
+							{product.categoryId &&
+								!isLoadingRelated &&
+								related.length > 0 && (
+									<div className="text-center">
+										<Link href={`/shop?categories=${product.category}`}>
+											<Button
+												variant="outline"
+												className="inline-flex items-center gap-2"
+											>
+												<span>View More Products</span>
+												<ChevronRight className="h-4 w-4" />
+											</Button>
+										</Link>
+									</div>
+								)}
 						</div>
 
 						{isLoadingRelated ? (

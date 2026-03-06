@@ -71,14 +71,26 @@ export default async function RootLayout({
 
 	return (
 		<html lang="en" suppressHydrationWarning>
+			<head>
+				<link rel="preconnect" href="https://www.googletagmanager.com" />
+				<link rel="preconnect" href="https://connect.facebook.net" />
+				<link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+				{/* Preload the first Hero image - adjust as per the first slide in Hero.tsx */}
+				<link
+					rel="preload"
+					as="image"
+					href="/images/hero/hero__cvgr5aj1ttsi_large_2x.webp"
+					type="image/webp"
+				/>
+			</head>
 			<body className={`${inter.variable} antialiased m-0 p-0`}>
 				{googleAnalyticsId && (
 					<>
 						<Script
 							src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
-							strategy="afterInteractive"
+							strategy="lazyOnload"
 						/>
-						<Script id="google-analytics" strategy="afterInteractive">
+						<Script id="google-analytics" strategy="lazyOnload">
 							{`
 								window.dataLayer = window.dataLayer || [];
 								function gtag(){dataLayer.push(arguments);}
@@ -91,7 +103,7 @@ export default async function RootLayout({
 				)}
 				{metaPixelId && (
 					<>
-						<Script id="meta-pixel" strategy="afterInteractive">
+						<Script id="meta-pixel" strategy="lazyOnload">
 							{`
 								!function(f,b,e,v,n,t,s){
 									if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -135,10 +147,12 @@ export default async function RootLayout({
 					/>
 					<QueryProvider>
 						<CartProvider>
-							{googleAnalyticsId && (
-								<GoogleAnalyticsPageView measurementId={googleAnalyticsId} />
-							)}
-							{metaPixelId && <MetaPixelPageView />}
+							<Suspense fallback={null}>
+								{googleAnalyticsId && (
+									<GoogleAnalyticsPageView measurementId={googleAnalyticsId} />
+								)}
+								{metaPixelId && <MetaPixelPageView />}
+							</Suspense>
 							<main>{children}</main>
 						</CartProvider>
 						<WhatsAppButton />

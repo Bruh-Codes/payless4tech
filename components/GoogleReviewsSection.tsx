@@ -50,7 +50,7 @@ export default function GoogleReviewsSection() {
 
 	return (
 		<section className="bg-background py-16">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 				<div className="mb-10 flex flex-col gap-6 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-end md:justify-between">
 					<div>
 						<p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">

@@ -1,23 +1,24 @@
-"use client";
-
-import { useEffect, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
-import { useCart } from "@/contexts/CartContext";
-import { toast } from "sonner";
+import { Suspense } from "react";
 import dynamic from "next/dynamic";
 import { ProductCardSkeleton } from "@/components/LoadingSkeletons";
 
 import Navbar from "@/components/navbar";
 import Hero from "@/components/Hero";
-import FeaturedProducts from "@/components/ui/featured-products";
+import PaymentSuccessHandler from "@/components/PaymentSuccessHandler";
 
 // Dynamic imports for better bundle splitting
-const Footer = dynamic(() => import("@/components/Footer"));
-const Categories = dynamic(() => import("@/components/ui/categories"));
+const Footer = dynamic(() => import("@/components/Footer"), { ssr: true });
+const Categories = dynamic(() => import("@/components/ui/categories"), {
+	ssr: true,
+});
+const FeaturedProducts = dynamic(
+	() => import("@/components/ui/featured-products"),
+	{ ssr: true },
+);
 const NewArrivals = dynamic(() => import("@/components/ui/new-arrivals"), {
 	loading: () => (
 		<section className="py-16 bg-muted/30">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 				<div className="mb-10 text-center">
 					<div className="h-8 w-32 bg-muted animate-pulse rounded-md mx-auto mb-2" />
 					<div className="h-4 w-48 bg-muted animate-pulse rounded-md mx-auto" />
@@ -30,47 +31,26 @@ const NewArrivals = dynamic(() => import("@/components/ui/new-arrivals"), {
 			</div>
 		</section>
 	),
+	ssr: true,
 });
-const WhyChooseUs = dynamic(() => import("@/components/why-choose-us"));
-const PreorderSection = dynamic(() => import("@/components/PreorderSection"));
-const GoogleReviewsSection = dynamic(
-	() => import("@/components/GoogleReviewsSection"),
-);
+const WhyChooseUs = dynamic(() => import("@/components/why-choose-us"), {
+	ssr: true,
+});
+const PreorderSection = dynamic(() => import("@/components/PreorderSection"), {
+	ssr: true,
+});
 
 const Page = () => {
-	const searchParams = useSearchParams();
-	const { clearCart } = useCart();
-
-	const handlePaymentSuccess = useCallback(() => {
-		const paymentSuccess = searchParams.get("payment_success");
-		const reference = searchParams.get("reference");
-
-		if (paymentSuccess === "true" && reference) {
-			// Clear the cart on payment success
-			clearCart();
-
-			toast.success("Payment successful!", {
-				description: `Transaction ID: ${reference}. You can track your order status in "My Orders" from your profile menu.`,
-				duration: 6000,
-			});
-
-			// Clean up URL parameters
-			window.history.replaceState({}, "", window.location.pathname);
-		}
-	}, [searchParams, clearCart]);
-
-	useEffect(() => {
-		handlePaymentSuccess();
-	}, [handlePaymentSuccess]);
-
 	return (
 		<>
 			<div className="min-h-screen bg-background">
+				<Suspense fallback={null}>
+					<PaymentSuccessHandler />
+				</Suspense>
 				<Navbar />
 				<Hero />
 				<Categories />
 				<FeaturedProducts />
-				{/* <GoogleReviewsSection /> */}
 				<NewArrivals />
 				<WhyChooseUs />
 				<PreorderSection />

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { categories } from "@/lib/products";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -50,7 +50,7 @@ interface EbayProduct {
 	qualityScore?: number;
 }
 
-const SearchResults = () => {
+const SearchContent = () => {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const initialQuery = searchParams.get("q") || "";
@@ -314,7 +314,7 @@ const SearchResults = () => {
 		<div className="min-h-screen bg-background">
 			<Navbar />
 
-			<main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+			<main className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4 py-6">
 				{query.trim() && (
 					<motion.div
 						initial={{ opacity: 0, y: 10 }}
@@ -468,7 +468,7 @@ const SearchResults = () => {
 							initial={{ opacity: 0, width: 0 }}
 							animate={{ opacity: 1, width: 280 }}
 							exit={{ opacity: 0, width: 0 }}
-							className="flex-shrink-0 bg-card space-y-4 rounded-lg border border-border p-6 h-fit sticky top-42 max-h-[calc(100vh-6rem)] overflow-y-auto"
+							className="shrink-0 bg-card space-y-4 rounded-lg border border-border p-6 h-fit sticky top-42 max-h-[calc(100vh-6rem)] overflow-y-auto"
 						>
 							<div className="flex items-center justify-between mb-6">
 								<h3 className="font-semibold text-foreground">Filters</h3>
@@ -625,6 +625,20 @@ const SearchResults = () => {
 				</div>
 			</main>
 		</div>
+	);
+};
+
+const SearchResults = () => {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-background flex items-center justify-center">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+				</div>
+			}
+		>
+			<SearchContent />
+		</Suspense>
 	);
 };
 

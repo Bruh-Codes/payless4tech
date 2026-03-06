@@ -9,7 +9,7 @@ import Link from "next/link";
 const Footer = () => {
 	return (
 		<footer className="border-t border-border dark:bg-card/50 bg-secondary">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+			<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4 py-12">
 				<div className="flex flex-wrap gap-8">
 					<div className="flex-1 p-4">
 						<Link href="/" className="shrink-0">
@@ -66,7 +66,7 @@ const Footer = () => {
 						<ul className="space-y-2 text-sm text-muted-foreground">
 							<li>
 								<a
-									href="/search?q=smartphones"
+									href="/shop?categories=smartphones"
 									className="hover:text-primary transition-colors"
 								>
 									Smartphones
@@ -74,7 +74,7 @@ const Footer = () => {
 							</li>
 							<li>
 								<a
-									href="/search?q=laptops"
+									href="/shop?categories=laptops"
 									className="hover:text-primary transition-colors"
 								>
 									Laptops
@@ -82,7 +82,7 @@ const Footer = () => {
 							</li>
 							<li>
 								<a
-									href="/search?q=audio"
+									href="/shop?categories=audio"
 									className="hover:text-primary transition-colors"
 								>
 									Audio
@@ -90,7 +90,7 @@ const Footer = () => {
 							</li>
 							<li>
 								<a
-									href="/search?q=gaming"
+									href="/shop?categories=gaming"
 									className="hover:text-primary transition-colors"
 								>
 									Gaming

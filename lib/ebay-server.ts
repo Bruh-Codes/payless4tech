@@ -741,6 +741,7 @@ const getCategoryName = (categoryId: string): string => {
 };
 
 export async function getEbayProductById(itemId: string) {
+	const decodedItemId = decodeURIComponent(itemId);
 	const baseUrl =
 		process.env.EBAY_ENV === "sandbox"
 			? "https://api.sandbox.ebay.com"
@@ -750,16 +751,36 @@ export async function getEbayProductById(itemId: string) {
 	const access_token = await getEbayAuthToken();
 
 	// ---- Get item details ----
-	const res = await fetch(
-		`${baseUrl}/buy/browse/v1/item/${encodeURIComponent(itemId)}?fieldgroups=PRODUCT`,
-		{
-			headers: {
-				Authorization: `Bearer ${access_token}`,
-				"X-EBAY-C-MARKETPLACE-ID": marketplaceId,
-				Accept: "application/json",
-			},
+	// Use legacy ID endpoint if it's a v1 restful ID to avoid pipe encoding issues
+	let itemUrl = `${baseUrl}/buy/browse/v1/item/${encodeURIComponent(decodedItemId)}?fieldgroups=PRODUCT`;
+
+	if (decodedItemId.startsWith("v1|")) {
+		const parts = decodedItemId.split("|");
+		const legacyItemId = parts[1];
+		const legacyVariationId = parts[2];
+
+		if (!legacyItemId) {
+			throw new Error(`Invalid legacy itemId format: ${itemId}`);
+		}
+
+		const searchParams = new URLSearchParams();
+		searchParams.append("legacy_item_id", legacyItemId);
+		searchParams.append("fieldgroups", "PRODUCT");
+
+		if (legacyVariationId && legacyVariationId !== "0") {
+			searchParams.append("legacy_variation_id", legacyVariationId);
+		}
+
+		itemUrl = `${baseUrl}/buy/browse/v1/item/get_item_by_legacy_id?${searchParams.toString()}`;
+	}
+
+	const res = await fetch(itemUrl, {
+		headers: {
+			Authorization: `Bearer ${access_token}`,
+			"X-EBAY-C-MARKETPLACE-ID": marketplaceId,
+			Accept: "application/json",
 		},
-	);
+	});
 
 	if (!res.ok) throw new Error(await res.text());
 	const data = await res.json();

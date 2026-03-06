@@ -2,10 +2,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "./db";
 import { account, session, user as schemaUser, verification } from "@/schema";
-import { admin as AdminPlugin, magicLink } from "better-auth/plugins";
+import { admin as AdminPlugin } from "better-auth/plugins";
 import { ac, user, admin } from "./permissions";
-import { Resend } from "resend";
-import MagicLinkEmail from "@/components/emails/MagicLinkEmail";
+// import { Resend } from "resend";
+// import MagicLinkEmail from "@/components/emails/MagicLinkEmail";
 // const resend = new Resend(process.env.RESEND_API_KEY);
 
 const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL || "http:localhost:3000";
@@ -30,7 +30,12 @@ export const auth = betterAuth({
 			clientSecret: GOOGLE_CLIENT_SECRET || "",
 		},
 	},
-	trustedOrigins: ["http://localhost:3000", BETTER_AUTH_URL],
+	trustedOrigins: [
+		"http://localhost:3000",
+		"https://www.payless4tech.com",
+		"https://payless4tech.com",
+		BETTER_AUTH_URL,
+	],
 
 	account: {
 		accountLinking: {

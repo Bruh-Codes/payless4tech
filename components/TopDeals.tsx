@@ -13,7 +13,7 @@ const TopDeals = () => {
 
 	return (
 		<section className="py-10 md:py-14">
-			<div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div className="mx-auto max-w-7xl  sm:px-6 lg:px-8 px-4">
 				<motion.div
 					initial={{ opacity: 0, y: 10 }}
 					whileInView={{ opacity: 1, y: 0 }}
