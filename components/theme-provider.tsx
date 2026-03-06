@@ -2,13 +2,19 @@
 
 import * as React from "react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { usePathname } from "next/navigation";
 
 export function ThemeProvider({
 	children,
 	storageKey = "theme",
 	...props
 }: React.ComponentProps<typeof NextThemesProvider>) {
+	const pathname = usePathname();
+	const isAdmin = pathname?.startsWith("/admin");
+
 	React.useEffect(() => {
+		if (isAdmin) return; // Let admins toggle themes freely
+
 		const lockLightTheme = () => {
 			document.documentElement.classList.remove("dark");
 			document.documentElement.style.colorScheme = "light";
@@ -39,7 +45,7 @@ export function ThemeProvider({
 			window.removeEventListener("storage", handleStorage);
 			observer.disconnect();
 		};
-	}, [storageKey]);
+	}, [storageKey, isAdmin]);
 
 	return (
 		<NextThemesProvider
@@ -47,7 +53,7 @@ export function ThemeProvider({
 			storageKey={storageKey}
 			defaultTheme="light"
 			enableSystem={false}
-			forcedTheme="light"
+			forcedTheme={isAdmin ? undefined : "light"}
 		>
 			{children}
 		</NextThemesProvider>

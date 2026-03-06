@@ -206,3 +206,11 @@
 .scrollbar-hide::-webkit-scrollbar {
 	display: none;
 }
+
+/* Ensure Paystack popup sits above all dialogs/modals */
+iframe[name="checkout"],
+#paystack-checkout,
+div[id^="paystack"] {
+	z-index: 99999 !important;
+	position: relative;
+}

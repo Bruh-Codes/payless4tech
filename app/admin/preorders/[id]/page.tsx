@@ -51,21 +51,34 @@ export default function PreorderDetailsPage() {
 
 	const handleMarkDelivered = async () => {
 		try {
-			const { error } = await supabase
+			const { error, data, status } = await supabase
 				.from("preorders")
 				.update({ fulfillment_status: "delivered" })
-				.eq("id", preorderId);
+				.eq("id", preorderId)
+				.select();
 
-			if (error) throw error;
+			if (error) {
+				console.error("Supabase update error:", {
+					message: error.message,
+					code: error.code,
+					details: error.details,
+					hint: error.hint,
+				});
+				throw error;
+			}
+
+			console.log("Update result:", { data, status });
 
 			toast.success("Preorder marked as delivered!");
 			setPreorder((prev: any) => ({
 				...prev,
 				fulfillment_status: "delivered",
 			}));
-		} catch (err) {
+		} catch (err: any) {
 			console.error("Failed to update status:", err);
-			toast.error("Failed to change preorder status.");
+			toast.error(
+				`Failed to change preorder status: ${err?.message || "Unknown error"}`,
+			);
 		}
 	};
 

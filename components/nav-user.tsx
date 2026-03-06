@@ -1,9 +1,6 @@
 "use client";
 
-import {
-	IconDotsVertical,
-	IconLogout,
-} from "@tabler/icons-react";
+import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -20,9 +17,13 @@ import {
 	SidebarMenuItem,
 	useSidebar,
 } from "@/components/ui/sidebar";
+import ThemeToggle from "./ui/theme-toggle";
+import { useTheme } from "next-themes";
 export function NavUser({
 	user,
+	showTheme = false,
 }: {
+	showTheme?: boolean;
 	user: {
 		name: string;
 		email: string;
@@ -30,6 +31,9 @@ export function NavUser({
 	};
 }) {
 	const { isMobile } = useSidebar();
+
+	const { setTheme, theme, systemTheme } = useTheme();
+	const currentTheme = theme === "system" ? systemTheme : theme;
 
 	return (
 		<SidebarMenu>
@@ -74,10 +78,22 @@ export function NavUser({
 							</div>
 						</DropdownMenuLabel>
 						<DropdownMenuSeparator />
-						<DropdownMenuItem>
+						<DropdownMenuItem className="hover:text-foreground!">
 							<IconLogout />
 							Log out
 						</DropdownMenuItem>
+						{showTheme && (
+							<DropdownMenuItem
+								onClick={() => {
+									const newTheme = currentTheme === "dark" ? "light" : "dark";
+									setTheme(newTheme);
+								}}
+								className="p-0 hover:text-foreground!"
+							>
+								<ThemeToggle />
+								Theme
+							</DropdownMenuItem>
+						)}
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</SidebarMenuItem>

@@ -123,7 +123,7 @@ export default async function RootLayout({
 					storageKey="theme"
 				>
 					<NextTopLoader
-						color="#FF8904"
+						color="#693ad4"
 						initialPosition={0.04}
 						crawlSpeed={300}
 						height={2}
@@ -136,9 +136,7 @@ export default async function RootLayout({
 					<QueryProvider>
 						<CartProvider>
 							{googleAnalyticsId && (
-								<GoogleAnalyticsPageView
-									measurementId={googleAnalyticsId}
-								/>
+								<GoogleAnalyticsPageView measurementId={googleAnalyticsId} />
 							)}
 							{metaPixelId && <MetaPixelPageView />}
 							<main>{children}</main>

@@ -10,7 +10,6 @@ import {
 	IconFileDescription,
 	IconFileWord,
 	IconFolder,
-	IconInnerShadowTop,
 	IconListDetails,
 	IconReport,
 	IconSettings,
@@ -18,7 +17,6 @@ import {
 
 import { NavMain } from "@/components/nav-main";
 // import { NavSecondary } from "@/components/admin/nav-secondary";
-import { NavUser } from "@/components/nav-user";
 import {
 	Sidebar,
 	SidebarContent,
@@ -29,6 +27,9 @@ import {
 	SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
+import Image from "next/image";
+import logo from "@/public/images/logo/payless-logo.png";
+import { NavUser } from "../nav-user";
 
 const data = {
 	navMain: [
@@ -137,15 +138,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 					<SidebarMenuItem>
 						<SidebarMenuButton
 							asChild
-							className="[slot=sidebar-menu-button]:p-1.5!"
+							className="[slot=sidebar-menu-button]:p-1.5! hover:bg-transparent active:bg-transparent"
 						>
-							<a href="/">
-								<IconInnerShadowTop className="size-5!" />
-								<div className="flex items-center space-x-2">
-									<h1 className="text-2xl font-bold text-sidebar-foreground">
-										Payless<span className="text-orange-500">4Tech</span>
-									</h1>
-								</div>
+							<a href="/" className="flex items-center gap-3 w-full">
+								<Image
+									src={logo}
+									alt="Payless4Tech"
+									className="h-16 w-auto object-contain drop-shadow-sm dark:brightness-110"
+									priority
+								/>
 							</a>
 						</SidebarMenuButton>
 					</SidebarMenuItem>
@@ -155,8 +156,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 				<NavMain items={data.navMain} />
 				{/* <NavSecondary items={data.navSecondary} className="mt-auto" /> */}
 			</SidebarContent>
-			<SidebarFooter>
+			<SidebarFooter className="border-t border-border/40 p-3 space-y-4">
 				<NavUser
+					showTheme={true}
 					user={{
 						name: user?.name || "",
 						email: user?.email || "",
