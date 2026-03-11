@@ -10,7 +10,7 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { Plus, UploadCloud, X, Trash2 } from "lucide-react";
+import { Plus, UploadCloud, X } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import {
 	Select,
@@ -31,12 +31,14 @@ import {
 	Form,
 	FormControl,
 	FormField,
+	FormDescription,
 	FormItem,
 	FormLabel,
 	FormMessage,
 } from "@/components/ui/form";
 import { cn } from "@/lib/utils";
 import { ProductFormData, useProductForm } from "@/hooks/useProductForm";
+import { ProductSpecsEditor } from "./ProductSpecsEditor";
 
 export const formSchema = z.object({
 	id: z.string().optional(),
@@ -95,21 +97,9 @@ export function AddProductsSheet() {
 		form.setValue(
 			"detailed_specs",
 			validSpecs.length ? JSON.stringify(validSpecs) : "",
+			{ shouldDirty: true, shouldValidate: true },
 		);
 	}, [specs, form]);
-
-	const addSpec = () => setSpecs([...specs, { key: "", value: "" }]);
-	const removeSpec = (index: number) => {
-		const newSpecs = specs.filter((_, i) => i !== index);
-		setSpecs(newSpecs.length ? newSpecs : [{ key: "", value: "" }]);
-	};
-	const updateSpec = (index: number, field: "key" | "value", val: string) => {
-		const newSpecs = [...specs];
-		if (newSpecs[index]) {
-			newSpecs[index][field] = val;
-			setSpecs(newSpecs);
-		}
-	};
 
 	// Use the hook for product creation
 	const {
@@ -121,6 +111,7 @@ export function AddProductsSheet() {
 		onProductAdded: () => {
 			setToggleSheet(false);
 			setSelectedFiles([]);
+			setSpecs([{ key: "", value: "" }]);
 			form.reset();
 			toast.success("Product added successfully!");
 		},
@@ -366,46 +357,14 @@ export function AddProductsSheet() {
 									render={() => (
 										<FormItem>
 											<FormLabel>Detailed Specifications</FormLabel>
-											<div className="space-y-2">
-												{specs.map((spec, index) => (
-													<div key={index} className="flex items-center gap-2">
-														<Input
-															placeholder="Key (e.g. Brand)"
-															value={spec.key}
-															onChange={(e) =>
-																updateSpec(index, "key", e.target.value)
-															}
-															className="flex-1"
-														/>
-														<Input
-															placeholder="Value (e.g. Apple)"
-															value={spec.value}
-															onChange={(e) =>
-																updateSpec(index, "value", e.target.value)
-															}
-															className="flex-1"
-														/>
-														<Button
-															type="button"
-															variant="outline"
-															size="icon"
-															className="shrink-0"
-															onClick={() => removeSpec(index)}
-														>
-															<Trash2 className="h-4 w-4 text-destructive" />
-														</Button>
-													</div>
-												))}
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													onClick={addSpec}
-													className="mt-2 text-xs h-8"
-												>
-													<Plus className="h-3 w-3 mr-1" /> Add Spec
-												</Button>
-											</div>
+											<FormDescription>
+												You can still add specs manually, but bulk paste is
+												faster for copied product details.
+											</FormDescription>
+											<ProductSpecsEditor
+												specs={specs}
+												setSpecs={setSpecs}
+											/>
 											<FormMessage />
 										</FormItem>
 									)}

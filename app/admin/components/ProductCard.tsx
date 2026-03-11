@@ -31,6 +31,7 @@ import {
 	Form,
 	FormControl,
 	FormField,
+	FormDescription,
 	FormItem,
 	FormLabel,
 	FormMessage,
@@ -73,7 +74,7 @@ import { toast } from "sonner";
 import { ProductFormData, useProductForm } from "@/hooks/useProductForm";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { IconPlus } from "@tabler/icons-react";
+import { ProductSpecsEditor } from "./ProductSpecsEditor";
 
 interface ProductCardProps {
 	product: Product;
@@ -176,21 +177,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		form.setValue(
 			"detailed_specs",
 			validSpecs.length ? JSON.stringify(validSpecs) : "",
+			{ shouldDirty: true, shouldValidate: true },
 		);
 	}, [specs, form]);
-
-	const addSpec = () => setSpecs([...specs, { key: "", value: "" }]);
-	const removeSpec = (index: number) => {
-		const newSpecs = specs.filter((_, i) => i !== index);
-		setSpecs(newSpecs.length ? newSpecs : [{ key: "", value: "" }]);
-	};
-	const updateSpec = (index: number, field: "key" | "value", val: string) => {
-		const newSpecs = [...specs];
-		if (newSpecs[index]) {
-			newSpecs[index][field] = val;
-			setSpecs(newSpecs);
-		}
-	};
 
 	const { data: additionalImages, refetch: refetchAdditionalImages } = useQuery(
 		{
@@ -536,46 +525,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									render={() => (
 										<FormItem>
 											<FormLabel>Detailed Specifications</FormLabel>
-											<div className="space-y-2">
-												{specs.map((spec, index) => (
-													<div key={index} className="flex items-center gap-2">
-														<Input
-															placeholder="Key (e.g. Brand)"
-															value={spec.key}
-															onChange={(e) =>
-																updateSpec(index, "key", e.target.value)
-															}
-															className="flex-1"
-														/>
-														<Input
-															placeholder="Value (e.g. Apple)"
-															value={spec.value}
-															onChange={(e) =>
-																updateSpec(index, "value", e.target.value)
-															}
-															className="flex-1"
-														/>
-														<Button
-															type="button"
-															variant="outline"
-															size="icon"
-															className="shrink-0"
-															onClick={() => removeSpec(index)}
-														>
-															<Trash2 className="h-4 w-4 text-destructive" />
-														</Button>
-													</div>
-												))}
-												<Button
-													type="button"
-													variant="outline"
-													size="sm"
-													onClick={addSpec}
-													className="mt-2 text-xs h-8"
-												>
-													<IconPlus className="h-3 w-3 mr-1" /> Add Spec
-												</Button>
-											</div>
+											<FormDescription>
+												Paste copied specs in bulk, then fine-tune any rows
+												before saving.
+											</FormDescription>
+											<ProductSpecsEditor
+												specs={specs}
+												setSpecs={setSpecs}
+											/>
 											<FormMessage />
 										</FormItem>
 									)}
