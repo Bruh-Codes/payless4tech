@@ -63,7 +63,7 @@ export function convertEbayToLocalProduct(ebayItem: EbayItem): Product {
 		condition: ebayItem.condition,
 		rating: 0, // eBay doesn't provide rating in this API
 		reviews: 0, // eBay doesn't provide reviews in this API
-		shipping: "Request Delivery",
+		shipping: "Within 24hrs",
 		seller: "Payless4Tech",
 		isPreorder: ebayItem.isPreorder,
 	} as Product; // Type assertion to bypass TypeScript cache issue

@@ -19,7 +19,15 @@ import { Package, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClassValue } from "clsx";
 
-export const AuthButtons = ({ className }: { className?: ClassValue }) => {
+export const AuthButtons = ({
+	className,
+	showDashboard = true,
+	showProfileMenu = true,
+}: {
+	className?: ClassValue;
+	showDashboard?: boolean;
+	showProfileMenu?: boolean;
+}) => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 	const router = useRouter();
@@ -63,9 +71,9 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 			{session ? (
 				<>
 					<div className={cn("flex items-center gap-2", className)}>
-						{isPending ? (
+						{showDashboard && isPending ? (
 							<Skeleton className="h-9 w-24" />
-						) : isAdmin?.data?.success ? (
+						) : showDashboard && isAdmin?.data?.success ? (
 							<Link
 								href="/admin"
 								className="m-0"
@@ -78,59 +86,61 @@ export const AuthButtons = ({ className }: { className?: ClassValue }) => {
 						) : null}
 					</div>
 
-					<DropdownMenu
-						modal={false}
-						open={isDropdownOpen}
-						onOpenChange={setIsDropdownOpen}
-					>
-						<DropdownMenuTrigger asChild>
-							<button
-								className="p-0 font-norma rounded-lg transition-colors"
-								disabled={isLoading}
-							>
-								<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-									<Avatar className="h-8 w-8 rounded-lg">
-										<AvatarImage
-											src={session?.user?.image ?? ""}
-											alt={session?.user?.name}
-										/>
-										<AvatarFallback className="rounded-lg">
-											{session?.user?.name?.charAt(0)}
-										</AvatarFallback>
-									</Avatar>
-									{isDropdownOpen ? (
-										<ChevronUp className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
-									) : (
-										<ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
-									)}
-								</div>
-							</button>
-						</DropdownMenuTrigger>
-
-						<DropdownMenuContent
-							className="w-56 cursor-pointer"
-							align="end"
-							forceMount
+					{showProfileMenu ? (
+						<DropdownMenu
+							modal={false}
+							open={isDropdownOpen}
+							onOpenChange={setIsDropdownOpen}
 						>
-							<DropdownMenuItem asChild>
-								<Link
-									href="/orders"
-									className="flex hover:text-foreground! items-center gap-2"
-									aria-label="View your order history and track orders"
+							<DropdownMenuTrigger asChild>
+								<button
+									className="p-0 font-norma rounded-lg transition-colors"
+									disabled={isLoading}
 								>
-									<Package className="h-4 w-4" />
-									My Orders
-								</Link>
-							</DropdownMenuItem>
-							<DropdownMenuItem
-								className="hover:text-foreground!"
-								onClick={handleLogout}
-								disabled={isLoading}
+									<div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+										<Avatar className="h-8 w-8 rounded-lg">
+											<AvatarImage
+												src={session?.user?.image ?? ""}
+												alt={session?.user?.name}
+											/>
+											<AvatarFallback className="rounded-lg">
+												{session?.user?.name?.charAt(0)}
+											</AvatarFallback>
+										</Avatar>
+										{isDropdownOpen ? (
+											<ChevronUp className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+										) : (
+											<ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200" />
+										)}
+									</div>
+								</button>
+							</DropdownMenuTrigger>
+
+							<DropdownMenuContent
+								className="w-56 cursor-pointer"
+								align="end"
+								forceMount
 							>
-								{isLoading ? "Logging out..." : "Log out"}
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+								<DropdownMenuItem asChild>
+									<Link
+										href="/orders"
+										className="flex hover:text-foreground! items-center gap-2"
+										aria-label="View your order history and track orders"
+									>
+										<Package className="h-4 w-4" />
+										My Orders
+									</Link>
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									className="hover:text-foreground!"
+									onClick={handleLogout}
+									disabled={isLoading}
+								>
+									{isLoading ? "Logging out..." : "Log out"}
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					) : null}
 				</>
 			) : (
 				<Link href="/login" aria-label="Sign in to your account">

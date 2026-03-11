@@ -153,8 +153,8 @@ const OrdersPage = () => {
 								You haven't placed any orders. Start shopping to see your orders
 								here!
 							</p>
-							<Button onClick={() => (window.location.href = "/")}>
-								Start Shopping
+							<Button asChild>
+								<Link href="/shop">Start Shopping</Link>
 							</Button>
 						</CardContent>
 					</Card>

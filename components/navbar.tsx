@@ -384,10 +384,10 @@ const Navbar = memo(() => {
 							className={`flex items-center gap-1 md:hidden ${isDarkNavbar ? "dark" : ""}`}
 						>
 							<div
-								className={`flex gap-2 items-center ${isDarkNavbar ? "[&_button]:bg-white/10 [&_button]:text-white [&_button:hover]:bg-white/20" : ""}`}
+								className={`flex gap-2 items-center ${isDarkNavbar ? "[&_button]:bg-white/10 [&_button]:text-white [&_button:hover]:bg-white/20 [&_[data-slot='button']]:border-white/20" : ""}`}
 							>
 								<Cart />
-								<AuthButtons className="hidden md:flex" />
+								<AuthButtons className="flex" showDashboard={false} />
 							</div>
 							<Button
 								variant="ghost"
@@ -413,9 +413,9 @@ const Navbar = memo(() => {
 					>
 						<div className="space-y-3 w-full">
 							{/* Mobile Category Dropdown */}
-							<div className="flex items-center justify-between">
+							<div className="flex items-start justify-between gap-3">
 								<div
-									className="relative w-full"
+									className="relative flex-1"
 									ref={mobileCategoryDropdownRef}
 								>
 									<Button
@@ -473,6 +473,18 @@ const Navbar = memo(() => {
 											</div>
 										</div>
 									)}
+								</div>
+								<div
+									className={cn(
+										"shrink-0 flex items-center",
+										isDarkNavbar &&
+											"dark [&_button]:bg-white/10 [&_button]:text-white [&_button:hover]:bg-white/20 [&_[data-slot='button']]:border-white/20",
+									)}
+								>
+									<AuthButtons
+										className="flex"
+										showProfileMenu={false}
+									/>
 								</div>
 							</div>
 

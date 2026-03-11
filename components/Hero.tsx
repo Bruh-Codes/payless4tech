@@ -9,6 +9,30 @@ import Image from "next/image";
 
 const slides = [
 	{
+		id: "m5-chip",
+		title: "M5 Chip",
+		subtitle: "Power beyond belief.",
+		description:
+			"The next generation of Apple silicon is here. Groundbreaking speed and efficiency.",
+		bgImage: "/images/hero/hero_startframe__ek0dqbh61vau_xlarge.webp",
+		textColor: "text-white",
+		theme: "dark",
+		align: "center",
+		bgPosition: "center",
+	},
+
+	{
+		id: "m5-chip",
+		title: "M5 Family",
+		subtitle: "Scary fast.",
+		description: "The most advanced chips ever built for a personal computer.",
+		bgImage: "/images/hero/sensors_chips__s805s5o3gkii_large.webp",
+		textColor: "text-white",
+		theme: "dark",
+		align: "center",
+		bgPosition: "center",
+	},
+	{
 		id: "vision-pro",
 		title: "Vision Pro",
 		subtitle: "Welcome to the era of spatial computing.",
@@ -36,7 +60,7 @@ const slides = [
 		title: "Galaxy S26 Ultra",
 		subtitle: "Galaxy AI is here.",
 		description: "Unleash new ways to create, connect, and more.",
-		bgImage: "/images/galaxy-s26-ultra-features-kv.jpg", // Kept as jpg if not found in list, but I will check others
+		bgImage: "/images/galaxy-s26-ultra-features-kv.webp",
 		textColor: "text-white",
 		theme: "dark",
 		align: "top",
@@ -64,29 +88,6 @@ const slides = [
 		textColor: "text-white",
 		theme: "light",
 		align: "top",
-		bgPosition: "center",
-	},
-	{
-		id: "m5-chip",
-		title: "M5 Family",
-		subtitle: "Scary fast.",
-		description: "The most advanced chips ever built for a personal computer.",
-		bgImage: "/images/hero/sensors_chips__s805s5o3gkii_large.webp",
-		textColor: "text-white",
-		theme: "dark",
-		align: "center",
-		bgPosition: "center",
-	},
-	{
-		id: "m5-chip",
-		title: "M5 Chip",
-		subtitle: "Power beyond belief.",
-		description:
-			"The next generation of Apple silicon is here. Groundbreaking speed and efficiency.",
-		bgImage: "/images/hero/hero_startframe__ek0dqbh61vau_xlarge.webp",
-		textColor: "text-white",
-		theme: "dark",
-		align: "center",
 		bgPosition: "center",
 	},
 ];

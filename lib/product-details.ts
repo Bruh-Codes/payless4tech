@@ -92,7 +92,7 @@ export const getProductDetailsById = cache(async function getProductDetailsById(
 			additionalImages: additionalImages.filter(Boolean),
 			category: productData.category,
 			condition: productData.condition || "Unknown",
-			shipping: "Request Delivery",
+			shipping: "Within 24hrs",
 			seller: "Payless4tech",
 			itemUrl: "",
 			isPreorder: productData.status === "pre-order",

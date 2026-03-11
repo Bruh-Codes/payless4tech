@@ -380,7 +380,7 @@ export async function getItemsByItemGroup(
 					category: it.categoryId ? getCategoryName(it.categoryId) : "Unknown",
 					condition:
 						CONDITION_ID_MAP[it.conditionId] ?? it.condition ?? "Unknown",
-					shipping: "Request Delivery",
+					shipping: "Within 24hrs",
 					seller: "payless4tech",
 					itemUrl: it.itemWebUrl ?? "",
 					isPreorder: false,
@@ -657,7 +657,7 @@ export async function searchEbayProducts(
 				category: it.categories?.[0]?.categoryName ?? "Unknown",
 				condition:
 					CONDITION_ID_MAP[it.conditionId] ?? it.condition ?? "Unknown",
-				shipping: "Request Delivery",
+				shipping: "Within 24hrs",
 				seller: "Payless4tech",
 				itemUrl: it.itemWebUrl ?? "",
 				isPreorder: true,
@@ -829,7 +829,7 @@ export async function getEbayProductById(itemId: string) {
 		category: data.categoryId ? getCategoryName(data.categoryId) : "Unknown",
 		condition:
 			CONDITION_ID_MAP[data.conditionId] ?? data.condition ?? "Unknown",
-		shipping: "Request Delivery",
+		shipping: "Within 24hrs",
 		seller: "payless4tech",
 		itemUrl: data.itemWebUrl ?? "",
 		isPreorder: true,

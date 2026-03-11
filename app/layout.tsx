@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Manrope } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { CartProvider } from "@/contexts/CartContext";
@@ -23,7 +23,7 @@ const ReactQueryDevtools = dynamic(() =>
 	})),
 );
 
-const inter = Inter({
+const manrope = Manrope({
 	variable: "--font-inter",
 	subsets: ["latin", "greek", "cyrillic"],
 });
@@ -83,7 +83,7 @@ export default async function RootLayout({
 					type="image/webp"
 				/>
 			</head>
-			<body className={`${inter.variable} antialiased m-0 p-0`}>
+			<body className={`${manrope.variable} antialiased m-0 p-0`}>
 				{googleAnalyticsId && (
 					<>
 						<Script

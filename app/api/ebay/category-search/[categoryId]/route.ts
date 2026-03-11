@@ -56,7 +56,7 @@ export async function GET(
 				category: p.category,
 				categoryId: p.category,
 				condition: p.condition || "New",
-				shipping: "Request Delivery",
+				shipping: "Within 24hrs",
 				seller: "Payless4tech",
 				itemUrl: "",
 				isPreorder: p.status === "pre-order",

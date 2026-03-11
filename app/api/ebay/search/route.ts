@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
 					image: p.image_url,
 					category: p.category,
 					condition: p.condition || "New",
-					shipping: "Request Delivery",
+					shipping: "Within 24hrs",
 					seller: "Payless4tech",
 					itemUrl: `/product/${p.id}`,
 					isPreorder: false,

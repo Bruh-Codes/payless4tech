@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
 	Truck,
 	ShieldCheck,
-	Store,
 	Package,
 	ChevronRight,
 	ShoppingCart,
@@ -196,7 +195,7 @@ export default function ProductDetailClient({
 							)}
 						</div>
 
-						<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						<div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
 								<Package className="h-5 w-5 shrink-0 text-primary" />
 								<div>
@@ -212,15 +211,6 @@ export default function ProductDetailClient({
 									<p className="text-xs text-muted-foreground">Shipping</p>
 									<p className="text-sm font-semibold text-foreground">
 										{product.shipping}
-									</p>
-								</div>
-							</div>
-							<div className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3">
-								<Store className="h-5 w-5 shrink-0 text-primary" />
-								<div>
-									<p className="text-xs text-muted-foreground">Seller</p>
-									<p className="text-sm font-semibold text-foreground">
-										{product.seller}
 									</p>
 								</div>
 							</div>
