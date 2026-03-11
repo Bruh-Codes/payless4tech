@@ -40,6 +40,7 @@ interface UploadResult {
 	successful: number;
 	failed: number;
 	errors: string[];
+	warnings?: string[];
 }
 
 interface ImageMap {
@@ -257,13 +258,11 @@ export function BulkUploadSheet() {
 			skipEmptyLines: true,
 			complete: (results) => {
 				const referencedImageNames = new Set<string>();
-				const extensionsFound = new Set<string>();
 
 				results.data.forEach((row: any) => {
 					// Extract main image
 					if (row.image_url && row.image_url.trim() !== "") {
 						const name = row.image_url.trim();
-						if (/\.[a-z0-9]+$/i.test(name)) extensionsFound.add(name);
 						referencedImageNames.add(getBaseName(name));
 					}
 					// Extract additional images
@@ -273,24 +272,10 @@ export function BulkUploadSheet() {
 							.map((img: string) => img.trim())
 							.filter((img: string) => img.length > 0);
 						parts.forEach((img: string) => {
-							if (/\.[a-z0-9]+$/i.test(img)) extensionsFound.add(img);
 							referencedImageNames.add(getBaseName(img));
 						});
 					}
 				});
-
-				if (extensionsFound.size > 0) {
-					toast.error(
-						`CSV Error: Please remove file extensions (.jpg, .png etc). Found: ${Array.from(
-							extensionsFound,
-						)
-							.slice(0, 3)
-							.join(", ")}${extensionsFound.size > 3 ? "..." : ""}`,
-					);
-					setUploading(false);
-					setResult(null);
-					return;
-				}
 
 				const providedImageNames = new Set(
 					images.map((img) => getBaseName(img.name)),
@@ -349,12 +334,12 @@ export function BulkUploadSheet() {
 			"Brand new iPhone 15 Pro Max with 256GB storage",
 			"8500",
 			"9200",
-			"phones",
+			"smartphones",
 			"New",
 			"available",
 			"10",
-			"iphone15", // Changed to show base filename instead of URL or full filename
-			"iphone15-side, iphone15-back", // Additional images
+			"iphone15.jpg",
+			"iphone15-side.jpg, iphone15-back.jpg",
 			"Processor:A17 Pro|Display:6.7-inch|Camera:48MP",
 		];
 		const csv = [headers.join(","), sampleRow.join(",")].join("\n");
@@ -437,14 +422,51 @@ export function BulkUploadSheet() {
 							</div>
 						</div>
 
+						<div className="rounded-lg border bg-blue-50/60 dark:bg-blue-950/20 p-4 space-y-3">
+							<h4 className="text-sm font-medium">How Bulk Upload Works</h4>
+							<div className="space-y-2 text-xs text-muted-foreground">
+								<p>1. Add your product images first.</p>
+								<p>2. Fill the CSV template with your product details.</p>
+								<p>
+									3. In the CSV, the <code>image_url</code> should match the image
+									file name for that product.
+								</p>
+								<p>
+									Example: if the product is <strong>iPhone 15 Pro Max</strong>,
+									name the image <code>iphone15pro.jpg</code> and put{" "}
+									<code>iphone15pro.jpg</code> in the CSV.
+								</p>
+								<p>
+									4. Upload the CSV. We will match the product to the image using
+									that image name.
+								</p>
+							</div>
+						</div>
+
+						<div className="rounded-lg border p-4 space-y-2">
+							<h4 className="text-sm font-medium">Simple Example</h4>
+							<div className="rounded-md bg-muted/50 p-3 text-xs font-mono overflow-x-auto">
+								<p>Product name: iPhone 15 Pro Max 256GB</p>
+								<p>Image file: iphone15pro.jpg</p>
+								<p>CSV image_url: iphone15pro.jpg</p>
+							</div>
+							<p className="text-xs text-muted-foreground">
+								The product name does not have to be exactly the same as the image
+								file name, but the <code>image_url</code> value in the CSV must
+								match the image file name you uploaded.
+							</p>
+						</div>
+
 						{/* Step 1: Image Drag & Drop Area */}
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">
 								Step 1: Upload Images (Optional)
 							</h4>
 							<p className="text-xs text-muted-foreground pb-2">
-								Drop the product images first. The CSV will map to these files
-								using their exact file names.
+								Drop the product images first. The CSV will connect each product
+								to its image using the image file name. You can use either the
+								full filename like <code>iphone15.jpg</code> or just the base
+								name like <code>iphone15</code>.
 							</p>
 							<div
 								onDragEnter={handleDragImages}
@@ -537,8 +559,10 @@ export function BulkUploadSheet() {
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">Step 2: Upload CSV</h4>
 							<p className="text-xs text-muted-foreground pb-2">
-								Ensure the <code>image_url</code> matches the exact names of the
-								files uploaded above (e.g. <code>iphone15.jpg</code>).
+								The <code>image_url</code> and <code>additional_images</code>{" "}
+								fields can use either full filenames or base names from Step 1
+								(e.g. <code>iphone15.jpg</code> or <code>iphone15</code>). For
+								best results, use the exact image file name.
 							</p>
 							<div
 								onDragEnter={handleDragCSV}
@@ -681,6 +705,31 @@ export function BulkUploadSheet() {
 									</div>
 								)}
 
+								{(result.warnings?.length || 0) > 0 && (
+									<div className="rounded-lg border border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 p-3">
+										<div className="flex items-center gap-2 mb-2">
+											<AlertTriangle className="h-4 w-4 text-amber-500" />
+											<p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+												Helpful Notes ({result.warnings?.length})
+											</p>
+										</div>
+										<p className="text-xs text-amber-700/80 dark:text-amber-300/80 mb-2">
+											These items did not block the upload, but you may want to
+											review them.
+										</p>
+										<div className="max-h-40 overflow-y-auto space-y-1">
+											{result.warnings?.map((warning, i) => (
+												<div key={i} className="flex items-start gap-2">
+													<AlertTriangle className="h-3 w-3 text-amber-500 mt-0.5 shrink-0" />
+													<p className="text-xs text-amber-700/90 dark:text-amber-300/90">
+														{warning}
+													</p>
+												</div>
+											))}
+										</div>
+									</div>
+								)}
+
 								{/* Success message */}
 								{result.successful > 0 && result.failed === 0 && (
 									<div className="rounded-lg border border-green-200 dark:border-green-900/50 bg-green-50/50 dark:bg-green-950/20 p-3">
@@ -697,7 +746,7 @@ export function BulkUploadSheet() {
 
 						{/* Column Guide */}
 						<div className="rounded-lg border p-4">
-							<h4 className="text-sm font-medium mb-3">CSV Column Guide</h4>
+							<h4 className="text-sm font-medium mb-3">What To Fill In</h4>
 							<div className="space-y-1.5 text-xs">
 								{[
 									["name*", "Product name (required)"],
@@ -713,11 +762,11 @@ export function BulkUploadSheet() {
 									["stock", "Stock quantity (number)"],
 									[
 										"image_url",
-										"Exact filename from Step 1 (e.g. iphone15.jpg). Leave blank to omit.",
+										"Main product image file name from Step 1. Example: iphone15.jpg",
 									],
 									[
 										"additional_images",
-										"Comma-separated filenames from Step 1 (e.g. img1.jpg, img2.png).",
+										"Extra product image file names, separated by commas.",
 									],
 									[
 										"detailed_specs",
@@ -754,9 +803,9 @@ export function BulkUploadSheet() {
 											Missing Images ({validationWarning.missingImages.length}):
 										</strong>
 										<p className="text-sm">
-											The CSV references images that were not dropped into Step
-											1. If they are not already in the Supabase bucket, the
-											import for those rows will fail.
+											These image names are in the CSV, but the files were not
+											uploaded in Step 1. Fix this by uploading the missing image
+											files or removing those image names from the CSV.
 										</p>
 										<div className="bg-red-50 dark:bg-red-950/20 text-red-600 rounded p-2 mt-2 max-h-24 overflow-y-auto text-xs">
 											{validationWarning.missingImages.join(", ")}
@@ -771,9 +820,9 @@ export function BulkUploadSheet() {
 											Unused Images ({validationWarning.unusedImages.length}):
 										</strong>
 										<p className="text-sm">
-											You provided images in Step 1 that are not referenced in
-											the CSV. To save storage space, they will be skipped and
-											won't be uploaded.
+											These image files were uploaded in Step 1 but are not used
+											in the CSV. They will be skipped unless you add their names
+											to <code>image_url</code> or <code>additional_images</code>.
 										</p>
 										<div className="bg-amber-50 dark:bg-amber-950/20 text-amber-600 rounded p-2 mt-2 max-h-24 overflow-y-auto text-xs">
 											{validationWarning.unusedImages.join(", ")}

@@ -11,7 +11,6 @@ const supabase = createClient(
 const VALID_CATEGORIES = [
 	"consumer-electronics",
 	"laptops",
-	"phones",
 	"tablets",
 	"audio",
 	"gaming",
@@ -34,6 +33,28 @@ interface ParsedProduct {
 	additional_images: string[];
 	detailed_specs: string;
 }
+
+interface ParsedProductWarning {
+	message: string;
+}
+
+const HEADER_ALIASES: Record<string, keyof ParsedProduct | "skip"> = {
+	name: "name",
+	description: "description",
+	price: "price",
+	original_price: "original_price",
+	"original price": "original_price",
+	category: "category",
+	condition: "condition",
+	status: "status",
+	stock: "stock",
+	image_url: "image_url",
+	"image url": "image_url",
+	additional_images: "additional_images",
+	"additional images": "additional_images",
+	detailed_specs: "detailed_specs",
+	"detailed specs": "detailed_specs",
+};
 
 function parseCSVLine(line: string): string[] {
 	const result: string[] = [];
@@ -60,28 +81,77 @@ function parseCSVLine(line: string): string[] {
 	return result;
 }
 
-function validateProduct(
-	row: string[],
-	rowIndex: number,
-	imageMapping: Record<string, string> = {},
-): { valid: true; product: ParsedProduct } | { valid: false; error: string } {
-	if (row.length < 3) {
-		return {
-			valid: false,
-			error: `Row ${rowIndex}: Too few columns (${row.length})`,
-		};
+function normalizeHeader(header: string) {
+	return header.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function getCategorySlug(category: string) {
+	const normalizedCategory = category.toLowerCase().replace(/\s+/g, "-");
+	if (normalizedCategory === "phones") {
+		return "smartphones";
 	}
 
-	const name = row[0]?.trim();
-	const description = row[1]?.trim() || "";
-	const priceStr = row[2]?.trim();
-	const originalPrice = row[3]?.trim() || "";
-	const category = row[4]?.trim() || "consumer-electronics";
-	const condition = row[5]?.trim() || "New";
-	const status = row[6]?.trim() || "available";
-	const stockStr = row[7]?.trim() || "0";
+	return VALID_CATEGORIES.includes(normalizedCategory)
+		? normalizedCategory
+		: "consumer-electronics";
+}
 
-	let imageUrl = (row[8] || "")?.trim() || "";
+async function getExistingBucketImageMap() {
+	const existingImages: Record<string, string> = {};
+	const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+	if (!baseUrl) {
+		return existingImages;
+	}
+
+	let offset = 0;
+	const pageSize = 100;
+
+	while (true) {
+		const { data, error } = await supabase.storage.from("product-images").list("", {
+			limit: pageSize,
+			offset,
+		});
+
+		if (error || !data || data.length === 0) {
+			break;
+		}
+
+		for (const item of data) {
+			if (!item.name) continue;
+			const baseName = item.name.replace(/\.[a-z0-9]+$/i, "");
+			existingImages[baseName] =
+				`${baseUrl}/storage/v1/object/public/product-images/${item.name}`;
+		}
+
+		if (data.length < pageSize) {
+			break;
+		}
+
+		offset += pageSize;
+	}
+
+	return existingImages;
+}
+
+function validateProduct(
+	row: Record<string, string>,
+	rowIndex: number,
+	imageMapping: Record<string, string> = {},
+):
+	| { valid: true; product: ParsedProduct; warnings: ParsedProductWarning[] }
+	| { valid: false; error: string } {
+	const name = row.name?.trim();
+	const description = row.description?.trim() || "";
+	const priceStr = row.price?.trim();
+	const originalPrice = row.original_price?.trim() || "";
+	const category = row.category?.trim() || "consumer-electronics";
+	const condition = row.condition?.trim() || "New";
+	const status = row.status?.trim() || "available";
+	const stockStr = row.stock?.trim() || "0";
+	const warnings: ParsedProductWarning[] = [];
+
+	let imageUrl = row.image_url?.trim() || "";
 	// Helper to resolve an image name to a URL
 	const resolveImageUrl = (imgName: string) => {
 		if (!imgName) return "";
@@ -96,18 +166,21 @@ function validateProduct(
 		if (imageMapping[baseName]) {
 			return imageMapping[baseName];
 		}
-		// Fallback: Assume it's in the Supabase bucket with the same name
-		const baseUrl =
-			process.env.NEXT_PUBLIC_SUPABASE_URL ||
-			"https://ntudizdvtyhhrxpafuyj.supabase.co";
-		return `${baseUrl}/storage/v1/object/public/product-images/${baseName}`;
+		return "";
 	};
 
 	imageUrl = resolveImageUrl(imageUrl);
+	if (row.image_url?.trim() && !imageUrl) {
+		return {
+			valid: false,
+			error: `Row ${rowIndex}: The main image "${row.image_url.trim()}" could not be found. Upload that image in Step 1 or change the "image_url" value in your CSV.`,
+		};
+	}
 
 	// Extract additional images from row 9, split by commas, and map them if available
-	const rawAdditionalImages = (row[9] || "")?.trim();
+	const rawAdditionalImages = row.additional_images?.trim() || "";
 	let additionalImages: string[] = [];
+	const missingAdditionalImages: string[] = [];
 	if (rawAdditionalImages) {
 		const parts = rawAdditionalImages
 			.split(",")
@@ -116,10 +189,18 @@ function validateProduct(
 		for (const imgName of parts) {
 			const resolvedUrl = resolveImageUrl(imgName);
 			if (resolvedUrl) additionalImages.push(resolvedUrl);
+			else missingAdditionalImages.push(imgName);
 		}
 	}
 
-	let detailedSpecs = (row[10] || "")?.trim() || "";
+	if (missingAdditionalImages.length > 0) {
+		return {
+			valid: false,
+			error: `Row ${rowIndex}: These additional images could not be found: ${missingAdditionalImages.join(", ")}. Upload them in Step 1 or remove them from "additional_images" in your CSV.`,
+		};
+	}
+
+	let detailedSpecs = row.detailed_specs?.trim() || "";
 
 	// Parse 'Key:Value|Key:Value' into a JSON string
 	if (detailedSpecs && detailedSpecs.includes(":")) {
@@ -138,28 +219,41 @@ function validateProduct(
 	}
 
 	if (!name) {
-		return { valid: false, error: `Row ${rowIndex}: Product name is required` };
+		return {
+			valid: false,
+			error: `Row ${rowIndex}: Product name is missing. Add a value in the "name" column.`,
+		};
 	}
 
 	const price = parseFloat(priceStr || "0");
 	if (isNaN(price) || price <= 0) {
 		return {
 			valid: false,
-			error: `Row ${rowIndex}: Invalid price "${priceStr}"`,
+			error: `Row ${rowIndex}: Price "${priceStr}" is not valid. Enter a number greater than 0 in the "price" column.`,
 		};
 	}
 
 	const stock = parseInt(stockStr, 10);
+	if (stockStr && (isNaN(stock) || stock < 0)) {
+		return {
+			valid: false,
+			error: `Row ${rowIndex}: Stock "${stockStr}" is not valid. Enter 0 or a positive whole number in the "stock" column.`,
+		};
+	}
 
-	// Normalize category - allow flexible input
-	let normalizedCategory = category.toLowerCase().replace(/\s+/g, "-");
-	if (!VALID_CATEGORIES.includes(normalizedCategory)) {
-		normalizedCategory = "consumer-electronics"; // default fallback
+	const normalizedCategory = getCategorySlug(category);
+	if (category && normalizedCategory !== category.toLowerCase().replace(/\s+/g, "-")) {
+		warnings.push({
+			message: `Row ${rowIndex}: Category "${category}" was changed to "${normalizedCategory}" to match your shop filters.`,
+		});
 	}
 
 	// Normalize status
 	let normalizedStatus = status.toLowerCase().replace(/\s+/g, "-");
 	if (!VALID_STATUSES.includes(normalizedStatus)) {
+		warnings.push({
+			message: `Row ${rowIndex}: Status "${status}" is not recognized, so it was changed to "available".`,
+		});
 		normalizedStatus = "available";
 	}
 
@@ -170,9 +264,15 @@ function validateProduct(
 	else if (conditionLower.includes("open")) normalizedCondition = "Open Box";
 	else if (conditionLower.includes("renew")) normalizedCondition = "Renewed";
 	else if (conditionLower === "used") normalizedCondition = "Used";
+	else if (condition && !["new", "used"].includes(conditionLower)) {
+		warnings.push({
+			message: `Row ${rowIndex}: Condition "${condition}" was kept as entered. Make sure it is the label you want customers to see.`,
+		});
+	}
 
 	return {
 		valid: true,
+		warnings,
 		product: {
 			name,
 			description,
@@ -231,8 +331,27 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		// Parse header (skip it - we use positional matching)
-		parseCSVLine(lines[0] as string);
+		const headerRow = parseCSVLine(lines[0] as string);
+		const normalizedHeaders = headerRow.map(normalizeHeader);
+		const headerMap = normalizedHeaders.map(
+			(header) => HEADER_ALIASES[header] || "skip",
+		);
+
+		const hasRequiredHeaders =
+			headerMap.includes("name") && headerMap.includes("price");
+
+		if (!hasRequiredHeaders) {
+			return NextResponse.json(
+				{
+					error:
+						'CSV must include "name" and "price" headers. Download the template and try again.',
+				},
+				{ status: 400 },
+			);
+		}
+
+		const existingBucketImageMap = await getExistingBucketImageMap();
+		const resolvedImageMapping = { ...existingBucketImageMap, ...imageMapping };
 
 		// Validate and parse data rows
 		const results = {
@@ -240,6 +359,7 @@ export async function POST(request: NextRequest) {
 			successful: 0,
 			failed: 0,
 			errors: [] as string[],
+			warnings: [] as string[],
 		};
 
 		// Process in batches of 50 to avoid overwhelming Supabase
@@ -257,9 +377,20 @@ export async function POST(request: NextRequest) {
 			for (let i = 0; i < batch.length; i++) {
 				const rowIndex = batchStart + i + 2; // 1-indexed, skip header
 				const parsedRow = parseCSVLine(batch[i] as string);
-				const result = validateProduct(parsedRow, rowIndex, imageMapping);
+				const mappedRow = parsedRow.reduce(
+					(acc, value, index) => {
+						const field = headerMap[index];
+						if (field && field !== "skip") {
+							acc[field] = value;
+						}
+						return acc;
+					},
+					{} as Record<string, string>,
+				);
+				const result = validateProduct(mappedRow, rowIndex, resolvedImageMapping);
 
 				if (result.valid) {
+					results.warnings.push(...result.warnings.map((warning) => warning.message));
 					validProducts.push(result.product);
 				} else {
 					results.failed++;
