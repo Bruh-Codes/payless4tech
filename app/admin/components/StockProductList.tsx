@@ -20,6 +20,7 @@ import { BulkUploadSheet } from "./BulkUploadSheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { AdminProductGridSkeleton } from "@/components/LoadingSkeletons";
+import { deleteProductWithAssets } from "../delete-product";
 
 interface ProductListProps {
 	products: AdminProductType[];
@@ -73,38 +74,7 @@ const StockProductList: React.FC<ProductListProps> = ({
 	// Delete product mutation
 	const deleteProductMutation = useMutation({
 		mutationFn: async (id: string) => {
-			// First, get product by id to retrieve its image URL
-			const { data: productData, error: fetchError } = await supabase
-				.from("products")
-				.select("*")
-				.eq("id", id)
-				.single();
-
-			if (fetchError) {
-				throw new Error("Failed to fetch product for deletion");
-			}
-
-			const imageUrl = productData?.image_url || "";
-			if (imageUrl) {
-				const path = imageUrl.split(
-					"/storage/v1/object/public/product-images/",
-				)[1];
-				if (path) {
-					const { error: imageError } = await supabase.storage
-						.from("product-images")
-						.remove([path.replace("product-images/", "")]);
-					if (imageError) {
-						throw new Error("Failed to delete product image");
-					}
-				}
-			}
-
-			const { error } = await supabase.from("products").delete().eq("id", id);
-
-			if (error) {
-				throw new Error("Failed to delete product");
-			}
-
+			await deleteProductWithAssets(id);
 			return id;
 		},
 		onSuccess: () => {
@@ -172,7 +142,7 @@ const StockProductList: React.FC<ProductListProps> = ({
 		const standard = [
 			"consumer-electronics",
 			"laptops",
-			"phones",
+			"smartphones",
 			"audio",
 			"others",
 		];
@@ -263,7 +233,7 @@ const StockProductList: React.FC<ProductListProps> = ({
 										Electronics
 									</SelectItem>
 									<SelectItem value="laptops">Laptops</SelectItem>
-									<SelectItem value="phones">Phones</SelectItem>
+									<SelectItem value="smartphones">Phones</SelectItem>
 									<SelectItem value="audio">Audio</SelectItem>
 									<SelectItem value="others">Others</SelectItem>
 									{dynamicCategories.map((cat) => (
@@ -287,7 +257,6 @@ const StockProductList: React.FC<ProductListProps> = ({
 									<SelectItem value="all">All Status</SelectItem>
 									<SelectItem value="available">Available</SelectItem>
 									<SelectItem value="unavailable">Unavailable</SelectItem>
-									<SelectItem value="new">New</SelectItem>
 									<SelectItem value="low-stock">Low Stock</SelectItem>
 									{dynamicStatuses.map((stat) => (
 										<SelectItem key={stat} value={stat}>

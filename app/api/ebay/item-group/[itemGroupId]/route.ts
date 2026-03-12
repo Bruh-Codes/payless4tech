@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getItemsByItemGroup } from "@/lib/ebay-server";
 
 export async function GET(
-	req: NextRequest,
+	_req: NextRequest,
 	{ params }: { params: Promise<{ itemGroupId: string }> },
 ) {
 	const { itemGroupId } = await params;

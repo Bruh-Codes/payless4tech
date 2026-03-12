@@ -44,7 +44,7 @@ const data = {
 			icon: IconListDetails,
 		},
 		{
-			title: "Preorders",
+			title: "Orders",
 			url: "/admin/preorders",
 			icon: IconClipboardList,
 		},

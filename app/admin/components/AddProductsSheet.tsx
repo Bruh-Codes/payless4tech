@@ -158,8 +158,24 @@ export function AddProductsSheet() {
 		handleFormChange("additionalImages", rest);
 	};
 
+	const setPrimaryImage = (indexToPromote: number) => {
+		if (indexToPromote <= 0 || indexToPromote >= selectedFiles.length) return;
+
+		const nextFiles = [...selectedFiles];
+		const [selectedPrimary] = nextFiles.splice(indexToPromote, 1);
+		nextFiles.unshift(selectedPrimary as File);
+		setSelectedFiles(nextFiles);
+
+		const [first, ...rest] = nextFiles;
+		handleFormChange("image", first || null);
+		handleFormChange("additionalImages", rest);
+		form.setValue("image_url", first ? URL.createObjectURL(first) : "");
+	};
+
 	const fileInputRef = useRef<HTMLInputElement>(null);
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+	const watchedName = form.watch("name");
+	const watchedDescription = form.watch("description");
 
 	const handleClick = () => {
 		fileInputRef.current?.click();
@@ -364,6 +380,8 @@ export function AddProductsSheet() {
 											<ProductSpecsEditor
 												specs={specs}
 												setSpecs={setSpecs}
+												productName={watchedName}
+												productDescription={watchedDescription}
 											/>
 											<FormMessage />
 										</FormItem>
@@ -377,6 +395,11 @@ export function AddProductsSheet() {
 										return (
 											<FormItem>
 												<FormLabel>Upload Product Images</FormLabel>
+												<FormDescription>
+													Double-click an image below to use it as the main
+													product image. The remaining images will be saved as
+													additional images.
+												</FormDescription>
 												<FormControl>
 													<div className="flex flex-col items-start gap-2">
 														<Input
@@ -417,6 +440,7 @@ export function AddProductsSheet() {
 																		<li
 																			key={idx}
 																			className="relative border rounded-lg overflow-hidden shadow-sm group"
+																			onDoubleClick={() => setPrimaryImage(idx)}
 																		>
 																			<Image
 																				alt={file.name}
@@ -488,7 +512,9 @@ export function AddProductsSheet() {
 																Electronics
 															</SelectItem>
 															<SelectItem value="laptops">Laptops</SelectItem>
-															<SelectItem value="phones">Phones</SelectItem>
+															<SelectItem value="smartphones">
+																Phones
+															</SelectItem>
 															<SelectItem value="audio">Audio</SelectItem>
 															<SelectItem value="others">Others</SelectItem>
 															<SelectItem value="custom">
@@ -548,7 +574,6 @@ export function AddProductsSheet() {
 															<SelectItem value="unavailable">
 																Unavailable
 															</SelectItem>
-															<SelectItem value="new">New</SelectItem>
 															<SelectItem value="low-stock">
 																Low Stock
 															</SelectItem>

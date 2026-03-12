@@ -37,6 +37,11 @@ export const useProductForm = ({
 	refetchAdditionalImages,
 	shouldLoad = true,
 }: UseProductFormProps) => {
+	const normalizeCategory = (category: string) => {
+		const normalized = category.trim().toLowerCase();
+		return normalized === "phones" ? "smartphones" : normalized;
+	};
+
 	const [isLoading, setIsLoading] = useState(false);
 	const { data: session } = authClient.useSession();
 	const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
@@ -255,7 +260,7 @@ export const useProductForm = ({
 				description: dataToUse.description,
 				price: parseFloat(dataToUse.price),
 				condition: dataToUse.condition,
-				category: dataToUse.category,
+				category: normalizeCategory(dataToUse.category),
 				original_price: dataToUse.original_price
 					? parseFloat(dataToUse.original_price)
 					: null,
@@ -340,7 +345,10 @@ export const useProductForm = ({
 				is_new_arrival: false,
 			});
 			queryClient.invalidateQueries({
-				queryKey: ["products"],
+				queryKey: ["admin", "products"],
+			});
+			queryClient.invalidateQueries({
+				queryKey: ["shop-search"],
 			});
 		} catch (error: any) {
 			console.error("Error details:", error);

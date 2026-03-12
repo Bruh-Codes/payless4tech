@@ -22,12 +22,28 @@ export function NavMain({
 	}[];
 }) {
 	const currentPath = usePathname();
+
+	const normalizePath = (path: string) => {
+		if (!path) return "/";
+		if (path.length > 1 && path.endsWith("/")) {
+			return path.slice(0, -1);
+		}
+		return path;
+	};
+
 	const isActive = (url: string) => {
-		const getLastSegment = (path: string) => {
-			const segments = path.split("/").filter(Boolean);
-			return segments.length > 0 ? `/${segments[segments.length - 1]}` : "/";
-		};
-		return getLastSegment(currentPath) === getLastSegment(url);
+		const normalizedCurrent = normalizePath(currentPath);
+		const normalizedUrl = normalizePath(url);
+
+		// Keep dashboard exact; parent routes should stay active for nested detail pages.
+		if (normalizedUrl === "/admin") {
+			return normalizedCurrent === "/admin";
+		}
+
+		return (
+			normalizedCurrent === normalizedUrl ||
+			normalizedCurrent.startsWith(`${normalizedUrl}/`)
+		);
 	};
 	return (
 		<SidebarGroup>
@@ -40,8 +56,8 @@ export function NavMain({
 									tooltip={item.title}
 									isActive={isActive(item.url)}
 								>
-									{item.icon && <item.icon />}
-									<span>{item.title}</span>
+									{item.icon && <item.icon className="size-5!  stroke-[2.4]" />}
+									<span className="text-[15px] ">{item.title}</span>
 								</SidebarMenuButton>
 							</SidebarMenuItem>
 						</Link>

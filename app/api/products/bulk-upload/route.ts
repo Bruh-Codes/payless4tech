@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import Papa from "papaparse";
 
 const supabase = createClient(
 	process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,7 +19,23 @@ const VALID_CATEGORIES = [
 	"smartphones",
 ];
 
-const VALID_STATUSES = ["available", "unavailable", "new", "low-stock"];
+const VALID_STATUSES = ["available", "unavailable", "low-stock"];
+
+const LEGACY_TEMPLATE_SAMPLE_ROW = {
+	name: "iPhone 15 Pro Max 256GB",
+	description: "Brand new iPhone 15 Pro Max with 256GB storage",
+	price: "8500",
+	original_price: "9200",
+	category: "smartphones",
+	condition: "New",
+	status: "available",
+	stock: "10",
+	image_url: "iphone15.jpg",
+	additional_images: "iphone15-side.jpg, iphone15-back.jpg",
+} as const;
+
+const MALFORMED_LEGACY_ADDITIONAL_IMAGE = "iphone15-side.jpg";
+const MALFORMED_LEGACY_SHIFTED_DETAILS = "iphone15-back.jpg";
 
 interface ParsedProduct {
 	name: string;
@@ -36,6 +53,20 @@ interface ParsedProduct {
 
 interface ParsedProductWarning {
 	message: string;
+}
+
+interface BulkUploadRowInput {
+	name?: string;
+	description?: string;
+	price?: string;
+	original_price?: string;
+	category?: string;
+	condition?: string;
+	status?: string;
+	stock?: string;
+	image_url?: string;
+	additional_images?: string;
+	detailed_specs?: string;
 }
 
 const HEADER_ALIASES: Record<string, keyof ParsedProduct | "skip"> = {
@@ -56,33 +87,86 @@ const HEADER_ALIASES: Record<string, keyof ParsedProduct | "skip"> = {
 	"detailed specs": "detailed_specs",
 };
 
-function parseCSVLine(line: string): string[] {
-	const result: string[] = [];
-	let current = "";
-	let inQuotes = false;
-
-	for (let i = 0; i < line.length; i++) {
-		const char = line[i];
-		if (char === '"') {
-			if (inQuotes && line[i + 1] === '"') {
-				current += '"';
-				i++; // skip escaped quote
-			} else {
-				inQuotes = !inQuotes;
-			}
-		} else if (char === "," && !inQuotes) {
-			result.push(current.trim());
-			current = "";
-		} else {
-			current += char;
-		}
-	}
-	result.push(current.trim());
-	return result;
-}
-
 function normalizeHeader(header: string) {
 	return header.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function parseSpecLine(line: string) {
+	const cleanedLine = line
+		.trim()
+		.replace(/^[\u2022*-]\s*/, "")
+		.replace(/^\d+[.)]\s*/, "");
+
+	if (!cleanedLine) {
+		return null;
+	}
+
+	const patterns = [
+		/^(.*?)\t+(.+)$/,
+		/^(.*?):\s*(.+)$/,
+		/^(.*?)\s+\|\s+(.+)$/,
+		/^(.*?)\s*=\s*(.+)$/,
+		/^(.*?)\s[-–]\s(.+)$/,
+		/^(.*?)\s{2,}(.+)$/,
+	];
+
+	for (const pattern of patterns) {
+		const match = cleanedLine.match(pattern);
+		const key = match?.[1]?.trim();
+		const value = match?.[2]?.trim();
+
+		if (key && value) {
+			return { key, value };
+		}
+	}
+
+	return { key: "Details", value: cleanedLine };
+}
+
+function normalizeDetailedSpecs(rawSpecs: string) {
+	const detailedSpecs = rawSpecs.trim();
+
+	if (!detailedSpecs) {
+		return "";
+	}
+
+	const normalizedText = detailedSpecs.replace(/\|/g, "\n");
+	const specsArray = normalizedText
+		.split(/\r?\n/)
+		.map(parseSpecLine)
+		.filter((spec): spec is { key: string; value: string } => Boolean(spec));
+
+	if (!specsArray.length) {
+		return detailedSpecs;
+	}
+
+	return JSON.stringify(specsArray);
+}
+
+function isLegacyTemplateRow(row: Record<string, string>) {
+	const matchesCoreFields =
+		(row.name || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.name &&
+		(row.description || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.description &&
+		(row.price || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.price &&
+		(row.original_price || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.original_price &&
+		(row.category || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.category &&
+		(row.condition || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.condition &&
+		(row.status || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.status &&
+		(row.stock || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.stock &&
+		(row.image_url || "").trim() === LEGACY_TEMPLATE_SAMPLE_ROW.image_url;
+
+	if (!matchesCoreFields) {
+		return false;
+	}
+
+	const additionalImages = (row.additional_images || "").trim();
+	const detailedSpecs = (row.detailed_specs || "").trim();
+
+	return (
+		additionalImages === LEGACY_TEMPLATE_SAMPLE_ROW.additional_images ||
+		(additionalImages === MALFORMED_LEGACY_ADDITIONAL_IMAGE &&
+			detailedSpecs === MALFORMED_LEGACY_SHIFTED_DETAILS)
+	);
 }
 
 function getCategorySlug(category: string) {
@@ -141,6 +225,14 @@ function validateProduct(
 ):
 	| { valid: true; product: ParsedProduct; warnings: ParsedProductWarning[] }
 	| { valid: false; error: string } {
+	if (isLegacyTemplateRow(row)) {
+		row = {
+			...row,
+			image_url: "",
+			additional_images: "",
+		};
+	}
+
 	const name = row.name?.trim();
 	const description = row.description?.trim() || "";
 	const priceStr = row.price?.trim();
@@ -201,22 +293,7 @@ function validateProduct(
 	}
 
 	let detailedSpecs = row.detailed_specs?.trim() || "";
-
-	// Parse 'Key:Value|Key:Value' into a JSON string
-	if (detailedSpecs && detailedSpecs.includes(":")) {
-		try {
-			const specsArray = detailedSpecs.split("|").map((pair) => {
-				const [key, ...valueParts] = pair.split(":");
-				return {
-					key: key?.trim() || "Details",
-					value: valueParts.join(":").trim(),
-				};
-			});
-			detailedSpecs = JSON.stringify(specsArray);
-		} catch (error) {
-			console.warn("Could not parse detailed_specs, storing as string.", error);
-		}
-	}
+	detailedSpecs = normalizeDetailedSpecs(detailedSpecs);
 
 	if (!name) {
 		return {
@@ -293,11 +370,8 @@ export async function POST(request: NextRequest) {
 	try {
 		const formData = await request.formData();
 		const file = formData.get("file") as File | null;
+		const rowsJson = formData.get("rows") as string | null;
 		const imageMappingStr = formData.get("imageMapping") as string | null;
-
-		if (!file) {
-			return NextResponse.json({ error: "No file provided" }, { status: 400 });
-		}
 
 		let imageMapping: Record<string, string> = {};
 		if (imageMappingStr) {
@@ -307,77 +381,101 @@ export async function POST(request: NextRequest) {
 				console.warn("Failed to parse imageMapping JSON:", e);
 			}
 		}
+		let normalizedRows: Record<string, string>[] = [];
+		let rowNumberOffset = 1;
 
-		// Validate file type
-		const fileName = file.name.toLowerCase();
-		if (!fileName.endsWith(".csv")) {
-			return NextResponse.json(
-				{ error: "Only CSV files are supported" },
-				{ status: 400 },
+		if (rowsJson) {
+			try {
+				const parsedRows = JSON.parse(rowsJson) as BulkUploadRowInput[];
+				normalizedRows = parsedRows
+					.map((row) => ({
+						name: String(row.name ?? "").trim(),
+						description: String(row.description ?? "").trim(),
+						price: String(row.price ?? "").trim(),
+						original_price: String(row.original_price ?? "").trim(),
+						category: String(row.category ?? "").trim(),
+						condition: String(row.condition ?? "").trim(),
+						status: String(row.status ?? "").trim(),
+						stock: String(row.stock ?? "").trim(),
+						image_url: String(row.image_url ?? "").trim(),
+						additional_images: String(row.additional_images ?? "").trim(),
+						detailed_specs: String(row.detailed_specs ?? "").trim(),
+					}))
+					.filter((row) => Object.values(row).some((value) => value.length > 0));
+			} catch (error) {
+				return NextResponse.json(
+					{ error: `Rows payload could not be parsed: ${String(error)}` },
+					{ status: 400 },
+				);
+			}
+
+			if (normalizedRows.length === 0) {
+				return NextResponse.json(
+					{ error: "Add at least one product row before uploading." },
+					{ status: 400 },
+				);
+			}
+		} else {
+			if (!file) {
+				return NextResponse.json(
+					{ error: "No file or rows were provided" },
+					{ status: 400 },
+				);
+			}
+
+			const fileName = file.name.toLowerCase();
+			if (!fileName.endsWith(".csv")) {
+				return NextResponse.json(
+					{ error: "Only CSV files are supported" },
+					{ status: 400 },
+				);
+			}
+
+			const text = await file.text();
+			const parsedCsv = Papa.parse<string[]>(text, {
+				skipEmptyLines: true,
+			});
+
+			if (parsedCsv.errors.length > 0) {
+				return NextResponse.json(
+					{ error: `CSV parsing failed: ${parsedCsv.errors[0]?.message}` },
+					{ status: 400 },
+				);
+			}
+
+			const csvRows = parsedCsv.data
+				.map((row) => row.map((value) => String(value ?? "").trim()))
+				.filter((row) => row.some((value) => value.length > 0));
+
+			if (csvRows.length < 2) {
+				return NextResponse.json(
+					{ error: "CSV file must have a header row and at least one data row" },
+					{ status: 400 },
+				);
+			}
+
+			const headerRow = csvRows[0] as string[];
+			const normalizedHeaders = headerRow.map(normalizeHeader);
+			const headerMap = normalizedHeaders.map(
+				(header) => HEADER_ALIASES[header] || "skip",
 			);
-		}
 
-		// Read and parse CSV
-		const text = await file.text();
-		const lines = text
-			.split(/\r?\n/)
-			.map((line) => line.trim())
-			.filter((line) => line.length > 0);
+			const hasRequiredHeaders =
+				headerMap.includes("name") && headerMap.includes("price");
 
-		if (lines.length < 2) {
-			return NextResponse.json(
-				{ error: "CSV file must have a header row and at least one data row" },
-				{ status: 400 },
-			);
-		}
+			if (!hasRequiredHeaders) {
+				return NextResponse.json(
+					{
+						error:
+							'CSV must include "name" and "price" headers. Download the template and try again.',
+					},
+					{ status: 400 },
+				);
+			}
 
-		const headerRow = parseCSVLine(lines[0] as string);
-		const normalizedHeaders = headerRow.map(normalizeHeader);
-		const headerMap = normalizedHeaders.map(
-			(header) => HEADER_ALIASES[header] || "skip",
-		);
-
-		const hasRequiredHeaders =
-			headerMap.includes("name") && headerMap.includes("price");
-
-		if (!hasRequiredHeaders) {
-			return NextResponse.json(
-				{
-					error:
-						'CSV must include "name" and "price" headers. Download the template and try again.',
-				},
-				{ status: 400 },
-			);
-		}
-
-		const existingBucketImageMap = await getExistingBucketImageMap();
-		const resolvedImageMapping = { ...existingBucketImageMap, ...imageMapping };
-
-		// Validate and parse data rows
-		const results = {
-			total: lines.length - 1,
-			successful: 0,
-			failed: 0,
-			errors: [] as string[],
-			warnings: [] as string[],
-		};
-
-		// Process in batches of 50 to avoid overwhelming Supabase
-		const BATCH_SIZE = 50;
-		const rows = lines.slice(1);
-
-		for (
-			let batchStart = 0;
-			batchStart < rows.length;
-			batchStart += BATCH_SIZE
-		) {
-			const batch = rows.slice(batchStart, batchStart + BATCH_SIZE);
-			const validProducts: ParsedProduct[] = [];
-
-			for (let i = 0; i < batch.length; i++) {
-				const rowIndex = batchStart + i + 2; // 1-indexed, skip header
-				const parsedRow = parseCSVLine(batch[i] as string);
-				const mappedRow = parsedRow.reduce(
+			rowNumberOffset = 2;
+			normalizedRows = csvRows.slice(1).map((currentRow) =>
+				currentRow.reduce(
 					(acc, value, index) => {
 						const field = headerMap[index];
 						if (field && field !== "skip") {
@@ -386,8 +484,41 @@ export async function POST(request: NextRequest) {
 						return acc;
 					},
 					{} as Record<string, string>,
-				);
-				const result = validateProduct(mappedRow, rowIndex, resolvedImageMapping);
+				),
+			);
+		}
+
+		const existingBucketImageMap = await getExistingBucketImageMap();
+		const resolvedImageMapping = { ...existingBucketImageMap, ...imageMapping };
+
+		// Validate and parse data rows
+		const results = {
+			total: normalizedRows.length,
+			successful: 0,
+			failed: 0,
+			errors: [] as string[],
+			warnings: [] as string[],
+		};
+
+		// Process in batches of 50 to avoid overwhelming Supabase
+		const BATCH_SIZE = 50;
+		const dataRows = normalizedRows;
+
+		for (
+			let batchStart = 0;
+			batchStart < dataRows.length;
+			batchStart += BATCH_SIZE
+		) {
+			const batch = dataRows.slice(batchStart, batchStart + BATCH_SIZE);
+			const validProducts: ParsedProduct[] = [];
+
+			for (let i = 0; i < batch.length; i++) {
+				const rowIndex = batchStart + i + rowNumberOffset;
+				const currentRow = batch[i];
+				if (!currentRow) {
+					continue;
+				}
+				const result = validateProduct(currentRow, rowIndex, resolvedImageMapping);
 
 				if (result.valid) {
 					results.warnings.push(...result.warnings.map((warning) => warning.message));
@@ -414,6 +545,7 @@ export async function POST(request: NextRequest) {
 							stock: product.stock,
 							image_url: product.image_url || null,
 							detailed_specs: product.detailed_specs,
+							created_at: new Date().toISOString(),
 						})
 						.select("id")
 						.single();

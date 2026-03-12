@@ -24,6 +24,16 @@ const LOCAL_CONDITION_MAP: Record<string, string[]> = {
 	refurbished: ["refurbished", "renewed"],
 };
 
+function getLocalCategoryAliases(categorySlug: string) {
+	const normalized = categorySlug.trim().toLowerCase();
+
+	if (normalized === "smartphones" || normalized === "phones") {
+		return ["smartphones", "phones"];
+	}
+
+	return [normalized];
+}
+
 function mapLocalProduct(p: any) {
 	return {
 		id: p.id,
@@ -101,8 +111,9 @@ async function fetchLocalProducts({
 	}
 
 	if (categorySlug) {
-		countQuery = countQuery.eq("category", categorySlug);
-		dataQuery = dataQuery.eq("category", categorySlug);
+		const categoryAliases = getLocalCategoryAliases(categorySlug);
+		countQuery = countQuery.in("category", categoryAliases);
+		dataQuery = dataQuery.in("category", categoryAliases);
 	}
 
 	if (minPrice !== undefined) {

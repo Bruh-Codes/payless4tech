@@ -7,7 +7,6 @@ import { PreorderForm } from "@/components/PreorderForm";
 
 const PreorderSection = () => {
 	const [isPreorderFormOpen, setIsPreorderFormOpen] = useState(false);
-	const [formData, setFormData] = useState({});
 
 	useEffect(() => {
 		const handlePreorderEvent = (event: Event) => {
@@ -34,23 +33,7 @@ const PreorderSection = () => {
 			const target = event.target as HTMLElement;
 			const preorderButton = target.closest('[data-preorder="true"]');
 			if (preorderButton) {
-				// Get product info from the button's data attributes if available
-				const productId = preorderButton.getAttribute("data-product-id");
-				const productName = preorderButton.getAttribute("data-product-name");
-				const productCategory = preorderButton.getAttribute(
-					"data-product-category",
-				);
-
 				setIsPreorderFormOpen(true);
-
-				// Pre-fill form with product information
-				if (productId || productName || productCategory) {
-					setFormData((prev) => ({
-						...prev,
-						productName: productName || "",
-						productCategory: productCategory || "",
-					}));
-				}
 			}
 		};
 

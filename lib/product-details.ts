@@ -84,9 +84,6 @@ export const getProductDetailsById = cache(async function getProductDetailsById(
 			id: productData.id,
 			title: productData.name,
 			price: { value: productData.price || 0, currency: "GHS" },
-			originalPrice: productData.original_price
-				? { value: Number(productData.original_price), currency: "GHS" }
-				: undefined,
 			image: productData.image_url || "",
 			categoryId: productData.category,
 			additionalImages: additionalImages.filter(Boolean),
@@ -101,6 +98,12 @@ export const getProductDetailsById = cache(async function getProductDetailsById(
 					? "IN_STOCK"
 					: "OUT_OF_STOCK",
 			specifications,
+			...(productData.original_price && {
+				originalPrice: {
+					value: Number(productData.original_price),
+					currency: "GHS",
+				},
+			}),
 		};
 	}
 

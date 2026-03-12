@@ -1,26 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 // import { Input } from "@/components/ui/input";
 // import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Mail, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export const LoginForm = () => {
-	const router = useRouter();
 	const [isLoading, setIsLoading] = useState(false);
 	// const [magicLinkLoading, setMagicLinkLoading] = useState(false);
 	// const [magicLinkEmail, setMagicLinkEmail] = useState("");
-	const [error, setError] = useState<string | null>(null);
 	// const [showMagicLinkSuccess, setShowMagicLinkSuccess] = useState(false);
 
 	const handleGoogleLogin = async () => {
 		setIsLoading(true);
-		setError(null);
 
 		try {
 			await authClient.signIn.social({
@@ -29,7 +25,6 @@ export const LoginForm = () => {
 			});
 		} catch (error: any) {
 			console.error("Error logging in with Google:", error);
-			setError(error.message || "Failed to login with Google");
 			toast.error("Google login failed", {
 				description: error.message || "Please try again.",
 			});

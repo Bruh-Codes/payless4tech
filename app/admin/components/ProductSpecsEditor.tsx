@@ -25,6 +25,8 @@ export type ProductSpec = {
 interface ProductSpecsEditorProps {
 	specs: ProductSpec[];
 	setSpecs: Dispatch<SetStateAction<ProductSpec[]>>;
+	productName?: string;
+	productDescription?: string;
 }
 
 const EMPTY_SPEC: ProductSpec = { key: "", value: "" };
@@ -71,6 +73,8 @@ function parseSpecsFromText(input: string): ProductSpec[] {
 export function ProductSpecsEditor({
 	specs,
 	setSpecs,
+	productName = "",
+	productDescription = "",
 }: ProductSpecsEditorProps) {
 	const [bulkSpecs, setBulkSpecs] = useState("");
 	const [isPasteOpen, setIsPasteOpen] = useState(false);
@@ -114,8 +118,64 @@ export function ProductSpecsEditor({
 		);
 	};
 
+	const copyAiPrompt = async () => {
+		const trimmedName = productName.trim();
+		const trimmedDescription = productDescription.trim();
+
+		if (!trimmedName) {
+			toast.error(
+				"Product name was not entered. Add the product name first so it can be used in the prompt.",
+			);
+			return;
+		}
+
+		const prompt = [
+			`Generate product specifications as plain text key-value lines for this product.`,
+			`Return only the specs, one per line, in the format "Key: Value".`,
+			`Do not add headings, bullets, numbering, commentary, markdown, or extra explanation.`,
+			`Use accurate specs for this exact product when known. If something is uncertain, leave it out instead of guessing.`,
+			"",
+			`Product name: ${trimmedName}`,
+			trimmedDescription ? `Description: ${trimmedDescription}` : "",
+			"",
+			`Example output:`,
+			`Chip: A19`,
+			`Display: 6.3-inch Super Retina XDR with ProMotion up to 120Hz`,
+			`Storage: 256GB`,
+		]
+			.filter(Boolean)
+			.join("\n");
+
+		try {
+			await navigator.clipboard.writeText(prompt);
+			toast.success("AI specs prompt copied.");
+		} catch {
+			toast.error("Failed to copy the AI prompt.");
+		}
+	};
+
 	return (
 		<div className="space-y-3">
+			<div className="rounded-lg border bg-muted/30 p-3">
+				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+					<div className="space-y-1">
+						<p className="text-sm font-medium">Generate specs with AI</p>
+						<p className="text-xs text-muted-foreground">
+							Copy and paste into any AI chatbot to get product specifications
+							for the product.
+						</p>
+					</div>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={copyAiPrompt}
+					>
+						Copy AI Prompt
+					</Button>
+				</div>
+			</div>
+
 			<Collapsible open={isPasteOpen} onOpenChange={setIsPasteOpen}>
 				<CollapsibleTrigger asChild>
 					<Button
@@ -124,9 +184,7 @@ export function ProductSpecsEditor({
 						className="w-full justify-between"
 					>
 						<span>
-							{isPasteOpen
-								? "Hide pasted specs box"
-								: "I want to paste specs"}
+							{isPasteOpen ? "Hide pasted specs box" : "I want to paste specs"}
 						</span>
 						<div className="flex items-center gap-2 text-muted-foreground">
 							<span className="text-xs">
@@ -162,8 +220,8 @@ export function ProductSpecsEditor({
 							</Button>
 						</div>
 						<FormDescription>
-							Paste one spec per line, like `Brand: Apple` or
-							`Storage: 256GB`, then click `Add Pasted Specs`.
+							Paste one spec per line, like `Brand: Apple` or `Storage: 256GB`,
+							then click `Add Pasted Specs`.
 						</FormDescription>
 					</div>
 				</CollapsibleContent>

@@ -8,6 +8,7 @@ import {
 	Package,
 	ChevronRight,
 	ShoppingCart,
+	Check,
 } from "lucide-react";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,10 @@ export default function ProductDetailClient({
 			quantity: 1,
 			image_url: product.image,
 		});
+	};
+
+	const handleOpenCart = () => {
+		window.dispatchEvent(new CustomEvent("open-cart"));
 	};
 
 	const handlePreorder = () => {
@@ -228,13 +233,16 @@ export default function ProductDetailClient({
 							) : (
 								<Button
 									size="lg"
-									className="min-h-[48px] w-full text-base font-semibold"
-									onClick={handleAddToCart}
-									disabled={isInCart}
+									className={`min-h-[48px] w-full text-base font-semibold ${
+										isInCart
+											? "bg-purple-600 hover:bg-purple-700 text-white"
+											: ""
+									}`}
+									onClick={isInCart ? handleOpenCart : handleAddToCart}
 								>
 									{isInCart ? (
 										<>
-											<ShoppingCart className="mr-2 h-4 w-4" />
+											<Check className="mr-2 h-4 w-4" />
 											In Cart
 										</>
 									) : (

@@ -2,10 +2,7 @@ import type { NextConfig } from "next";
 import withPWA from "next-pwa";
 
 const nextConfig: NextConfig = {
-	/* config options here */
-	typescript: {
-		ignoreBuildErrors: true,
-	},
+	turbopack: {},
 	images: {
 		remotePatterns: [
 			{
@@ -57,11 +54,11 @@ const nextConfig: NextConfig = {
 	},
 };
 
-export const pwaConfig = withPWA({
-	// disable: process.env.NODE_ENV === "development",
+const withConfiguredPWA = withPWA({
+	disable: process.env.NODE_ENV === "development",
 	dest: "public",
 	register: true,
 	skipWaiting: true,
-});
+}) as unknown as (config: NextConfig) => NextConfig;
 
-export default nextConfig;
+export default withConfiguredPWA(nextConfig);

@@ -71,7 +71,6 @@ import { toast } from "sonner";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import { useDebounce } from "use-debounce";
 import Image from "next/image";
 
@@ -263,7 +262,11 @@ const columns = (
 	},
 ];
 
-const PreorderTable = () => {
+type PreorderTableProps = {
+	searchQuery: string;
+};
+
+const PreorderTable = ({ searchQuery }: PreorderTableProps) => {
 	const [rowSelection, setRowSelection] = React.useState({});
 	const [columnVisibility, setColumnVisibility] =
 		React.useState<VisibilityState>({});
@@ -275,7 +278,6 @@ const PreorderTable = () => {
 		pageIndex: 0,
 		pageSize: 10,
 	});
-	const [searchQuery, setSearchQuery] = React.useState("");
 	const [debouncedQuery] = useDebounce(searchQuery, 300);
 
 	const queryClient = useQueryClient();
@@ -296,34 +298,75 @@ const PreorderTable = () => {
 		queryFn: async () => {
 			const from = pagination.pageIndex * pagination.pageSize;
 			const to = from + pagination.pageSize - 1;
+			const normalizedQuery = debouncedQuery.trim().toLowerCase();
 
-			let req = supabase
+			const baseReq = supabase
 				.from("preorders")
 				.select("*", { count: "exact" })
 				.order("fulfillment_status", { ascending: false })
-				.order("created_at", { ascending: false })
-				.range(from, to);
+				.order("created_at", { ascending: false });
 
-			if (debouncedQuery) {
-				req = req.or(
-					`full_name.ilike.%${debouncedQuery}%,email.ilike.%${debouncedQuery}%,phone_number.ilike.%${debouncedQuery}%,item_type.ilike.%${debouncedQuery}%`,
-				);
+			if (!normalizedQuery) {
+				const { data: preorder, error, count } = await baseReq.range(from, to);
+
+				if (error) {
+					console.error("Error fetching preorders:", error);
+					return { data: [], count: 0 };
+				}
+
+				return { data: preorder || [], count: count || 0 };
 			}
 
-			const { data: preorder, error, count } = await req;
+			const { data: preorder, error } = await baseReq;
 
 			if (error) {
 				console.error("Error fetching preorders:", error);
 				return { data: [], count: 0 };
 			}
 
-			return { data: preorder || [], count: count || 0 };
+			const filtered = (preorder || []).filter((row: any) => {
+				let specificationsValue: unknown = row?.specifications;
+
+				if (typeof specificationsValue === "string") {
+					try {
+						specificationsValue = JSON.parse(specificationsValue);
+					} catch {
+						// Keep original string for matching fallback.
+					}
+				}
+
+				const specsText =
+					specificationsValue && typeof specificationsValue === "object"
+						? JSON.stringify(specificationsValue)
+						: String(specificationsValue || "");
+
+				const haystack = [
+					row?.full_name,
+					row?.email,
+					row?.phone_number,
+					row?.item_type,
+					specsText,
+				]
+					.map((value) => String(value || "").toLowerCase())
+					.join(" ");
+
+				return haystack.includes(normalizedQuery);
+			});
+
+			return {
+				data: filtered.slice(from, to + 1),
+				count: filtered.length,
+			};
 		},
 		staleTime: 1000 * 60 * 3, // 3 minutes
 	});
 
 	const data = queryResult?.data ?? [];
 	const totalCount = queryResult?.count ?? 0;
+
+	React.useEffect(() => {
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [debouncedQuery]);
 
 	// Modal State
 	const [alertState, setAlertState] = React.useState<{
@@ -507,14 +550,6 @@ const PreorderTable = () => {
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
-			<div className="flex items-center">
-				<Input
-					placeholder="Search by name, email, phone, or item type..."
-					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
-					className="max-w-sm"
-				/>
-			</div>
 			<div className="overflow-hidden rounded-lg border">
 				{!table || !table?.getRowModel() ? (
 					isLoading ? (

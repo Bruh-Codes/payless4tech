@@ -57,17 +57,6 @@ const ProductCard = memo(
 			typeof product.price === "object"
 				? (product.price as any).value
 				: product.price;
-		const originalPriceValue = product.originalPrice
-			? typeof product.originalPrice === "object"
-				? (product.originalPrice as any).value
-				: product.originalPrice
-			: undefined;
-
-		const discount = originalPriceValue
-			? Math.round(
-					((originalPriceValue - priceValue) / originalPriceValue) * 100,
-				)
-			: 0;
 
 		// Disable cart functionality for eBay products
 		const isEbayProduct = !!product.itemUrl;
@@ -84,6 +73,11 @@ const ProductCard = memo(
 				quantity: 1,
 				image_url: product.image,
 			});
+		};
+
+		const handleOpenCart = (e: React.MouseEvent) => {
+			e.stopPropagation();
+			window.dispatchEvent(new CustomEvent("open-cart"));
 		};
 
 		const handlePreorder = (e: React.MouseEvent) => {
@@ -192,8 +186,8 @@ const ProductCard = memo(
 									</Button>
 								) : isInCart ? (
 									<Button
-										onClick={(e) => e.stopPropagation()}
-										className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-medium transition-all duration-300"
+										onClick={handleOpenCart}
+										className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-full font-medium transition-all duration-300"
 									>
 										<Check className="h-4 w-4 mr-2" />
 										In Cart

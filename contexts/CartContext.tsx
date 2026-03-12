@@ -214,11 +214,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({
 						body: JSON.stringify({
 							email,
 							amount,
+							orderDetails: details,
 							items: items.map((item) => ({
 								name: item.name,
 								quantity: item.quantity,
 								price: item.price,
 								id: item.id,
+								image_url: item.image_url,
 							})),
 						}),
 					});

@@ -47,6 +47,50 @@ interface ImageMap {
 	[filename: string]: string; // Original filename -> Supabase Public URL
 }
 
+const LEGACY_TEMPLATE_SAMPLE_ROW = {
+	name: "iPhone 15 Pro Max 256GB",
+	description: "Brand new iPhone 15 Pro Max with 256GB storage",
+	price: "8500",
+	original_price: "9200",
+	category: "smartphones",
+	condition: "New",
+	status: "available",
+	stock: "10",
+	image_url: "iphone15.jpg",
+	additional_images: "iphone15-side.jpg, iphone15-back.jpg",
+	detailed_specs: "Processor:A17 Pro|Display:6.7-inch|Camera:48MP",
+} as const;
+
+const MALFORMED_LEGACY_ADDITIONAL_IMAGE = "iphone15-side.jpg";
+const MALFORMED_LEGACY_SHIFTED_DETAILS = "iphone15-back.jpg";
+
+function isLegacyTemplateSampleRow(row: Record<string, unknown>) {
+	const valueOf = (key: string) => String(row[key] ?? "").trim();
+	const matchesCore =
+		valueOf("name") === LEGACY_TEMPLATE_SAMPLE_ROW.name &&
+		valueOf("description") === LEGACY_TEMPLATE_SAMPLE_ROW.description &&
+		valueOf("price") === LEGACY_TEMPLATE_SAMPLE_ROW.price &&
+		valueOf("original_price") === LEGACY_TEMPLATE_SAMPLE_ROW.original_price &&
+		valueOf("category") === LEGACY_TEMPLATE_SAMPLE_ROW.category &&
+		valueOf("condition") === LEGACY_TEMPLATE_SAMPLE_ROW.condition &&
+		valueOf("status") === LEGACY_TEMPLATE_SAMPLE_ROW.status &&
+		valueOf("stock") === LEGACY_TEMPLATE_SAMPLE_ROW.stock &&
+		valueOf("image_url") === LEGACY_TEMPLATE_SAMPLE_ROW.image_url;
+
+	if (!matchesCore) {
+		return false;
+	}
+
+	const additionalImages = valueOf("additional_images");
+	const detailedSpecs = valueOf("detailed_specs");
+
+	return (
+		additionalImages === LEGACY_TEMPLATE_SAMPLE_ROW.additional_images ||
+		(additionalImages === MALFORMED_LEGACY_ADDITIONAL_IMAGE &&
+			detailedSpecs === MALFORMED_LEGACY_SHIFTED_DETAILS)
+	);
+}
+
 export function BulkUploadSheet() {
 	const [open, setOpen] = useState(false);
 	const [file, setFile] = useState<File | null>(null);
@@ -225,7 +269,7 @@ export function BulkUploadSheet() {
 				setResult(data);
 				if (data.successful > 0) {
 					toast.success(`${data.successful} products uploaded successfully!`);
-					queryClient.invalidateQueries({ queryKey: ["products"] });
+					queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
 				}
 				if (data.failed > 0) {
 					toast.warning(`${data.failed} products failed to upload`);
@@ -260,6 +304,10 @@ export function BulkUploadSheet() {
 				const referencedImageNames = new Set<string>();
 
 				results.data.forEach((row: any) => {
+					if (isLegacyTemplateSampleRow(row)) {
+						return;
+					}
+
 					// Extract main image
 					if (row.image_url && row.image_url.trim() !== "") {
 						const name = row.image_url.trim();
@@ -340,9 +388,12 @@ export function BulkUploadSheet() {
 			"10",
 			"iphone15.jpg",
 			"iphone15-side.jpg, iphone15-back.jpg",
-			"Processor:A17 Pro|Display:6.7-inch|Camera:48MP",
+			"Chip: A13 Bionic\nDisplay: 6.1-inch Liquid Retina HD display\nStorage: 64GB, 128GB, 256GB\nRear Camera: Dual 12MP Ultra Wide and Wide cameras\nFront Camera: 12MP TrueDepth camera\nFace ID: Supported\nCellular: 4G LTE\nCharging: Fast charging and Qi wireless charging\nConnector: Lightning\nWater Resistance: IP68\nOperating System: iOS\nSim: Dual SIM (nano-SIM and eSIM)",
 		];
-		const csv = [headers.join(","), sampleRow.join(",")].join("\n");
+		const csv = Papa.unparse({
+			fields: headers,
+			data: [sampleRow],
+		});
 		const blob = new Blob([csv], { type: "text/csv" });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement("a");
@@ -425,16 +476,16 @@ export function BulkUploadSheet() {
 						<div className="rounded-lg border bg-blue-50/60 dark:bg-blue-950/20 p-4 space-y-3">
 							<h4 className="text-sm font-medium">How Bulk Upload Works</h4>
 							<div className="space-y-2 text-xs text-muted-foreground">
-								<p>1. Add your product images first.</p>
-								<p>2. Fill the CSV template with your product details.</p>
+								<p>1. Fill the CSV template with your product details.</p>
+								<p>2. (Optional) Add product images.</p>
 								<p>
-									3. In the CSV, the <code>image_url</code> should match the image
-									file name for that product.
+									3. In the CSV, <code>image_url</code> and{" "}
+									<code>additional_images</code> should match the uploaded image
+									file names.
 								</p>
 								<p>
-									Example: if the product is <strong>iPhone 15 Pro Max</strong>,
-									name the image <code>iphone15pro.jpg</code> and put{" "}
-									<code>iphone15pro.jpg</code> in the CSV.
+									Use the uploaded image file name in <code>image_url</code> (or{" "}
+									<code>additional_images</code>), not the product name.
 								</p>
 								<p>
 									4. Upload the CSV. We will match the product to the image using
@@ -443,30 +494,86 @@ export function BulkUploadSheet() {
 							</div>
 						</div>
 
-						<div className="rounded-lg border p-4 space-y-2">
-							<h4 className="text-sm font-medium">Simple Example</h4>
-							<div className="rounded-md bg-muted/50 p-3 text-xs font-mono overflow-x-auto">
-								<p>Product name: iPhone 15 Pro Max 256GB</p>
-								<p>Image file: iphone15pro.jpg</p>
-								<p>CSV image_url: iphone15pro.jpg</p>
-							</div>
-							<p className="text-xs text-muted-foreground">
-								The product name does not have to be exactly the same as the image
-								file name, but the <code>image_url</code> value in the CSV must
-								match the image file name you uploaded.
+						{/* Step 1: CSV Drag & Drop Area */}
+						<div className="space-y-2">
+							<h4 className="text-sm font-medium">Step 1: Upload CSV</h4>
+							<p className="text-xs text-muted-foreground pb-2">
+								The <code>image_url</code> and <code>additional_images</code>{" "}
+								fields can use either full filenames or base names from Step 2
+								(e.g. <code>iphone15.jpg</code> or <code>iphone15</code>). If you
+								skip Step 2, they can point to existing images already in storage.
 							</p>
+							<div
+								onDragEnter={handleDragCSV}
+								onDragLeave={handleDragCSV}
+								onDragOver={handleDragCSV}
+								onDrop={handleDropCSV}
+								onClick={() => fileInputRef.current?.click()}
+								className={`
+								relative cursor-pointer rounded-lg border-2 border-dashed p-8
+								text-center transition-all duration-200
+								${
+									dragActiveCSV
+										? "border-primary bg-primary/5 scale-[1.01]"
+										: "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/20"
+								}
+								${file ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20" : ""}
+							`}
+							>
+								<input
+									ref={fileInputRef}
+									type="file"
+									accept=".csv"
+									onChange={handleFileSelect}
+									className="hidden"
+								/>
+								{file ? (
+									<div className="space-y-2">
+										<CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
+										<p className="font-medium text-sm">{file.name}</p>
+										<p className="text-xs text-muted-foreground">
+											{(file.size / 1024).toFixed(1)} KB
+										</p>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={(e) => {
+												e.stopPropagation();
+												removeCsv();
+											}}
+											className="text-xs text-red-500 hover:text-red-600"
+										>
+											Remove
+										</Button>
+									</div>
+								) : (
+									<div className="space-y-2">
+										<FileSpreadsheet
+											className={`h-10 w-10 mx-auto ${dragActiveCSV ? "text-primary" : "text-muted-foreground"}`}
+										/>
+										<p className="font-medium text-sm">
+											{dragActiveCSV
+												? "Drop your CSV here"
+												: "Drag & drop your CSV file here"}
+										</p>
+										<p className="text-xs text-muted-foreground">
+											or click to browse
+										</p>
+									</div>
+								)}
+							</div>
 						</div>
 
-						{/* Step 1: Image Drag & Drop Area */}
+						{/* Step 2: Image Drag & Drop Area */}
 						<div className="space-y-2">
 							<h4 className="text-sm font-medium">
-								Step 1: Upload Images (Optional)
+								Step 2: Upload Images (Optional)
 							</h4>
 							<p className="text-xs text-muted-foreground pb-2">
-								Drop the product images first. The CSV will connect each product
-								to its image using the image file name. You can use either the
-								full filename like <code>iphone15.jpg</code> or just the base
-								name like <code>iphone15</code>.
+								Upload images for products in your CSV. The CSV will connect each
+								product to its image using the file name. You can use either the
+								full filename like <code>iphone15.jpg</code> or just the base name
+								like <code>iphone15</code>.
 							</p>
 							<div
 								onDragEnter={handleDragImages}
@@ -546,76 +653,6 @@ export function BulkUploadSheet() {
 											{dragActiveImages
 												? "Drop images here"
 												: "Drag & drop images here"}
-										</p>
-										<p className="text-xs text-muted-foreground">
-											or click to browse
-										</p>
-									</div>
-								)}
-							</div>
-						</div>
-
-						{/* Step 2: CSV Drag & Drop Area */}
-						<div className="space-y-2">
-							<h4 className="text-sm font-medium">Step 2: Upload CSV</h4>
-							<p className="text-xs text-muted-foreground pb-2">
-								The <code>image_url</code> and <code>additional_images</code>{" "}
-								fields can use either full filenames or base names from Step 1
-								(e.g. <code>iphone15.jpg</code> or <code>iphone15</code>). For
-								best results, use the exact image file name.
-							</p>
-							<div
-								onDragEnter={handleDragCSV}
-								onDragLeave={handleDragCSV}
-								onDragOver={handleDragCSV}
-								onDrop={handleDropCSV}
-								onClick={() => fileInputRef.current?.click()}
-								className={`
-								relative cursor-pointer rounded-lg border-2 border-dashed p-8
-								text-center transition-all duration-200
-								${
-									dragActiveCSV
-										? "border-primary bg-primary/5 scale-[1.01]"
-										: "border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/20"
-								}
-								${file ? "border-green-500/50 bg-green-50/50 dark:bg-green-950/20" : ""}
-							`}
-							>
-								<input
-									ref={fileInputRef}
-									type="file"
-									accept=".csv"
-									onChange={handleFileSelect}
-									className="hidden"
-								/>
-								{file ? (
-									<div className="space-y-2">
-										<CheckCircle2 className="h-10 w-10 text-green-500 mx-auto" />
-										<p className="font-medium text-sm">{file.name}</p>
-										<p className="text-xs text-muted-foreground">
-											{(file.size / 1024).toFixed(1)} KB
-										</p>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={(e) => {
-												e.stopPropagation();
-												removeCsv();
-											}}
-											className="text-xs text-red-500 hover:text-red-600"
-										>
-											Remove
-										</Button>
-									</div>
-								) : (
-									<div className="space-y-2">
-										<FileSpreadsheet
-											className={`h-10 w-10 mx-auto ${dragActiveCSV ? "text-primary" : "text-muted-foreground"}`}
-										/>
-										<p className="font-medium text-sm">
-											{dragActiveCSV
-												? "Drop your CSV here"
-												: "Drag & drop your CSV file here"}
 										</p>
 										<p className="text-xs text-muted-foreground">
 											or click to browse
@@ -758,7 +795,7 @@ export function BulkUploadSheet() {
 										"consumer-electronics, laptops, phones, tablets, etc.",
 									],
 									["condition", "New, Open Box, Renewed, Used"],
-									["status", "available, unavailable, new, low-stock"],
+									["status", "available, unavailable, low-stock"],
 									["stock", "Stock quantity (number)"],
 									[
 										"image_url",

@@ -90,12 +90,10 @@ const ShopContent = () => {
 	});
 	const [filtersOpen, setFiltersOpen] = useState(false);
 
-	// eBay search query based on filters
-	const ebayQuery = useMemo(() => {
-		let query = searchQuery || activeCategory;
-
-		return query;
-	}, [searchQuery, activeCategory]);
+	// Only use explicit user search text as the query term.
+	// Category filtering is already handled separately and should not
+	// exclude local DB products whose names/descriptions don't contain the slug.
+	const ebayQuery = useMemo(() => searchQuery.trim(), [searchQuery]);
 
 	// Create filter object for the API call
 	const searchFilters = useMemo(() => {

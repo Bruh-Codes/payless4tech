@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LoadingState } from "./LoadingState";
-import { useCart } from "@/contexts/CartContext";
 import { cn } from "@/lib/utils";
 import { type ClassValue } from "clsx";
 import { toast } from "sonner";
@@ -40,7 +39,6 @@ export const ProductGrid = ({
 }: ProductGridProps) => {
 	const [products, setProducts] = useState<Product[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
-	const { state } = useCart();
 
 	const fetchProducts = async () => {
 		setIsLoading(true);
@@ -117,10 +115,6 @@ export const ProductGrid = ({
 						)}
 					>
 						{products.map((product) => {
-							const productInCart = state.items.some(
-								(cartItems) => cartItems.id === product.id,
-							);
-
 							return (
 								<ProductCard
 									key={product.id}
@@ -128,7 +122,6 @@ export const ProductGrid = ({
 										id: product.id,
 										title: product.name,
 										price: product.price,
-										originalPrice: product.original_price || undefined,
 										image: product.image_url || "",
 										category: product.category,
 										condition: product.condition,
@@ -137,6 +130,9 @@ export const ProductGrid = ({
 										shipping: "Standard",
 
 										seller: "Payless4Tech",
+										...(product.original_price !== null && {
+											originalPrice: product.original_price,
+										}),
 									}}
 								/>
 							);

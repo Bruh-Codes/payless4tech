@@ -56,13 +56,24 @@ const Cart = () => {
 		}
 	}, [session]);
 
+	useEffect(() => {
+		const handleOpenCart = () => {
+			setTriggerSheet(true);
+		};
+
+		window.addEventListener("open-cart", handleOpenCart as EventListener);
+		return () => {
+			window.removeEventListener("open-cart", handleOpenCart as EventListener);
+		};
+	}, []);
+
 	const handleCheckout = async (e: React.FormEvent) => {
 		e.preventDefault();
 		setIsCheckOutLoading(true);
 
 		try {
 			await checkout(checkoutDetails);
-			toast.success("Order placed successfully!");
+			toast.info("Redirecting to payment...");
 			setCheckoutSheetOpen(false);
 			setTriggerSheet(false);
 		} catch (error) {

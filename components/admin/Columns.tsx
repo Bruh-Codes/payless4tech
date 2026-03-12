@@ -3,7 +3,6 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "../ui/button";
-import { salesType } from "@/app/admin/page";
 
 export type product = {
 	id: number;
@@ -12,6 +11,18 @@ export type product = {
 	price: number;
 	date: string;
 	status: string;
+};
+
+export type salesType = {
+	id: string | number;
+	email: string;
+	phone_number: string;
+	alternative_phone?: string;
+	status: string;
+	fulfillment_status: string;
+	total_amount: number;
+	delivery_address: string;
+	extended_warranty?: string | boolean;
 };
 
 export const Columns: ColumnDef<product>[] = [

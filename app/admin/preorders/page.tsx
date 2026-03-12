@@ -1,6 +1,6 @@
 "use client";
 
-import PreorderTable from "@/components/admin/PreorderTable";
+import SalesTableWrapper from "@/components/admin/SalesTableWrapper";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const PreordersPage = () => {
@@ -9,13 +9,13 @@ const PreordersPage = () => {
 			<div className="flex flex-col mb-6">
 				<div className="flex gap-5 items-center">
 					<SidebarTrigger />
-					<h1 className="text-3xl font-bold">Preorders</h1>
+					<h1 className="text-3xl font-bold">Orders</h1>
 				</div>
 				<p className="text-muted-foreground mt-2 pl-12">
-					View and manage customer requests for items not currently in stock.
+					View and manage both regular orders and pre-orders in one place.
 				</p>
 			</div>
-			<PreorderTable />
+			<SalesTableWrapper />
 		</div>
 	);
 };

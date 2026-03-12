@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminProductGridSkeleton } from "@/components/LoadingSkeletons";
+import { deleteProductWithAssets } from "../delete-product";
 
 import {
 	AlertDialog,
@@ -85,15 +86,7 @@ const Products = () => {
 		if (!deleteModal.product) return;
 
 		try {
-			// Delete from Supabase
-			const { error } = await supabase
-				.from("products")
-				.delete()
-				.eq("id", deleteModal.product.id);
-
-			if (error) {
-				throw error;
-			}
+			await deleteProductWithAssets(deleteModal.product.id);
 
 			// Invalidate queries to refresh data
 			queryClient.invalidateQueries({ queryKey: ["admin", "products"] });
@@ -113,12 +106,7 @@ const Products = () => {
 		setDeleteModal({ open: false, product: null });
 	};
 
-	const {
-		data: products,
-		error,
-		isPending,
-		isFetching,
-	} = useQuery({
+	const { isFetching } = useQuery({
 		queryKey: [
 			"admin",
 			"products",

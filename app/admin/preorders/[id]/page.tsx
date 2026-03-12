@@ -17,6 +17,36 @@ import {
 } from "@/components/ui/card";
 import Image from "next/image";
 
+type SpecEntry = {
+	label: string;
+	value: string;
+};
+
+const SPEC_SYSTEM_KEYS = new Set(["product_name", "product_image", "product_id"]);
+
+function formatSpecLabel(rawKey: string) {
+	return rawKey.replace(/_/g, " ").trim();
+}
+
+function formatSpecValue(value: unknown): string {
+	if (value === null || value === undefined) return "N/A";
+	if (typeof value === "string") return value.trim() || "N/A";
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	if (Array.isArray(value)) {
+		return value
+			.map((item) =>
+				typeof item === "object" ? JSON.stringify(item) : String(item),
+			)
+			.join(", ");
+	}
+
+	try {
+		return JSON.stringify(value, null, 2);
+	} catch {
+		return String(value);
+	}
+}
+
 export default function PreorderDetailsPage() {
 	const params = useParams();
 	const router = useRouter();
@@ -104,7 +134,7 @@ export default function PreorderDetailsPage() {
 					variant="outline"
 					onClick={() => router.push("/admin/preorders")}
 				>
-					Back to Preorders
+					Back to Orders
 				</Button>
 			</div>
 		);
@@ -129,11 +159,26 @@ export default function PreorderDetailsPage() {
 	const productImage = specifications?.product_image || preorder.product_image;
 	const productId = specifications?.product_id || preorder.product_id;
 
-	// Filter out system keys for the raw specs display
-	const displaySpecs = { ...specifications };
-	delete displaySpecs.product_name;
-	delete displaySpecs.product_image;
-	delete displaySpecs.product_id;
+	const specEntries: SpecEntry[] = Object.entries(specifications || {})
+		.filter(([key]) => !SPEC_SYSTEM_KEYS.has(key))
+		.map(([key, value]) => ({
+			label: formatSpecLabel(key),
+			value: formatSpecValue(value),
+		}));
+
+	const fulfillmentStatus = String(preorder.fulfillment_status || "pending").toLowerCase();
+	const statusLabel =
+		fulfillmentStatus === "delivered"
+			? "Delivered"
+			: fulfillmentStatus === "cancelled"
+				? "Cancelled"
+				: "Pending Delivery";
+	const statusHint =
+		fulfillmentStatus === "delivered"
+			? "This preorder has been completed."
+			: fulfillmentStatus === "cancelled"
+				? "This preorder was cancelled."
+				: "Waiting for fulfillment and delivery.";
 
 	return (
 		<div className="p-6 md:p-10 mx-auto max-w-5xl space-y-6">
@@ -148,16 +193,25 @@ export default function PreorderDetailsPage() {
 				<h1 className="text-3xl font-bold tracking-tight">
 					Preorder #{preorderId}
 				</h1>
+			</div>
+
+			<div className="pl-12 flex flex-wrap items-center gap-2">
+				<span className="text-sm font-medium text-muted-foreground">
+					Delivery Status:
+				</span>
 				<Badge
 					variant="outline"
-					className={`ml-auto capitalize ${
-						preorder.fulfillment_status === "delivered"
-							? "bg-green-100 text-green-800"
-							: "bg-yellow-100 text-yellow-800"
+					className={`${
+						fulfillmentStatus === "delivered"
+							? "bg-green-100 text-green-800 border-green-300"
+							: fulfillmentStatus === "cancelled"
+								? "bg-red-100 text-red-800 border-red-300"
+								: "bg-yellow-100 text-yellow-800 border-yellow-300"
 					}`}
 				>
-					{preorder.fulfillment_status}
+					{statusLabel}
 				</Badge>
+				<span className="text-sm text-muted-foreground">{statusHint}</span>
 			</div>
 
 			<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -222,24 +276,27 @@ export default function PreorderDetailsPage() {
 						</div>
 
 						<div className="mt-4">
-							<div className="text-sm text-muted-foreground mb-2">
+							<div className="mb-2 flex items-center justify-between gap-2 text-sm text-muted-foreground">
 								Specifications:
+								<span className="text-xs">{specEntries.length} total</span>
 							</div>
-							{Object.keys(displaySpecs).length > 0 ? (
-								<div className="bg-muted/50 p-4 rounded-md text-sm space-y-1">
-									{Object.entries(displaySpecs).map(([key, value]) => (
-										<div
-											key={key}
-											className="flex flex-col sm:flex-row sm:justify-between py-2 border-b last:border-0 border-muted-foreground/20"
-										>
-											<span className="font-semibold capitalize text-muted-foreground">
-												{key.replace(/_/g, " ")}:
-											</span>
-											<span className="text-right sm:w-2/3">
-												{String(value)}
-											</span>
-										</div>
-									))}
+							{specEntries.length > 0 ? (
+								<div className="rounded-md border bg-muted/40 text-sm">
+									<div className="max-h-[22rem] md:max-h-[28rem] overflow-y-auto overscroll-contain divide-y divide-muted-foreground/20">
+										{specEntries.map((entry, index) => (
+											<div
+												key={`${entry.label}-${index}`}
+												className="grid grid-cols-1 gap-1 p-3 sm:grid-cols-[minmax(140px,180px)_1fr] sm:gap-4"
+											>
+												<span className="font-semibold capitalize text-muted-foreground break-words">
+													{entry.label}
+												</span>
+												<span className="whitespace-pre-wrap break-words text-foreground">
+													{entry.value}
+												</span>
+											</div>
+										))}
+									</div>
 								</div>
 							) : (
 								<p className="text-sm italic text-muted-foreground">

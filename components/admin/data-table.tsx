@@ -352,22 +352,59 @@ export function DataTable() {
 		queryFn: async () => {
 			const from = pagination.pageIndex * pagination.pageSize;
 			const to = from + pagination.pageSize - 1;
+			const normalizedQuery = debouncedQuery.trim().toLowerCase();
 
-			let req = supabase
+			const baseReq = supabase
 				.from("sales")
 				.select("*", { count: "exact" })
-				.order("created_at", { ascending: false })
-				.range(from, to);
+				.order("created_at", { ascending: false });
 
-			if (debouncedQuery) {
-				req = req.or(
-					`email.ilike.%${debouncedQuery}%,phone_number.ilike.%${debouncedQuery}%,delivery_address.ilike.%${debouncedQuery}%`,
-				);
+			if (!normalizedQuery) {
+				const { data, error, count } = await baseReq.range(from, to);
+				if (error) throw error;
+				return { data: data || [], count: count || 0 };
 			}
 
-			const { data, error, count } = await req;
+			const { data, error } = await baseReq;
 			if (error) throw error;
-			return { data: data || [], count: count || 0 };
+
+			const filtered = (data || []).filter((sale: any) => {
+				let productValue: unknown = sale?.product;
+
+				if (typeof productValue === "string") {
+					try {
+						productValue = JSON.parse(productValue);
+					} catch {
+						// Keep original string for text matching fallback.
+					}
+				}
+
+				const productText = Array.isArray(productValue)
+					? productValue
+							.map((item: any) => `${item?.name || ""} ${item?.id || ""}`)
+							.join(" ")
+					: productValue && typeof productValue === "object"
+						? JSON.stringify(productValue)
+						: String(productValue || "");
+
+				const haystack = [
+					sale?.name,
+					sale?.email,
+					sale?.phone_number,
+					sale?.alternative_phone,
+					sale?.delivery_address,
+					productText,
+				]
+					.map((value) => String(value || "").toLowerCase())
+					.join(" ");
+
+				return haystack.includes(normalizedQuery);
+			});
+
+			return {
+				data: filtered.slice(from, to + 1),
+				count: filtered.length,
+			};
 		},
 		staleTime: 1000 * 60 * 2, // 2 minutes
 	});
@@ -378,6 +415,10 @@ export function DataTable() {
 
 	const rawData = queryResult?.data ?? [];
 	const totalCount = queryResult?.count ?? 0;
+
+	React.useEffect(() => {
+		setPagination((prev) => ({ ...prev, pageIndex: 0 }));
+	}, [debouncedQuery]);
 
 	// Modal State
 	const [alertState, setAlertState] = React.useState<{
@@ -552,7 +593,7 @@ export function DataTable() {
 				defaultValue="outline"
 				className="w-full flex-col justify-start gap-6"
 			>
-				<div className="flex items-center justify-between px-4 lg:px-6">
+				<div className="flex items-center gap-2 px-4 lg:px-6">
 					<Label htmlFor="view-selector" className="sr-only">
 						View
 					</Label>
@@ -573,6 +614,14 @@ export function DataTable() {
 						<TabsTrigger value="outline">Active Orders</TabsTrigger>
 						<TabsTrigger value="preorders">Preorders</TabsTrigger>
 					</TabsList>
+					<div className="flex-1 min-w-0 px-1">
+						<Input
+							placeholder="Search by customer, product name, email, phone, or address..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="w-full max-w-sm"
+						/>
+					</div>
 					{activeTab === "outline" && (
 						<div className="flex items-center gap-2">
 							<DropdownMenu>
@@ -615,14 +664,6 @@ export function DataTable() {
 					value="outline"
 					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
 				>
-					<div className="flex items-center">
-						<Input
-							placeholder="Search by email, phone, or address..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="max-w-sm"
-						/>
-					</div>
 					<div className="overflow-hidden rounded-lg border">
 						{!table || !table?.getRowModel() ? (
 							isLoading ? (
@@ -848,7 +889,7 @@ export function DataTable() {
 					value="preorders"
 					className="relative flex flex-col gap-4 overflow-auto"
 				>
-					<PreorderTable />
+					<PreorderTable searchQuery={searchQuery} />
 				</TabsContent>
 			</Tabs>
 		</>

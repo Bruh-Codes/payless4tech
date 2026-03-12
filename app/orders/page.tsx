@@ -54,8 +54,12 @@ const OrdersPage = () => {
 		enabled: !!session?.user.id,
 	});
 
-	const getStatusIcon = (fulfillmentStatus: string) => {
-		switch (fulfillmentStatus) {
+	const normalizeStatus = (value: string | undefined | null) =>
+		String(value || "").trim().toLowerCase();
+
+	const getDeliveryStatusIcon = (fulfillmentStatus: string) => {
+		const status = normalizeStatus(fulfillmentStatus);
+		switch (status) {
 			case "delivered":
 				return <CheckCircle className="h-4 w-4 text-green-600" />;
 			case "shipped":
@@ -69,18 +73,59 @@ const OrdersPage = () => {
 		}
 	};
 
-	const getStatusColor = (fulfillmentStatus: string) => {
-		switch (fulfillmentStatus) {
+	const getDeliveryStatusLabel = (fulfillmentStatus: string) => {
+		const status = normalizeStatus(fulfillmentStatus);
+		switch (status) {
 			case "delivered":
-				return "bg-green-100 text-green-800";
+				return "Delivered";
 			case "shipped":
-				return "bg-blue-100 text-blue-800";
+				return "Shipped";
 			case "processing":
-				return "bg-yellow-100 text-yellow-800";
+				return "Processing";
 			case "cancelled":
-				return "bg-red-100 text-red-800";
+				return "Cancelled";
 			default:
-				return "bg-gray-100 text-gray-800";
+				return "Pending Delivery";
+		}
+	};
+
+	const getDeliveryStatusColor = (fulfillmentStatus: string) => {
+		const status = normalizeStatus(fulfillmentStatus);
+		switch (status) {
+			case "delivered":
+				return "bg-green-100 text-green-800 border-green-300";
+			case "shipped":
+				return "bg-blue-100 text-blue-800 border-blue-300";
+			case "processing":
+				return "bg-indigo-100 text-indigo-800 border-indigo-300";
+			case "cancelled":
+				return "bg-red-100 text-red-800 border-red-300";
+			default:
+				return "bg-amber-100 text-amber-800 border-amber-300";
+		}
+	};
+
+	const getPaymentStatusLabel = (paymentStatus: string) => {
+		const status = normalizeStatus(paymentStatus);
+		switch (status) {
+			case "paid":
+				return "Paid";
+			case "failed":
+				return "Failed";
+			default:
+				return "Pending Payment";
+		}
+	};
+
+	const getPaymentStatusColor = (paymentStatus: string) => {
+		const status = normalizeStatus(paymentStatus);
+		switch (status) {
+			case "paid":
+				return "bg-green-100 text-green-800 border-green-300";
+			case "failed":
+				return "bg-red-100 text-red-800 border-red-300";
+			default:
+				return "bg-amber-100 text-amber-800 border-amber-300";
 		}
 	};
 
@@ -181,13 +226,18 @@ const OrdersPage = () => {
 													{new Date(order.created_at).toLocaleDateString()}
 												</p>
 											</div>
-											<div className="flex items-center gap-2">
-												{getStatusIcon(order.fulfillment_status)}
+											<div className="flex flex-wrap items-center justify-end gap-2">
+												<Badge className={getPaymentStatusColor(order.status)}>
+													Payment: {getPaymentStatusLabel(order.status)}
+												</Badge>
 												<Badge
-													className={getStatusColor(order.fulfillment_status)}
+													className={getDeliveryStatusColor(
+														order.fulfillment_status,
+													)}
 												>
-													{order.fulfillment_status?.charAt(0).toUpperCase() +
-														order.fulfillment_status?.slice(1) || "Pending"}
+													{getDeliveryStatusIcon(order.fulfillment_status)}
+													Delivery:{" "}
+													{getDeliveryStatusLabel(order.fulfillment_status)}
 												</Badge>
 											</div>
 										</div>
@@ -257,25 +307,42 @@ const OrdersPage = () => {
 											</h4>
 											<div className="space-y-2 text-sm">
 												<div className="flex items-center gap-2">
-													<CheckCircle className="h-4 w-4 text-green-600" />
-													<span>Order Confirmed</span>
+													{normalizeStatus(order.status) === "paid" ? (
+														<CheckCircle className="h-4 w-4 text-green-600" />
+													) : (
+														<Clock className="h-4 w-4 text-amber-600" />
+													)}
+													<span>
+														{normalizeStatus(order.status) === "paid"
+															? "Payment Received"
+															: "Awaiting Payment"}
+													</span>
 												</div>
-												{order.fulfillment_status !== "pending" && (
+
+												{normalizeStatus(order.status) === "paid" && (
 													<div className="flex items-center gap-2">
 														<Package className="h-4 w-4 text-blue-600" />
-														<span>Processing</span>
+														<span>Ready for Fulfillment</span>
 													</div>
 												)}
-												{order.fulfillment_status === "shipped" && (
+												{normalizeStatus(order.fulfillment_status) === "shipped" && (
 													<div className="flex items-center gap-2">
 														<Truck className="h-4 w-4 text-blue-600" />
 														<span>Shipped</span>
 													</div>
 												)}
-												{order.fulfillment_status === "delivered" && (
+												{normalizeStatus(order.fulfillment_status) ===
+													"delivered" && (
 													<div className="flex items-center gap-2">
 														<CheckCircle className="h-4 w-4 text-green-600" />
 														<span>Delivered</span>
+													</div>
+												)}
+												{normalizeStatus(order.fulfillment_status) ===
+													"cancelled" && (
+													<div className="flex items-center gap-2">
+														<AlertCircle className="h-4 w-4 text-red-600" />
+														<span>Cancelled</span>
 													</div>
 												)}
 											</div>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 
 // Utility to skip ngrok warning page
 const withNgrokHeader = (body: any, status: number) => {
@@ -12,6 +12,12 @@ const withNgrokHeader = (body: any, status: number) => {
 
 export async function POST(req: NextRequest) {
 	try {
+		const supabaseAdmin = createClient(
+			process.env.NEXT_PUBLIC_SUPABASE_URL!,
+			process.env.SUPABASE_SERVICE_ROLE_KEY ||
+				process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+		);
+
 		const rawBody = await req.text();
 		const signature = req.headers.get("x-paystack-signature");
 
@@ -38,6 +44,22 @@ export async function POST(req: NextRequest) {
 				return withNgrokHeader({ error: "metadata missing in data" }, 400);
 			}
 
+			// Prefer direct metadata.sale_id, fallback to custom_fields for legacy payloads.
+			const directSaleId = metadata?.sale_id;
+
+			if (directSaleId) {
+				const { error } = await supabaseAdmin
+					.from("sales")
+					.update({ status: "paid", updated_at: new Date().toISOString() })
+					.eq("id", directSaleId);
+
+				if (error) {
+					return withNgrokHeader({ error: "Database update failed" }, 500);
+				}
+
+				return withNgrokHeader({ message: "Sale updated successfully" }, 200);
+			}
+
 			// Extract sale_id from custom_fields array
 			const customFields = metadata.custom_fields || [];
 			const saleField = customFields.find(
@@ -54,9 +76,9 @@ export async function POST(req: NextRequest) {
 			const saleId = saleField.value;
 
 			// Update sale status in Supabase
-			const { error } = await supabase
+			const { error } = await supabaseAdmin
 				.from("sales")
-				.update({ status: "paid" })
+				.update({ status: "paid", updated_at: new Date().toISOString() })
 				.eq("id", saleId);
 
 			if (error) {

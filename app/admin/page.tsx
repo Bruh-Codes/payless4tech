@@ -4,10 +4,8 @@ import dynamicImport from "next/dynamic";
 import { Suspense } from "react";
 import {
 	ChartSkeleton,
-	TableSkeleton,
 	AdminCardsSkeleton,
 } from "@/components/LoadingSkeletons";
-import SalesTableWrapper from "@/components/admin/SalesTableWrapper";
 
 // Dynamically import heavy components for better performance
 const ChartAreaInteractive = dynamicImport(
@@ -41,10 +39,6 @@ export default function Page() {
 
 			<Suspense fallback={<ChartSkeleton />}>
 				<ChartAreaInteractive />
-			</Suspense>
-
-			<Suspense fallback={<TableSkeleton />}>
-				<SalesTableWrapper />
 			</Suspense>
 		</div>
 	);

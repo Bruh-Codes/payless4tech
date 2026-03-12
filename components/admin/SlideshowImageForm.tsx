@@ -43,7 +43,7 @@ export const SlideshowImageForm = ({
 			const fileExt = newImage.image.name.split(".").pop();
 			const fileName = `${Math.random()}.${fileExt}`;
 
-			const { error: uploadError, data } = await supabase.storage
+			const { error: uploadError } = await supabase.storage
 				.from("slideshow-images")
 				.upload(fileName, newImage.image);
 

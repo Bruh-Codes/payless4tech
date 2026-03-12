@@ -133,6 +133,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			...product,
+			custom_category: "",
+			custom_status: "",
+			custom_condition: "",
 			price: String(product.price ?? ""),
 			stock: String(product.stock ?? ""),
 			original_price: String(product.original_price ?? ""),
@@ -145,6 +148,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 	useEffect(() => {
 		form.reset({
 			...product,
+			custom_category: "",
+			custom_status: "",
+			custom_condition: "",
 			price: String(product.price ?? ""),
 			stock: String(product.stock ?? ""),
 			original_price: String(product.original_price ?? ""),
@@ -313,6 +319,30 @@ const ProductCard: React.FC<ProductCardProps> = ({
 		setHasImageChanges(newMainImage !== null || updatedFiles.length > 0);
 	};
 
+	const promoteAdditionalImageToMain = (indexToPromote: number) => {
+		const selectedFile = newAdditionalImages[indexToPromote];
+		if (!selectedFile) return;
+
+		const updatedAdditionalImages = newAdditionalImages.filter(
+			(_, index) => index !== indexToPromote,
+		);
+
+		setNewAdditionalImages(
+			newMainImage
+				? [newMainImage, ...updatedAdditionalImages]
+				: updatedAdditionalImages,
+		);
+		setNewMainImage(selectedFile);
+		form.setValue("image_url", URL.createObjectURL(selectedFile));
+		form.setValue(
+			"additionalImages",
+			newMainImage
+				? [newMainImage, ...updatedAdditionalImages]
+				: updatedAdditionalImages,
+		);
+		setHasImageChanges(true);
+	};
+
 	return (
 		<div className="relative group w-full h-full">
 			<StorefrontProductCard
@@ -387,10 +417,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									? "Remove New Arrival"
 									: "Mark as New Arrival"}
 							</span>
-						</DropdownMenuItem>
-						<DropdownMenuItem onClick={() => onStatusChange(product.id, "new")}>
-							<Star className="mr-2 h-4 w-4" />
-							<span>Mark as New</span>
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							onClick={() => onStatusChange(product.id, "available")}
@@ -616,7 +642,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 															height={200}
 															className="object-cover w-full h-[150px]"
 														/>
-														<span className="absolute bg-green-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
+														<span className="absolute bg-blue-500 text-white top-1 left-1 text-xs px-2 py-0.5 rounded">
 															New Main Image
 														</span>
 														<Button
@@ -644,6 +670,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 									render={() => (
 										<FormItem>
 											<FormLabel>Additional Product Images</FormLabel>
+											<FormDescription>
+												Double-click a newly added image below to use it as the
+												main product image. The remaining images stay as
+												additional images.
+											</FormDescription>
 											<FormControl>
 												<div className="flex flex-col items-start gap-2">
 													<Input
@@ -729,6 +760,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 													<div
 														key={idx}
 														className="relative border rounded-lg overflow-hidden shadow-sm group"
+														onDoubleClick={() =>
+															promoteAdditionalImageToMain(idx)
+														}
 													>
 														<Image
 															alt={file.name}
@@ -787,7 +821,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 																Electronics
 															</SelectItem>
 															<SelectItem value="laptops">Laptops</SelectItem>
-															<SelectItem value="phones">Phones</SelectItem>
+															<SelectItem value="smartphones">
+																Phones
+															</SelectItem>
 															<SelectItem value="audio">Audio</SelectItem>
 															<SelectItem value="others">Others</SelectItem>
 															<SelectItem value="custom">
@@ -809,7 +845,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 												<FormItem className="col-span-2">
 													<FormLabel>Custom Category Name</FormLabel>
 													<FormControl>
-														<Input placeholder="Enter category..." {...field} />
+														<Input
+															placeholder="Enter category..."
+															{...field}
+															value={field.value ?? ""}
+														/>
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -847,7 +887,6 @@ const ProductCard: React.FC<ProductCardProps> = ({
 															<SelectItem value="unavailable">
 																Unavailable
 															</SelectItem>
-															<SelectItem value="new">New</SelectItem>
 															<SelectItem value="low-stock">
 																Low Stock
 															</SelectItem>
@@ -870,7 +909,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
 												<FormItem className="col-span-2">
 													<FormLabel>Custom Status</FormLabel>
 													<FormControl>
-														<Input placeholder="Enter status..." {...field} />
+														<Input
+															placeholder="Enter status..."
+															{...field}
+															value={field.value ?? ""}
+														/>
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -901,6 +944,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														</SelectTrigger>
 													</FormControl>
 													<SelectContent>
+														<SelectItem value="New">New</SelectItem>
 														<SelectItem value={"none"}>None</SelectItem>
 														<SelectItem value="Open Box">Open Box</SelectItem>
 														<SelectItem value="Renewed">Renewed</SelectItem>
@@ -926,6 +970,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 														<Input
 															placeholder="Enter condition..."
 															{...field}
+															value={field.value ?? ""}
 														/>
 													</FormControl>
 													<FormMessage />
