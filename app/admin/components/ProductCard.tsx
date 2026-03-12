@@ -398,7 +398,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 							<Star className="mr-2 h-4 w-4 text-yellow-500" />
 							<span>
 								{product.is_featured
-									? "Remove Featured Deal"
+									? "Remove as Featured Deal"
 									: "Mark as Featured Deal"}
 							</span>
 						</DropdownMenuItem>
